@@ -62,19 +62,12 @@ export function hybridSearch(analysis: QueryAnalysis, maxResults: number = 15): 
       }
     }
 
-    // 2. Priority Concept Articles Boost (e.g. Labor termination -> 70, 77, 72)
-    if (matchingConcepts.some(c => c.primaryLawId === chunk.lawId)) {
-      if (priorityArticles.has(chunk.articleNumber)) {
-        score += 250;
-      }
-    }
-
-    // 3. Domain & Law Matching Boost
+    // 2. Domain & Law Matching Boost
     if (matchedLaw && (chunk.lawId === matchedLaw.id || chunk.lawName.includes(matchedLaw.name))) {
       score += 70;
     }
 
-    // 4. Title Matching Boost (Higher weight if keywords appear in article title)
+    // 3. Title Matching Boost (Higher weight if keywords appear in article title)
     for (const rawWord of analysis.keywords) {
       const word = normalizeAz(rawWord);
       if (titleNorm.includes(word)) {
@@ -82,7 +75,7 @@ export function hybridSearch(analysis: QueryAnalysis, maxResults: number = 15): 
       }
     }
 
-    // 5. Keyword Term Frequency Scoring in content
+    // 4. Keyword Term Frequency Scoring in content
     for (const rawWord of analysis.keywords) {
       const word = normalizeAz(rawWord);
       const occurrences = chunkNorm.split(word).length - 1;
@@ -100,9 +93,17 @@ export function hybridSearch(analysis: QueryAnalysis, maxResults: number = 15): 
       }
     }
 
-    // Length normalization
+    // Length normalization for text matching
     const lengthPenalty = chunk.content.length / 500;
     score = score / Math.sqrt(Math.max(1, lengthPenalty));
+
+    // 5. Priority Concept Articles Boost (applied post-normalization)
+    if (matchingConcepts.some(c => c.primaryLawId === chunk.lawId)) {
+      if (priorityArticles.has(chunk.articleNumber)) {
+        score += 500;
+      }
+    }
+
 
     if (score > 0) {
       scoredChunks.push({ ...chunk, score });

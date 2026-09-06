@@ -123,5 +123,39 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     triggerPhrases: ["mezuniyyet", "otpusk", "emek mezuniyyeti", "esas mezuniyyet", "odenissiz mezuniyyet"],
     expandedTerms: ["mezuniyyet huququ", "esas ve elave mezuniyyetler", "mezuniyyet muddetleri", "is iline gore mezuniyyet"],
     priorityArticles: ["112", "113", "114", "115", "116", "117", "128", "131"]
+  },
+  {
+    id: "tobacco_littering",
+    domain: "İnzibati hüquq",
+    primaryLawId: "inzibati_xetalar",
+    triggerPhrases: [
+      "siqaret atmaq", "siqareti yere atmaq", "siqaret tullamaq", "siqareti tullamaq", "yere atmaq",
+      "siqaret kotuyu", "kotuk", "kotuyu yere atmaq", "tutun tullantisi", "tutun tullantilari",
+      "siqareti yere", "siqaret atilmasi", "zibil atmaq"
+    ],
+    expandedTerms: [
+      "tutun memulatlari tullantilarinin etraf muhite atilmasina gore",
+      "etraf muhite atilmasina gore uc yuz manat mebleginde cerime edilir",
+      "tutun memulatlari tullantilarinin etraf muhite atilmasi",
+      "tutun memulatinin istehlakina dair mehdudiyyetler"
+    ],
+    priorityArticles: ["212", "212-1", "352"]
+  },
+  {
+    id: "tobacco_smoking_prohibited",
+    domain: "İnzibati hüquq",
+    primaryLawId: "inzibati_xetalar",
+    triggerPhrases: [
+      "siqaret cekmek", "siqaret icmek", "tutun cekmek", "qadagan olunmus yerde siqaret",
+      "elektron siqaret", "veyp", "qelyan", "qapali yerde siqaret"
+    ],
+    expandedTerms: [
+      "qadağan edilmiş digər yerlərdə tütün çəkməyə görə",
+      "tütün məmulatının istehlakına dair məhdudiyyətlər",
+      "tütün çəkmək üçün xüsusi ayrılmış yerlər",
+      "elektron siqaretlərin istifadəsi"
+    ],
+    priorityArticles: ["212", "212-1", "299", "305", "306", "318", "322"]
   }
 ];
+

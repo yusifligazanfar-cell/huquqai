@@ -108,11 +108,14 @@ export function analyzeQuery(query: string, history?: { role: string; content: s
   }
 
   const entities: string[] = [];
-  if (norm.includes("isegoturen") || norm.includes("isci") || norm.includes("emek")) entities.push("İşçi - İşəgötürən");
-  if (norm.includes("alici") || norm.includes("satici")) entities.push("Alıcı - Satıcı");
-  if (norm.includes("er") || norm.includes("arvad") || norm.includes("usaq") || norm.includes("aliment")) entities.push("Ər - Arvad - Uşaq");
-  if (norm.includes("surucu") || norm.includes("piyada") || norm.includes("avtomobil")) entities.push("Nəqliyyat - Sürücü");
-  if (norm.includes("qonsu")) entities.push("Qonşular arası münasibət");
+  const words = norm.split(/\s+/);
+  if (words.some(w => ["isegoturen", "isci", "emek"].includes(w))) entities.push("İşçi - İşəgötürən");
+  if (words.some(w => ["alici", "satici"].includes(w))) entities.push("Alıcı - Satıcı");
+  if (words.some(w => ["er", "arvad", "usaq", "aliment"].includes(w))) entities.push("Ər - Arvad - Uşaq");
+  if (words.some(w => ["surucu", "piyada", "avtomobil", "masin"].includes(w))) entities.push("Nəqliyyat - Sürücü");
+  if (words.some(w => ["qonsu", "qonsular"].includes(w))) entities.push("Qonşular arası münasibət");
+  if (words.some(w => ["siqaret", "tutun", "zibil", "cerime", "polisi", "protokol"].includes(w))) entities.push("Vətəndaş - İnzibati Məsuliyyət");
+
 
   return {
     normalizedQuery: norm,
