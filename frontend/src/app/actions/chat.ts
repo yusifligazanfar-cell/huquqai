@@ -155,6 +155,7 @@ ${query}`;
       cleanedContent = cleanedContent.replace(/^```\s*/, "").replace(/\s*```$/, "");
     }
 
+    let parsedJson: any = {};
     try {
       parsedJson = JSON.parse(cleanedContent);
     } catch(e) {
