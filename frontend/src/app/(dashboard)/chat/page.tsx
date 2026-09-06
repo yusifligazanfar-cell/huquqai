@@ -142,33 +142,26 @@ function InlineCitation({ title }: { title: string }) {
 
   return (
     <div className="w-full mt-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-950/10 p-2.5 transition-all">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
           <div className="flex flex-col min-w-0">
             <span className="text-[13px] font-semibold text-foreground truncate">{title}</span>
-            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">✓ Yoxlanılmış hüquqi mənbə</span>
+            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">✓ Yoxlanılmış rəsmi hüquqi mənbə</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 self-end sm:self-auto shrink-0">
-          <a
-            href={sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20 rounded-lg transition-colors"
-          >
-            Mənbəyə bax ↗
-          </a>
+        <div className="flex items-center gap-1.5 shrink-0">
           <button 
             onClick={toggle}
-            className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-foreground bg-secondary/50 hover:bg-secondary rounded-lg transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 rounded-lg transition-all cursor-pointer shadow-sm"
           >
-            <span>{isOpen ? "Gizlət" : "Mətnə bax"}</span>
+            <span>{isOpen ? "Gizlət" : "Maddənin tam mətni"}</span>
             <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
           </button>
         </div>
       </div>
+
       
       <AnimatePresence>
         {isOpen && (

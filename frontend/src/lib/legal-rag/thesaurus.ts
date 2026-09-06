@@ -156,6 +156,27 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
       "elektron siqaretlərin istifadəsi"
     ],
     priorityArticles: ["212", "212-1", "299", "305", "306", "318", "322"]
+  },
+  {
+    id: "apartment_lease_eviction",
+    domain: "Mənzil hüququ",
+    primaryLawId: "menzil",
+    triggerPhrases: [
+      "kirayeci", "kiraye haqqi", "ev sahibi", "evden cixarma", "menzilden cixarma", "mehkeme qerari olmadan",
+      "kirayeni odemir", "kiraye pulunu vermir", "kirayeci pulu odemir", "kirayecini evden cixarmaq",
+      "alti ay", "6 ay", "alti aydan cox", "alti aydan artiq", "haqq odemedikde"
+    ],
+    expandedTerms: [
+      "kirayeci ve onunla birlikde yasayan aile uzvleri",
+      "uzrlu sebebler olmadan alti aydan artiq muddetde yasayis sahesine ve kommunal xidmetlere gore haqq odemedikde",
+      "mehkeme qaydasinda cixarila bilerler",
+      "yasayis sahesinden mehkeme qaydasinda cixarilma",
+      "kiraye muqavilesinin legvi",
+      "mehkeme qerari olmadan yasayis sahesinden cixarilmanin yolverilmezliyi",
+      "kirayecinin huquqlari"
+    ],
+    priorityArticles: ["89", "90", "88", "82", "30", "1"]
   }
 ];
+
 

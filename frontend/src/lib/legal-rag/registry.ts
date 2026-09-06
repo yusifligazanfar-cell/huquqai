@@ -151,6 +151,16 @@ export const LAW_REGISTRY: Record<string, StructuredLaw> = {
     fallbackUrl: "https://e-qanun.az/framework/46942",
     files: ["eqanun_mega_46942_Torpaq_Məcəlləsi.txt"]
   },
+  "menzil": {
+    id: "menzil",
+    frameworkId: 46955,
+    name: "Azərbaycan Respublikasının Mənzil Məcəlləsi",
+    shortName: "Mənzil Məcəlləsi",
+    category: "Mənzil hüququ",
+    sourceUrl: "https://www.e-qanun.ai/results/46955",
+    fallbackUrl: "https://e-qanun.az/framework/46955",
+    files: ["eqanun_mega_46955_Mənzil_Məcəlləsi.txt"]
+  },
   "tehsil": {
     id: "tehsil",
     frameworkId: 18343,
@@ -179,6 +189,7 @@ export function findLawByQuery(text: string): StructuredLaw | null {
   if (norm.includes("mulki") || norm.includes("alqi-satqi") || norm.includes("satilir") || norm.includes("borc") || norm.includes("zamin") || norm.includes("ipoteka") || norm.includes("vereselik") || norm.includes("muqavile") || norm.includes("avtomobil satisi")) return LAW_REGISTRY["mulki"];
   if (norm.includes("vergi") || norm.includes("voen") || norm.includes("edv") || norm.includes("gelir vergisi") || norm.includes("sadelesdirilmis vergi")) return LAW_REGISTRY["vergi"];
   if (norm.includes("yol hereketi") || norm.includes("suruculuk") || norm.includes("radar") || norm.includes("piyada") || norm.includes("yol qezasi") || norm.includes("dayanma durma")) return LAW_REGISTRY["yol_hereketi"];
+  if (norm.includes("menzil mecellesi") || norm.includes("menzil") || norm.includes("evden cixarma") || norm.includes("kirayeci") || norm.includes("ev sahibi") || norm.includes("kiraye haqqi") || norm.includes("sosial kiraye")) return LAW_REGISTRY["menzil"];
   if (norm.includes("istehlakci") || norm.includes("qaytarilmasi") || norm.includes("zemanet") || norm.includes("keyfiyyetsiz mal")) return LAW_REGISTRY["istehlakci"];
   if (norm.includes("mehkeme") || norm.includes("hakim")) return LAW_REGISTRY["mehkimeler"];
 

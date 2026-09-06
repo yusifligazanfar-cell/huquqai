@@ -36,12 +36,16 @@ function detectLawInfo(content: string, fileName: string): { lawId: string; lawN
   if (fileName.includes("46942") || head.includes("AZƏRBAYCAN RESPUBLİKASININ TORPAQ MƏCƏLLƏSİ")) {
     return { lawId: "torpaq", lawName: LAW_REGISTRY.torpaq.name, sourceUrl: LAW_REGISTRY.torpaq.sourceUrl };
   }
+  if (fileName.includes("Mənzil_Məcəlləsi") || head.includes("AZƏRBAYCAN RESPUBLİKASININ MƏNZİL MƏCƏLLƏSİ") || head.includes("AZERBAYCAN RESPUBLIKASININ MENZIL MECELLESI")) {
+    return { lawId: "menzil", lawName: LAW_REGISTRY.menzil.name, sourceUrl: LAW_REGISTRY.menzil.sourceUrl };
+  }
   if (fileName.includes("46955") && (head.includes("ŞƏHƏRSALMA VƏ TİKİNTİ") || head.includes("SEHERSALMA"))) {
     return { lawId: "sehersalma", lawName: LAW_REGISTRY.sehersalma.name, sourceUrl: LAW_REGISTRY.sehersalma.sourceUrl };
   }
   if (fileName.includes("46953") && (head.includes("YOL HƏRƏKƏTİ") || head.includes("YOL HEREKETI"))) {
     return { lawId: "yol_hereketi", lawName: LAW_REGISTRY.yol_hereketi.name, sourceUrl: LAW_REGISTRY.yol_hereketi.sourceUrl };
   }
+
   if (fileName.includes("897") || (head.includes("AZƏRBAYCAN RESPUBLİKASININ KONSTİTUSİYASI") && !head.includes("MƏCƏLLƏ"))) {
     return { lawId: "konstitusiya", lawName: LAW_REGISTRY.konstitusiya.name, sourceUrl: LAW_REGISTRY.konstitusiya.sourceUrl };
   }
