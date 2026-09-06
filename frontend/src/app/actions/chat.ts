@@ -267,9 +267,48 @@ export async function getDocumentByTitle(targetTitle: string) {
       }
     }
 
+    // 3. Fallback to 56,982 e-qanun documents catalog
+    const docIdMatch = cleanTargetTitle.match(/\b\d{4,6}\b/);
+    const targetDocId = docIdMatch ? docIdMatch[0] : null;
+    const catalogPath = path.join(process.cwd(), 'src/data/eqanun_catalog.json');
+    if (fs.existsSync(catalogPath)) {
+      const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf-8'));
+      const catMatch = catalog.find((c: any) => 
+        (targetDocId && c.id === targetDocId) || 
+        normalizeAz(c.title).includes(nTarget) || 
+        nTarget.includes(normalizeAz(c.title))
+      );
+
+      if (catMatch) {
+        let docContent = "";
+        try {
+          const fileName = catMatch.file;
+          const fullDir = path.resolve(process.cwd(), '../data/full_eqanun_corpus');
+          const targetFile = path.resolve(fullDir, fileName);
+          if (targetFile.startsWith(fullDir) && fs.existsSync(targetFile)) {
+            docContent = fs.readFileSync(targetFile, 'utf-8');
+          }
+        } catch {
+          // ignore
+        }
+
+        if (!docContent) {
+          docContent = `Azərbaycan Respublikasının Qanunvericilik Aktı (ID: ${catMatch.id}).\nSənəd adı: ${catMatch.title}.\nRəsmi keçid: https://www.e-qanun.ai/results/${catMatch.id}`;
+        }
+
+
+        return {
+          title: `e-Qanun Aktı № ${catMatch.id}: ${catMatch.title}`,
+          content: docContent,
+          source: catMatch.file
+        };
+      }
+    }
+
     return null;
   } catch (e) {
     console.error("getDocumentByTitle error:", e);
     return null;
   }
 }
+

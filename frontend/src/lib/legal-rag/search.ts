@@ -113,7 +113,60 @@ export function hybridSearch(analysis: QueryAnalysis, maxResults: number = 15): 
   // Sort by score descending
   scoredChunks.sort((a, b) => (b.score || 0) - (a.score || 0));
 
-  const top = scoredChunks.slice(0, maxResults);
+  let top = scoredChunks.slice(0, maxResults);
+
+  // If specific document ID (e.g. 60090) or special query is passed, search the 56,982 e-qanun catalog
+  const numIdMatch = analysis.normalizedQuery.match(/\b\d{4,6}\b/);
+  if (numIdMatch || top.length === 0) {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const catalogPath = path.join(process.cwd(), 'src/data/eqanun_catalog.json');
+      if (fs.existsSync(catalogPath)) {
+        const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf-8'));
+        const targetId = numIdMatch ? numIdMatch[0] : null;
+
+        const matchedCatalogDocs = catalog.filter((c: any) => {
+          if (targetId && c.id === targetId) return true;
+          if (analysis.normalizedQuery.length > 5 && c.title.toLowerCase().includes(analysis.normalizedQuery)) return true;
+          return false;
+        }).slice(0, 3);
+
+        for (const catDoc of matchedCatalogDocs) {
+          let docContent = "";
+          try {
+            const fileName = catDoc.file;
+            const fullDir = path.resolve(process.cwd(), '../data/full_eqanun_corpus');
+            const targetFile = path.resolve(fullDir, fileName);
+            if (targetFile.startsWith(fullDir) && fs.existsSync(targetFile)) {
+              docContent = fs.readFileSync(targetFile, 'utf-8');
+            }
+          } catch {
+            // ignore
+          }
+
+          if (!docContent) {
+            docContent = `Azərbaycan Respublikasının Qanunvericilik Aktı (ID: ${catDoc.id}).\nSənəd adı: ${catDoc.title}.\nRəsmi keçid: https://www.e-qanun.ai/results/${catDoc.id}`;
+          }
+
+
+          top.unshift({
+            sourceId: `eqanun_doc_${catDoc.id}`,
+            lawId: `eqanun_${catDoc.id}`,
+            lawName: catDoc.title,
+            articleNumber: catDoc.id,
+            articleTitle: `Azərbaycan Respublikasının Qanunvericilik Aktı № ${catDoc.id}`,
+            content: docContent.substring(0, 4000),
+            sourceFile: catDoc.file,
+            sourceUrl: `https://www.e-qanun.ai/results/${catDoc.id}`,
+            score: 5000
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Error matching eqanun catalog in hybridSearch:", e);
+    }
+  }
 
   // Cross-reference expansion
   if (top.length > 0 && top.length < maxResults + 2) {
@@ -128,5 +181,6 @@ export function hybridSearch(analysis: QueryAnalysis, maxResults: number = 15): 
     }
   }
 
-  return top;
+  return top.slice(0, maxResults);
 }
+

@@ -11,6 +11,23 @@ export interface SearchResult {
   score: number;
 }
 
+let cachedCatalog: Array<{ id: string; title: string; file: string }> | null = null;
+
+function getEqanunCatalog() {
+  if (cachedCatalog) return cachedCatalog;
+  try {
+    const catalogPath = path.join(process.cwd(), 'src/data/eqanun_catalog.json');
+    if (fs.existsSync(catalogPath)) {
+      const data = fs.readFileSync(catalogPath, 'utf-8');
+      cachedCatalog = JSON.parse(data);
+      return cachedCatalog || [];
+    }
+  } catch (e) {
+    console.error("Failed to load eqanun_catalog.json:", e);
+  }
+  return [];
+}
+
 export async function executeSearch(query: string): Promise<SearchResult[]> {
   try {
     const kbPath = path.join(process.cwd(), 'src/data/knowledge_base')
@@ -18,6 +35,7 @@ export async function executeSearch(query: string): Promise<SearchResult[]> {
 
     const files = fs.readdirSync(kbPath).filter(f => f.endsWith('.txt'))
     let allChunks = []
+
 
     for (const file of files) {
       const filePath = path.join(kbPath, file)
@@ -289,10 +307,40 @@ export async function executeSearch(query: string): Promise<SearchResult[]> {
       scoredChunks = scoredChunks.filter(c => c.score >= maxOverallScore * 0.3)
     }
 
-    scoredChunks.sort((a, b) => b.score - a.score)
-    return scoredChunks.slice(0, 15) // Deep Search: Return top 15 results for the search page
+    scoredChunks.sort((a, b) => b.score - a.score);
+
+    // Also check the 56,982 e-qanun documents catalog for exact document ID (e.g. 60090) or matching title
+    const catalog = getEqanunCatalog();
+    if (catalog.length > 0) {
+      const qClean = query.trim().toLowerCase();
+      const numMatch = qClean.match(/\b\d{4,6}\b/);
+      const targetDocId = numMatch ? numMatch[0] : (targetArticleNum && targetArticleNum.length >= 4 ? targetArticleNum : null);
+
+      const catalogMatches = catalog.filter(c => {
+        if (targetDocId && c.id === targetDocId) return true;
+        if (qClean.length > 3 && c.title.toLowerCase().includes(qClean)) return true;
+        return false;
+      }).slice(0, 5);
+
+      for (const catDoc of catalogMatches) {
+        const isAlreadyAdded = scoredChunks.some(s => s.id.includes(catDoc.id) || s.title.includes(catDoc.id));
+        if (!isAlreadyAdded) {
+          scoredChunks.unshift({
+            id: `eqanun-catalog-${catDoc.id}`,
+            title: `e-Qanun Sənədi № ${catDoc.id} - ${catDoc.title}`,
+            content: `Azərbaycan Respublikasının Rəsmi Qanunvericilik Aktı (ID: ${catDoc.id}).\nSənəd adı: ${catDoc.title}.\nRəsmi keçid: https://www.e-qanun.ai/results/${catDoc.id}`,
+            lines: [],
+            source: `e-Qanun (ID: ${catDoc.id})`,
+            score: 5000
+          });
+        }
+      }
+    }
+
+    return scoredChunks.slice(0, 15);
   } catch (error) {
     console.error("Semantic search error:", error)
     return []
   }
 }
+
