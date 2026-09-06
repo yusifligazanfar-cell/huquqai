@@ -147,16 +147,39 @@ ${query}`;
     }
 
     const data = await response.json()
-    let parsedJson: any = {}
-    
+    const rawContent = data.choices[0].message.content || "";
+    let cleanedContent = rawContent.trim();
+    if (cleanedContent.startsWith("```json")) {
+      cleanedContent = cleanedContent.replace(/^```json\s*/, "").replace(/\s*```$/, "");
+    } else if (cleanedContent.startsWith("```")) {
+      cleanedContent = cleanedContent.replace(/^```\s*/, "").replace(/\s*```$/, "");
+    }
+
     try {
-      parsedJson = JSON.parse(data.choices[0].message.content)
+      parsedJson = JSON.parse(cleanedContent);
     } catch(e) {
-      parsedJson = {
-        cavab: data.choices[0].message.content,
-        maddeler: retrievedChunks.slice(0, 2).map(c => c.articleTitle)
+      // Fallback regex extract for cavab field if full JSON fails
+      const cavabMatch = cleanedContent.match(/"cavab"\s*:\s*"([\s\S]*?)(?:",\s*"maddeler"|"\s*\})/);
+      if (cavabMatch) {
+        try {
+          parsedJson = {
+            cavab: JSON.parse(`"${cavabMatch[1]}"`),
+            maddeler: retrievedChunks.slice(0, 2).map(c => c.articleTitle)
+          };
+        } catch {
+          parsedJson = {
+            cavab: rawContent,
+            maddeler: retrievedChunks.slice(0, 2).map(c => c.articleTitle)
+          };
+        }
+      } else {
+        parsedJson = {
+          cavab: rawContent,
+          maddeler: retrievedChunks.slice(0, 2).map(c => c.articleTitle)
+        };
       }
     }
+
 
     // 6. VALIDATE & ENFORCE HALLUCINATION GUARD
     const validated = validateLegalResponse(parsedJson, retrievedChunks);
