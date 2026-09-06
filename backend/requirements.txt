@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+chromadb
+sentence-transformers
+beautifulsoup4
+aiohttp
+lxml
+pydantic

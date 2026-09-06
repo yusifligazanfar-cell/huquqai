@@ -1,0 +1,471 @@
+SƏNƏDİN ADI: 2432 08.01.2024 “Şəhərsalma və tikinti fəaliyyətinin vahid informasiya təminatı sisteminin Əsasnaməsi”nin təsdiq edilməsi və bundan irəli gələn bəzi məsələlərin tənzimlənməsi haqqında Azərbaycan Respublikası Prezidentinin Fərmanı
+MƏNBƏ: arxkom.gov.az
+
+AZORBAYCAN RESPUBLIKASI PREZIDENTININ
+FERMANI
+"gaharsalma vo tikinti fealiyyetinin vahid informasiya teminatt sisteminin
+Osasnamesi"nin tasdiq edilmesi ve bundan ireli gelen bezi mesalalerin
+tenzimlenmasi haqqrnda
+Azerbaycan Respublikasr Konstitusiyasrnrn 109-cu maddesinin 32-ci bendini
+rahber tutaraq qerara alrram:
+1. "$eharsalma ve tikinti fealiyyetinin vahid informasiya teminatr sisteminin
+Osasnamesi" tesdiq edilsin (elava olunur).
+2. $aharsalma va tikinti faaliyyatinin vahid informasiya teminatr sisteminda ddvlat
+gaharsalma nazaretinin hayata kegirilmasini tamin edan "$ahersalma Nezareti"
+altsistemi yaradr lsr n.
+3. Azarbaycan Respublikasrnrn Nazirlar Kabineti:
+3.1 . tikintiya icaza va istismara icaza icraatr da daxil olmaqla geharsalma ve tikinti
+inzibatgrlr$rnrn, gehersalma ve tikinti fealiyyetinin vahid informasiya tominatr sistemi ve
+reqemsal texnologiyalarrn yaratdr$r imkanlar nezera alrnmaqla, tekmillagdirilmesi ila
+baglr takliflarini altr ay mirddetinda Azarbaycan Respublikasrnrn Prezidentine taqdim
+etsin;
+3.2. bu Fermandan irali gelan digar maselaleri hell etsin.
+4. Azarbaycan Respublikasrnrn D6vlat $aharsalma ve Arxitektura Komitasi:
+4.1. "$ehersalma Nezareti" altsisteminin formalagdrrrlmasrnr 2026-cr il yanvarrn
+1-dek temin etsin;
+4.2. aidiyyati ddvlat orqanlarrnrn (qurumlarrnrn) hemin altsisteme grxrgrnr tamin
+etsin;
+4.3. Azarbaycan Respublikasrnrn XUsusi Rabite va informasiya TehlUkasizliyi
+D6vlet Xidmati ila birlikda hamin altsistemin informasiya tah liikesizliyin in tamin
+olunmasr ugun zaruri tedbirlor gdrstin;
+4.4. bu Farmandan irali galan digar meselelari hall etsin.
+5. Azerbaycan Respublikasrnrn Reqemsal inkigaf ve Neqliyyat Nazirliyi:
+5.1 . Azerbaycan Respublikasr Prezidentinin 2019-cu il 3 iyun tarixli 718 n6mrali
+Fermanr ila tesdiq edilmig "Hokumat buludu" (G-cloud) Konsepsiyasr"na uy$un olaraq,
+2
+Azarbaycan Respublikasrnrn Dovlat $ahersalma va Arxitektura Komitesi ile birlikde
+geharsalma va tikinti faaliyyatinin vahid informasiya taminatr sisteminin "H6kumot
+buludu"nda yerlagdirilmesini tamin etsin;
+5.2. "Dovlet informasiya ehtiyatlarr va sistemlarinin formalagdrrrlmasr, aparrlmasr,
+inteqrasiyasr va axivlegdirilmasi Qaydalarr"nrn tasdiq edilmesi ve elektron hokumatle
+ba$lr bazi tadbirlar haqqrnda" Azerbaycan Respublikasr Prezidentinin 2018-ci il
+12 sentyabr tarixli 263 nomrali Farmanrna uygun olaraq, geharsalma ve tikinti
+fealiyyatinin vahid informasiya taminatr sisteminin vo "$aharsalma Nazarati"
+altsisteminin aidiyyati d6vlet informasiya ehtiyatlarr ve sistemleri ila elaqalendirilmesini
+Elektron Hdkumet informasiya Sistemi vasitosila temin etsin.
+6. Bu Farmanrn 1-ci hissasi ila tasdiq edilen Osasnamenin "Elektron Tikinti
+Portalr" altsistemi vasitasila yerina yetirilacek harakatlarla ballt mijddealan 2024-cn il
+yanvann 1-den, "$ehersalma Nezarati" altsistemi vasitasile yerina yetirilecek
+hareketlarla baglr mijddaalarr ise 2026-cr il yanvarrn 1-dan qiiwaye minir.
+\\
+itnam etiyy'
+n Respublikasrnrn Prezidenti
+Bakr gehari, " 2'7 "
+51o 2432
+dekabr
+Aze
+Azerbaycan Respublikasr Prezidentinin
+2023-ci rl " 27 " dekabr tarixli
+2432 nomrali Fermanr ila
+tasdiq edilmigdir
+$eharsalma vo tikinti faaliyyatinin vahid informasiya teminatr sisteminin
+Osasnamasi
+1. Umumi m ddaalar
+1-1. Bu Osasnama Azerbaycan Respublikasr $eharsalma va Tikinti Macellesinin
+(bundan sonra - Macalle) 16.2-ci maddasina uy$un olaraq haztrlanmtgdtr va
+gaharsalma ve tikinti faaliyyetinin vahid informasiya teminatt sisteminin (bundan sonra
+- Sistem) formalagd rrrlmasrnrn, aparrlmasrnrn va diger d6vlat orqanlartntn
+(qurumlarrnrn) informasiya ehtiyatlarr va sistemlarl ile Elektron H6kumet informasiya
+Sistemi (bundan sonra - EHiS) vasitesile inteqrasiyasrn rn, habela Sistemla baSh
+mirhafize tadbirlerinin tamin edilmasinin, Sistem vasitasile mUraciatlorin qabulunun,
+emalrnrn ve cavablandrrrlmasrnrn htiquqi, tagkilati va texnoloji esaslartnt mtjeyyen edir.
+1.2- Sistemin formalagd rrrlmasrnrn meqsedi reqamsal texnologiyalardan, o
+cUmladen informasiya-kommunikasiya texnologiyalartndan istifade yolu ile geharsalma
+va tikinti faaliyyeti sahasinda xidmetlar gdstarilmasinda algatanlr!rn, gaffaflt!tn ve
+operativliyin tamin edilmasi, habela bu saheda nezaretin effektivliyinin artrnlmasrndan
+ibaratdir.
+'1 .3. Sistemde formalagd rrrlan, yaradrlan, alda edilen ve toplantlan informasiya ve
+elektron sanedler Azarbaycan Respublikasrnrn m0lkiyyatidir.
+1.4. Fardi malumatlarrn Sistemda toplanrlmasrnrn va iglanilmesinin maqsadi bu
+Osasnamanin 1.2-ci bandinda qeyd olunan funksiyalartn temin edilmasidlr. Ferdl
+malumatlarrn toplanrlmasr, iglenilmesi, m0hafizesi, yayrlmasr va verilmasi "Fardi
+malumatlar haqqrnda" Azerbaycan Respublikasrnrn Qanununa ve Azerbaycan
+Respublikasrnrn digar normativ hUquqi aktlarrna asasan hayata kegirilir.
+1.5. Sistemin faaliyyatinin tegkili, idare olunmasr ve tekmillagdirilmasi ila baglr
+xarclar dovlet budcasindan ayrrlan vasait ve qanunla qada$an olunmayan digar
+manbalar hesabr na maliyyelagdirilir.
+'1 .6. Sistemdan istifada odenigsizdir.
+1.7. Sistemin formalagdrrrlmasrna, aparrlmasrna, inteqrasiyasrna vo
+arxivlegdirilmesine dair bu Osasnama ila tanzimlanmeyan digar masaleler Azerbaycan
+Respublikasr Prezidentinin 2018-ci il 12 sentyabr tarixli 263 nomreli Fermanr ile tesdiq
+edilmig "Ddvlet informasiya ehtiyatlarr va sistemlerinin formalagd rrrlmasr, aparrlmasr,
+inteqrasiyasr va arxivlegdirilmesi Qaydalarr"na (bundan sonra - Qaydalar) uy$un
+olaraq hall edilir.
+2. Osas anlayrglar
+2.1 . Bu Osasnamanin meqsadlari UgUn agagrdakr asas anlayr$lardan istifada
+edilir:
+2.'1 .l . sahib - normativ hUquqi aktlarla mtroyyon edilmig qaydada Sistem
+Uzarinda sahiblik ve istifada hUququnu hayata kegiran, habela Sistemin aparrlmasrnr
+temin edan Azerbaycan Respublikasrnrn D6vlat $aharsalma va Arxitektura Komitesi;
+2
+2.1.2. igtirakgr - Sistemin informasiya proseslerinda igtirak edan d6vlat orqanlarr
+(q urumlarr);
+2.1.3. istifadegi - Sistemden informasiya alda etmek ve ya informasiyadan
+istifade htrququ verilmig dovlat orqanlarr (qurumlarr), yerli 6z0nilidaraetma orqanlan,
+hiiquqi va fiziki gaxsler;
+2.1.4. elektron kabinet - istifadagilerin Vahid Girig Sistemi vasitasila Sistema
+daxil olmasrna va istifadasina imkan veren, miiraciatlari elektron formada
+gdndermesini ve xidmetlardon istifada etmesini, odenigler hayata kegirmesini,
+hemginin igtirakgr va sahibla qargrhqlr alaqeni tamin edan ferdi elektron sehife.
+2.2. Sistemin sahibi eyni zamanda onun operatoru funksiyalarrnr heyata kegirir.
+3. Sistemin fealiyyetinin prinsiplari
+3.1. Sistem Qaydalarrn 2.1-ci bandinde qeyd edilan prinsipler nezera alnmaqla
+formalagdrrrlrr va agagrdakr prinsiplar esasrnda fealiyyet gdstarir:
+3.'l .1. istifade rahatlr!r - Sistemden istifadenin va informasiya miibadilasinin
+rahat, elave ameliyyatlar aparrlmadan temin edilmasi;
+3.1 .2. operativlik - Sistemde malumatlarrn yaradrlmasr, toplanrlmasr,
+iglenilmesi, saxlanrlmasr ve axtan$r proseslarinin sUratli gekilde hayata kegirilmesi;
+3.1.3. gaffaflrq - Sistemin fealiyyetinde agkarlr!rn va hesabatlhgrn temin
+edilmasi, hayata kegirilen prosedurlarrn ve onlarrn naticalarinin izlanilmasi imkanrnrn
+mdvcudlu$ u;
+3.1 .4. fasilesizlik - Sistemda aparrlan tagkilati, inzibati, texniki va digar
+deyigikliklardan asrlr olmayaraq, faaliyyetin fasilasiz hayata kegirilmesi.
+4. Sistemin fealiyyetinin tagkili
+4.1. igtirakqr terafinden Sistema daxil edilan malumatlar g0clendirilmig elektron
+imzadan istlfade yolu ila daxil edilmalidir.
+4.2. Sisteme daxil edilan malumatlar dol$un olmah, zaruri xanalar tam
+doldurulmalr va anonimlagdirilan malumatlar istisna olmaqla, sdzler ixtisarla ifada
+edilmemelidir.
+4.3. Mirracietlarin neticesi olaraq verilmig yekun elektron senadlar Sistem
+vasitesile avtomatlagdrrrlmr g formada tertib edilir.
+4.4. Melumatlar Sistema Azarbaycan Respublikasrnrn dovlat dilinde daxil edilir.
+4.5. igtirakgr terefinden Sistema daxil edilmig melumatlarda gatrgmazhqlar agkar
+olunduqda, igtirakqrnrn yazrlt m0racioti esasrnda sahib hemin Qatl$mazltqlann aradan
+qaldrrrlmasr Ugtin tadbirlar gorUr.
+5. Sistemin texniki-texnoloji infrastrukturu
+5.1 . Sistem agagtdakt elementlardan ibaretdir:
+5.1 .1 . proqram kompleksi,
+5.1 .2. avadanltq kompleksi;
+5.1 .3. gebake infrastrukturu,
+5. 1 .4. igtirakgrlarrn iggi stansiyalarr nrn texniki vasitoleri;
+5.1 .5. ehtiyat sistemi.
+5.2. Sistemin proqram kompleksina amaliyyat sistemlari, tetbiqi proqram taminatr,
+informasiyanrn mUhafizasi va digar proqram vasiteleri aiddir.
+3
+6. Sistemin strukturu ve funksionallrSrna dair teleblar
+6.1 . Sistemin strukturuna agagrdakr altsistemler daxildir:
+6.1.1. Elektron Tikinti Portal;
+6.1.2. Tikintilerin Ddvlat Reyestri Portah;
+6.1 .3. $ahersalma Nezarati.
+6.2. Sistem vasltesile aga$rdakrlar tamin edilir:
+6.2.1. informasiyanrn informasiya ehtiyatrnda toplanrlmasr, emalr, axtarrgr, tehlili
+ve otiirUlmasi;
+6.2.2. Sistemden eyni zamanda goxsaylr istifadagilerin istifada etmesinin
+mUmkUnl0yU;
+6.2.3. tahlUkasizlik va malumatlarr n mtrhafizasi;
+6.2.4. geharsalma va tikinti fealiyyeti ile ba![ elektron xidmetlerin gOstarilmosi;
+6.2.5- mUraciotin naticasi olaraq yekun elektron sanedlerin hazrrlanmasr.
+6.3. "Elektron Tikinti Portah" altsistemine daxil olan modullar vasitasile
+aga$rdakrlar tamin edilir:
+6.3.1 . tikintiya icaza sahesinde:
+6.3.1.1. sifariggi tarefindan tikintiya icazealrnmasr meqsedile tikintiya icaze veran
+orqana (quruma) mtlraciat edilmasi;
+6.3.1.2. sifarigEi terefinden Mecallanin 75.3-cU maddasine uygun olaraq taqdim
+edilan sanedlerin erizeya alava olunmasrnrn yoxlanrlmasr;
+6.3.1.3. Macellanin 75.4-cO maddesine uygun olaraq senadlar tam teqdim
+olunmadrqda (Macallenin 75.3-1-ci maddasinin taleblari nazera alnmaqla) tikintiya
+icaza veren orqan (qurum) terefindan onlarrn tamamlanmasr Uq0n zoruri hareketlar
+barede sifariggiye melumat verilmasi va sanedlerin tamlr$rnrn tamin edilmemesinin
+hUquqi nelicelarinin izahrn rn gdndarilmesi;
+6.3.1 .4. mirracietin (miivafiq sanadlarla birlikde) tikintiye icaza veren orqan
+(qurum) tarafindan reylerin, texniki gertlerin ve hamin texniki gertlarla baglr layihe
+sanedlarinin alrnmasr UgUn aidiyyati qurumlara gonderilmasi;
+6.3.1.5. tikintiye icaza veran orqan (qurum) tarafindan verilmig tikintiya icazenin
+(teleb olunduqda hemginin xUsusi nigantn) va ya tikintiya icazenin verilmasinden imtina
+bareda qararr n sifarigqiye gdnderilmasi;
+6.3.1 .6. tikintiya icaze veren orqan (qurum) terafindan tikintiyo lcaza barada
+malumatlarrn Tikintilerin Dovlet reyestrine otUrUlmesi;
+5.3. Sistemin avadanlrq kompleksine serverler, yaddag qurgulan ve digar texniki
+vasitalar aiddir. Sistemin avadanlrq kompleksi sahibin nezareti alttnda fealiyyat
+g0starir.
+5.4. Sistemin gabeke infrastruktu runu kommunikasiya avadanlr$r ve mirhafize
+olunan telekommunikasiya kanallarr tagkil edir.
+5.5. Sistem igtirakgrlarrn rn iggi stansiyalarrnrn texniki vasitelarina kompriter desti,
+gap qur$usu, habela diger zeruri elektron cihazlar daxildir. Bu texniki vasitelarin
+miihafizesini ve onlardan teyinatr Uzre istifadeni igtirakgr temin etmelidir.
+5.6. Ehtiyat sistemi Sistemin faaliyyetinin dayanrqlrhQrnr va tehlUkesizliyini tamin
+etmek, habele formalagd rrrlan, daxil edilen va gOnderilen melumatlarrn ehtiyat
+suretlerini saxlamaq maqsadila yaradr lr r.
+4
+6.9.1 .7. Tikintilarin Dovlat reyestrini aparan orqan terafinden tikinti obyektina
+verilen kod ve hamin koda dair gehadatnamanin tikintiya icaze veran orqana (quruma)
+va sifariggiya g6ndarilmasi;
+6.3.1.8. tikintiya icaza, xi..rsusi nigan verildikde bu barada, habele miivafiq tikinti
+layihasi barede tikintiya d6vlet nazaratinin hayata keqirilmesi maqsadlari u9i.rn
+Azerbaycan Respublikasrnrn F6vqelada Hallar Nazirliyine melumat verilmesi;
+6.3.2. sifarigEi tarafindan tikintiye icaza almaq UQun mtraciat edilmezdan awel
+tikinti aparmaq istediyi arazide aparrlacaq tikintinin icaza verilen parametrlarini
+(erazinin tikinti emsalr, arazinin tikinti srxlr$r emsalr, tikinti obyektlerinin htindUrluyU va
+s.) Oyronmok meqsedile tikintiya icaze veran orqana (quruma) mUraciat edilmesi va
+hemin orqan (qurum) terafindan cavab verilmasi;
+6.3.3. istismara icaze sahesinda:
+6.3.3.1 . sifariggi terefinden tikinti obyektinin istismarrna icaze verilmasi meqsedila
+istismara icaze veren orqana (quruma) mtiraciet edilmasi, habela mtlraciata olava
+olunmalr sanedlerin teqdim edilmasi;
+6.3.3.2. istismara icaze veran orqan (qurum) terefinden tikinti obyektinin
+istismarrna icaza verilmasi 0gUn dovlat rusumunu 6damasi vazifesi barada sifariggiye
+malumat g6ndarilmesi, hamin 6denigin heyata kegirildiyini tesdiq edan senedin sifariggi
+tarafinden taqdim edilmesi:
+6.3.3.3. lstismara icaza veren orqan (qurum) terefinden verilmig tikinti obyektinin
+istismarrna icazenin ve ya istismara icazenin verilmesindan imtina haqqtnda qabul
+edilmig qerarrn sifariggiya gonderilmasi;
+6.3.3.4. istismara icaza veran orqan (qurum) tarafinden tikinti obyektinin
+istismarrna icaza barede melumatlartn Tikintilerin Dovlat reyestrina 6tUrUlmasi;
+6.3.4. reklam qur(ularrnrn tikintisina icaze sahesinde:
+6.3.4.1 . aqrq mekanda reklam yerlegdirilmasi Ugiin nezerde tutulmug sahesi
+(goxtarafli qur$ularda isa bir terefin sahasi) 60 kvadratmetr ve ya bundan gox tegkil
+eden reklam qur$ularrnrn tikintisina, quragdrrrlmasrna, onlara konstruktiv deyigiklikler
+edilmasine icaze verilmasi meqsadila sifariggi terefinden tikintiye icaze veren orqana
+(quruma) mtrraciat edilmesi;
+6.3.4.2. tikintiya icaze veren orqan (qurum) tarafinden reklam qur$ulartntn
+tikintisina icaza verilmosi ile ba$lr Macellenin 75.4-ci,75.5-ci,75.9-75.1'l-ci, 75.14-cO
+va B2-ci maddalarinda nazerda tutulmug tadbirlarin gor0lmesi;
+6.3.5. malumatlandrrma icraatr sahasinda:
+6.3.5.1. sifariggi tarafindan tikinti niyyeti barede melumatlandrrrlan orqana
+(quruma) melumat verilmesi va melumata alave olunan sonadlarin yoxlanrlmasr
+maqsadile g6nderilmasi;
+6.3.5.2. melumatland rrrlan orqan (qurum) terafinden tikinti obyektinin layihasine
+mUnasibetde iradlarrn sifariggiya g6ndarilmesi, Macalla ile mtjeyyen edilmig mUddatde
+her hansr irad bildirilmadikde, tikinti niyyeti barade malumatlarrn Tikintilerin Dovlet
+reyestrine oti.irUlmosi;
+6.3-5.3. tikinti iglerinin baglanrlmasr UgUn [Vlacellenin 80.4-cU maddesinde
+m0ayyon olunmug esas yarandrqda, bu barada, habela tikinti layihasinin memarlrq-
+planlagdrrma va tikinti erazisinin bag planr bdlmeleri bareda tikintiya ddvlat nazaratinin
+hayata kegirilmasi meqsadlari UQi.rn Azorbaycan Respublikasrnrn Fovqalade Hallar
+Nazirliyina malumat verilmesi;
+6.3.5.4. sifariggi tarafinden tikinti obyektinin tikintisinin baga gatmasr barede
+malumatland rrrlan orqana (quruma) malumat verilmasi ve hemin malumatlann
+Tikintilerin D6vlat reyestrina 6tUrUlmosi.
+6.4. "$eharsalma Nazarati" altsistemino daxil olan modullar vasitesila
+agagrdakrlar tamin edilir:
+6.4.1 . kameral qaydada nazarat zamafl taleb olunan senadlarin orqanlar
+(qurumlar) arasrnda mijbadilesi;
+6.4.2. sahib terafinden dovlat geharsalma nazareti Eargivasinde esaslandrrtlmtg
+gosteriglarin g6ndarilmasi;
+6.4.3. apanlan tikinti iqlari ile ba$lr tikintisina icaza teleb olunan tikinti obyektlarine
+milnasibatdo tikintiye icazanin verilib-verilmediyi, baraslnde melumatlandrrma icraatr
+tetbiq olunan tikinti obyektina munasibatde isa hamin iglarin baglanrlmasr iigiln
+Mecallenin 80.4-cU maddesinda mirayyan olunmug esasrn yaranrb-yaranmadr$r barada
+melumatlarrn real vaxt rejiminda yoxlanrlmasr ;
+6.4.4. yerli icra hakimiyyeti orqanlarr tarefinden dovlet geharsalma nezarotinin
+hayata kegirilmasi zamanr agkar edilmig pozuntular bareda Azerbaycan Respublikasr
+Fovqelade Hallar Nazirliyinin malumatlandrrrlmasr ve bu barada bUtUn melumatlann
+sahibe ve Azarbaycan Respublikasrnrn iqtisadiyyat Nazirliyi yanrnda Omlak Meselaleri
+Dovlet Xidmatine gondarilmesi.
+7. Sisteme daxil edilen ve citiirtilan malumatlar (sanadler)
+7.1 . Sisteme daxil edilen malumatlar (sanedlar) a9a$ rdakrlard rr:
+7. 1 .1 . geharsalma ve tikintiya dair normativ senadlar;
+7.1.2. dovlat gehersalma nozaretinin neticeleri;
+7.1.3. Tikintilerln Dovlet reyestri malumatlarr;
+7.1.4. tikinti layihasina dair raylar ve texniki gertler barade melumatlar.
+7.2. EH|S vasitasila sorgu asasrnda Sistema otUrUlen malumatlara (ham qrafiki
+(xerita), hem da metn geklinde) agagrdakrlar aiddir:
+7.2.1. dovlat geharsalma kadastrr malumatlarr;
+7 .2.2. tikinliy e ddvlet neza reti n i n netice leri ;
+7.2.3. peqekarlrq reyestri malumatlan;
+7.2.4. mUhendis-axtang iglerinin naticolori Uzra Dovlat melumat fondu.
+7.3. $ehersalma va tikintiya dair normativ sanadlere aga$rdakrlar aiddir:
+7.3.1 . gahersalma ve tikinti fealiyyetini tenzimlayan normativ h0quqi aktlar;
+7.3.2. erazi planlagdrnlmasr sanedlari (ijmumi, bag va m0fassel planlar).
+7.4. Dovlet gehersalma nazaratinin naticalerine respublika saviyyasinde ve yerli
+seviyyede aparrlan gaharsalma nezareti tadbirlerinin naticelerini eks etdiren senadlar,
+yazrlr gostariglar va melumatlar aiddir.
+T.5.Tikintilerin DOvlet reyestri malumatlarrna agag rdakrlar aiddir:
+7.5.1. tikilen, istismar edilan va sokrilan tikinti obyektleri, habele tizerinda qadala
+ve mehdudiyyetlar qoyulmug torpaqlar barede melumatlar;
+7.5.2. malumatlandrrma icraattnrn tetbiq olundugu tikinti obyektleri barede
+melumatlar.
+7.6. Tikinti layihasina dair rayler ve texnikl gertlar barada malumatlara aga$rdakrlar
+aiddir:
+7.6.1. tlkinti layihesinin geharsalma senadlarina uygun olub-olmamasr barada raya
+dalr melumatlar;
+7 .6.2. "Olral mUhite tesirin qiymatlandirilmasi haqqrnda" Azarbaycan Respublikasr
+Qanununun alavasinde gdsterilan fealiyyet novleri Uzre layihelerin atraf mirhite tasirin
+qiymetlendirilmesi (OMTQ) senedi ve hamin senadin d6vlet ekoloji ekspertizasrnrn
+reyine dair melumatlar;
+6
+7.6.3. Azarbaycan Respublikasr Sehiyya Nazirliyinin (sanitariya-gigiyena
+telablarina uygunluq baxrmrndan) ve Azarbaycan Respublikasr Fdvqalade Hallar
+Nazirliyinin (yanSrn tehlUkesizliyi teleblarine uygunluq baxrmrndan), habela tikintiya
+icaze ile faaliyyet sferasrna (maraqlarrna) toxunulan dlger dovlot orqanlarrnrn
+(qurumlannrn) raylarina dair malumatlar;
+7.6.4. tikintisine icaza talab olunan tikinti obyektlarinin layihelarinin gahersalma ve
+tikintiye dair normativ senadlarin talablarine uy!unlu$unun yoxlanrlmasr baxrmrndan,
+habele d6vlet vesaitlari hesabrna maliyyelegdirilen obyektlarin tikinti layihaleri va
+smetalarrnrn semereli istifadasinin qiymatlandirilmasi baxrmrndan ekspertizanrn
+neticelarina dair melumatlar;
+7.6.5. tachizat mtiessisalari tarefindan verilmig mUhendis-kommunikasiya taminatr
+ile baglr texniki gartler va hamin texniki gartlarla ba$lr layihe sanadleri.
+7.7. D6vlet gehersalma kadastn malumatlarrna agagrdakrlar aiddir:
+7.7.1. torpaq sahasinin texniki gostericilerine dair melumatlar;
+7.7.2. mUhendis-kommunikasiya taminatr sistemi (qaz, istilik, rabite, elektrik, su ve
+kanalizasiya taminatr vasitalari va qurgularr) barade melumatlar;
+7.7.3. yagrg sulannrn axrdrlmasr sistemlerinin infrastrukturuna dair malumatlar,
+7.7.4. larix va madaniyyat abidalari ve onlarrn mUhafize zonalarr barede
+melumatlar;
+7.7.5. naqliyyat infrastrukturu barada malumatlar;
+7.7.6. meliorasiya vo irriqasiya infrastrukturuna dair malumatlar;
+7 .7 .7 . bina ve qurlularrn texniki g6staricileri barade malumatlar.
+7.8. Tikintiya dovlet nazaretinin neticelerina obyektde tikinti-quragdrrma iglerinin
+gahersalma ve tikintiye dair normativ senadlerin telablarine va tikinti layihesine uylun
+aparrlmasrnr ve tikintiye d6vlat nazaratinin hayata kegirilmesinin baga gatmasrnt eks
+etdiran istismara hazrrhq aktr barada malumatlar aiddir.
+7.9. Pegekarlrq reyestri malumatlarrna mUhendis-axtang, layihelendirme, tikinti-
+quragdrrma, mexaniklagdirma va naqletma, tikinti materiallarrnrn istehsah ve tikinti
+layihalerinin ekspertizasr kimi pege sahaleri ila baglr pegekarhq sertifikatt almtg gexslar
+barade malumatlar aiddir.
+7.10. MUhandis-axtarrg iglerinin naticalari Uzra Dovlet malumat fondunun
+malumatlarrna agagrdakr lar aiddir:
+7.10.1 . mUhendis-geodeziya, m0handis-geoloji axtan$, mUhendis-hidrogeoloji
+axtarrg, geofiziki igleri va qruntlarrn laboratoriya tadqiqatlarr bareda melumatlar;
+7.10.2. tehlUkeli tebii va texnogen xarakterli fOvqelada hallarrn yaranma riskina
+meruz qalan arazilar haqqrnda malumatlar.
+7.11. Bu Osasnamenin 7.1 .1-ci, 7.1 .4-cn ve 7.2.1-7.2.4-c0 yarrmbandlarinda
+nezarda tutulan malumatlar "Elektron Tikinti Portalr" altsisteminde darc olunur.
+7.12. Bu Osasnamanin 7.1.2-ci yarrmbandinda nazarde tutulan melumatlar
+"$ehersalma Nazarati" altsisteminda darc olunur.
+7.'13. Bu Osasnamenin 7.'1.3-ct yarrmbandinde nozarda tutulan melumatlar
+"Tikintilarin Dovlat Reyestri Portalr" altsisteminda darc olunur.
+8. Malumatlarrn taqdim edilmesi
+8.1. Malumatlann Sistema taqdim edilmasi aidiyyati d6vlat orqanlarrnrn
+(qurumlarrnrn) informasiya ehtiyatlarr va sistemlari vasitesila tamin edilir,
+8.2. informasiya ehtiyatlarrnrn va sistemlarinin EHiS-a qogulmasr Qaydalarrn
+4-ctr hissasina uy$un olaraq hayata kegirilir.
+7
+8.3. informasiya ehtiyatlanna ve sistemlerina malik olmayan dovlat orqanlan
+(qurumlan) formalagd rrdrqlafl malumatlarr elektron kabinet vasitasila sahibe 6tilriirler.
+Bunun UgUn her bir dovlet orqanrnrn (qurumunun) mdhtir hUquqlu ve gUclendirilmig
+elektron imzasr olan rehber vezifali gaxsi tarafinden mesul struktur bOlmesinin
+amakda$r Sistemde qeydiyyatdan keqirilir ve Vahid Giriq Sistemi vasitosila
+identlklagdirildikden sonra avtomatik qaydada yaradrlan elektron kabinetine daxil
+olaraq Sistemden istifade edir.
+8.4. Malumatlarrn Sistemde iglanilmesi bu Osasnamanin 6.1-ci bandinde
+gdstorilan altsistemler vasitesile hayata kegirilir.
+9. Sahibin hiiquq va vazifaleri
+9.1. Sahibin agagrdakr hijquqlarr vardrr:
+9.1.1. elde olunmasr qanunla mahdudlagd rrrlan, o cilmloden xidmeti istifada UqUn
+nazerde tutulan informasiyanrn yalnrz qanunla muayyan edilmig qaydada oturulmesini
+ve istifadasini temin etmek;
+9.1.2. diger informasiya ehtiyatlarr ve sistemleri ila malumat mubadilesinin tagkili
+tlgUn elektron servisler tegkil etmak ve onlarr yenilemek.
+9.2. Sahibin agagrdakr vazifeleri vardrr:
+9.2.1. igtirakgrlarrn Sisteme girig hUququnu temin etmok;
+9.2.2. igtirakgrnrn Sistem vasitasile dayanrqlr, fasilasiz, etibarlr ve tehlijkesiz
+melumat mtibadilesi aparmastnr tamin etmek;
+9.2.3. Sistemin proqram kompleksina nezarati heyata keqirmek ve mtitemadi
+texniki baxrglarr tegkil etmek;
+9.2.4. proqram taminatrnln lisenziyalagdrrrlmasrnr, lisenziyalr proqram
+taminatlannrn iglak veziyyatde olmasrnr va yenilanmesini tamin etmek;
+9.2.5. Sistemde toplanrlan texniki vasitelarin emaliyyatlann qeydiyyat fayllarrnrn
+(loq-fayllarrn) monitorinqini heyata kegirmak ve bag veran xetalar uzra tehlillar
+aparmaq;
+9.2.6. Sistemin monitorinqi va auditi UqUn aidiyyeti dovlat orqantna (qurumuna)
+yerinde baxrg kegirilmesina gerait yaratmaq, bu maqsadle homin dovlet orqanrna
+(qurumuna) muvafiq melumatlarr (senedleri) teqdim etmek;
+9.2.7. informasiya ehtiyatrnrn ehtiyat nusxesinin saxlanrlmast vo qorunmast UgUn
+tedbirler g6rmak, saxlanrlan melumatlarrn siiratli axtangrnrn heyata kegirilmasi
+meqsedila informasiya ehtiyatrnrn mUtamadi optimallagdrrrlmasrnr tegkil etmak;
+9.2.8. mUeyyan edilmig qrafik iizre Sistemin avadanlq kompleksina ve gebaka
+infrastrukturuna profllaktik baxrq kegirilmasini temin etmok, mutomadi olaraq gabeke
+infrastru kturunda malumatdtirrma sUretini olgmek va fasilelar yaranmasrnrn seb5blerini
+mUoyyen etmak maqsadile monitorinqlar keqirmek;
+9.2.9. Sistema daxil edilen malumatlarrn tamlr$rnr, tehrifolunmazlr$rnr,
+algatanlr$rnr, aktuallr!rnr, etibarlrhgrnr, konfidensiallrgrnr (maxfiliyini) va muhafizesini
+tomin etmak, sistemdan istifada zamanr yaranan nasazlrqlarr aradan qaldrrmaq
+meqsadila taxirasalrnmaz tadbirlar gormak;
+9.2.10. server va gebeka infrastukturunun yerlagdiyi otaqlarda fasilasiz elektrik
+enerjisini, yan0rn tohliikosizliyini va taleb olunan temperaturu tonzimleyan avadanlr$a
+texniki baxrg kegirilmesini ve agkarlanmrg nasazlrqlarrn aradan qaldrrrlmasrnr tamin
+etmek;
+9 2.'1 '1 . normativ hUquqi aktlarla edilmig dayigikliklara asasan on qrsa milddatde
+proqram taminatrnda uy$unlagd rrmalar aparrlmasrnr, elece de yeni program
+modullannrn yazrlmasrnr ve srnaqlarrn kegirilmasini tagkil etmek;
+8
+9.2.12. qanunsuz daxilolma va saxtalagdrrma hallarrnrn qargtsrnt almaq, habela
+girig va emaliyyat tarixqalarini (loqlarr) saxlamaq;
+9.2.13. Sistemin formalagdrrrlmasr, aparrlmasr, inteqrasiyasr ve axivlagdirilmasi
+iglerini texniki talablere, eleca da bu Osasnama ila miloyyen edilen telablare uy$un
+formada aparmaq;
+9.2.14. Sistemin dayanrqlr ve fasilasiz faaliyyatini, Sistemin komponentlerinin va
+proqram tominatrnrn tayinatt trzra istismarrnr, texniki xidmetini, temirini va
+yenilonmosini, habela takmillagdirilmasi iizra profilaktik i$lar gorUlmasini tamin etmek;
+9.2.15. Sistemin takmillagdirilmasi vo onun funksional imkanlarrnrn arttnlmasl
+istiqamatinda tedbirler gormak;
+9.2.16. Sistemin digar informasiya ehtiyatlan vo sistemlori ila EHiS vasitasile
+inteqrasiyasrnr hayata kegirmak,
+9.2.17. Sistemin funksiyalarr barada igtirakgrlarr malumatlandrrmaq, onlara
+metodiki k6mak gostormak;
+9.2.18. Sisteme daxil edilmig malumatlarrn tahlttkasizliyi ila baglr tegkilati va
+texniki tedbirlar gOrmek, malumatlardan istifadenin ve onlarrn muhafizosinin teqkilini
+temin etmak;
+9.2.19. igtirakgrlarda va istifadaqilarda yaranmrg qatinliklerin mUeyyan edilmasi va
+zeruri talimatlandrrma iglerinin aparrlmasr ilgUn qaynar xatt tagkil etmek;
+9.2.20. Sistemin informasiya ehtiyatrnda deyigikliklari mijvafiq qeydlar etmekle
+aparmaq, bele qeydlar Ug0n esas olan senadlari mUvafiq senedler qovlu$una daxil
+etmak;
+9.2.21. Sistem trzra statistik hesabatlar hazrrlamaq ve onlar esastnda tehliller
+aparmaq;
+9.2.22. Sisteme grxrgr olan, habela onun aparrlmasrnda igtirak edan
+amakdaglannr gUclendirilmig elektron imza ile tamin etmek;
+9.2.23. d,vlat xidmatlari gostarilmasi ilQun talab edilen senadler barade melumat
+digar ddvlat informasiya ehtiyatlannda va ya sistemlerinde olduqda, hemin melumatrn
+ilkin manbedan alda olunmasrnt tamin etmak;
+9.2.24. elektron xidmotlerin "bir pancare" prinsipi asasrnda sahibin resmi internet
+sahifasi va EHiS vasitosila g6starilmesini temin etmek;
+9.2.25. istifadagilarin talabi asaslnda onlar barada malumatlarda apanlan
+dUzeligleri tesdiq va ya redd etmak;
+9.2.26. Azarbaycan Respublikasr Raqamsal inkigaf ve Neqliyyat Nazirliyinln
+asaslandrrrlmrg talebina uy!un olaraq Sistemin faaliyyetini tagkil etmek, onda doyigiklik
+ve tekmillagd irmaler aparmaq;
+9.2.27. igtirakgrlara va istifadagilara Sistemln i9 prinsipi va funksional imkanlarr
+haqqrnda molumat vermak, metodiki komak gostermek;
+9.2.28. Sisteme daxil edilmiq malumatlarda gatrgmazlrqlar agkar olunduqda,
+hamin qatrgmazlrqlann aradan qaldrrrlmast UQUn tedbirler gdrmak.
+10. igtirakgrlarrn hiiquq va vazifalari
+1 0. f . igtirakgrlarr n aga!rdakr hijquqlarr vard r r:
+10.1.1. Sistemin iginin tekmillagdirilmasi ile baglr teklifler vermek;
+10.1.2. elektron kabinet vasitosila Sistemde malumatlarr yoxlamaq, zaruri sened
+va arayrglara dair malumatlarr alda etmak va otrirmek;
+'1 0.1 .3. elektron kabinet vasitosila toplanrlan malumatlarda deyigiklik edilmesi
+barada sahiba mUraciat etmak.
+9
+10.2. igtirakgrlarrn agagrdakr vazifalari vardrr:
+1 0.2.1 . malumatlarr dol$un gakilde Sistema daxil etmak, bu melumatlarrn
+tahliikasizliyin in tamin edilmasi UgUn zaruri tadbirlar gormak;
+10.2.2. Sistema grxrgr olan, habele onun aparrlmasrnda igtirak edan
+emekdaglarrnr gtrclendirilmig elektron imza ila tamin etmak,
+10.2.3. Sistemden va oradakr melumatlardan yalnrz xidmeti meqsadlar Ugiln
+istifade etmak;
+10.2.4. sahib tarafindan Sisteme daxil edilan ve igtirakgrnrn bilavasita fealiyyeti
+ile baglr olan yeni malumat va sanodlori daim izlemak;
+10.2.5. Sistemda saxlanrlan malumatlarda agkar edilmlg sahvlerin aradan
+qaldrrrlmasr maqsedile darhal elektron qaydada sahibe melumat vermak;
+1O.2.6. melumatlarrn miihafizasini tamin edan avadanhq va proqram
+vasitelerina mUdaxila etmamak,
+10.2.7. Sistemin fealiyyatini lengidan, ona zatat vuran va ya onun faaliyyetinin
+dayanmasrna sabab ola bilen hereketlere yol vermamek;
+10.2.8. Sisteme girig imkanr veran avtomatlagdrrrlmrg iggl stansiyanrn
+qorunmasrnr temin etmak;
+10.2.9. Sisteme daxil olmaga imkan veran elektron imza vasitelerinin
+konfidensialhg rn r (mexfiliyini) pozmamaq;
+10.2.10. malumatlarrn mUhafizesi ila bagh tadbirlerin yoxlanrlmasrnr heyata
+kegiren gaxslara manea yaratmamaq.
+11. istifadagilerin hUquqlarr
+1 1.1. istifadagilerin aga!rdakr hUquqlarr vardrr:
+1 1 .1 . 1 . gahersalma ve tikinti faaliyyetine aid olan xidmetlerden istifade etmek;
+11.'l .2. geharsalma ve tikinti fealiyyeti ila bagk elektron mtlraciat etmek vo
+sanadlari elektron qaydada g0ndermak;
+11.1.3. Sistemin iginin takmillagdirilmesi ile baglr teklifler vermek.
+12. Sistemden istifade
+121. eUe edilmasi qanunla mahdudlagdrrrlan melumatlar istisna olunmaqla,
+Sistemin malumatlarrndan istifada EHiS-a inteqrasiya va elektron kabinet vasitasile
+tamin edillr.
+12.2. Olda edilmesi qanunla mehdudlagdrnlan malumatlardan "informasiya elda
+etmak haqqrnda", "Melumat azadlr$r haqqrnda" va "Dovlat sirri haqqrnda" Azarbaycan
+Respublikasrnrn qanunlarr, o cUmladan Azarbaycan Respublikasrnrn digor normativ
+htiquqi aktlarr ile mtjeyyen edilmig qaydada istifada edilir.
+12.3. Mahdudiyyet qoyulmayan malumat istenilen gexse onun sor$usuna
+esasen teqdim edilir.
+12.4. Sistemda 6danigler elektron qaydada hayata keqirilir,
+12.5. Sisteme qeyri-qanuni daxilolma ve ya mUdaxile bag verdikda, sahib
+istifadaginin Sistemdeki elektron kabineta girig hUquqlannr mehdudlagdrra biler.

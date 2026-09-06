@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+backend/venv/
+venv/
+__pycache__/
+*.pyc
+
+# Next.js build
+frontend/.next/
+frontend/out/
+frontend/build/
+.vercel/
+
+# Environment files
+.env*
+!.env.example
+
+# OS files
+.DS_Store
+*.pem
+
+# Large raw dataset (56,000+ files / 700MB)
+data/full_eqanun_corpus/
+e_qanun_links.txt
+
+# Temporary / Scratch files
+scratch/
+test-*.mjs
+test_*.mjs
+test-*.js
+test_*.js
+test_*.ts

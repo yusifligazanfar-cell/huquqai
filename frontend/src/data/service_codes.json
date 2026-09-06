@@ -1,0 +1,466 @@
+[
+  {
+    "code": 14221100,
+    "name": "İddia ərizəsinin verilməsinə görə",
+    "minRange": 0,
+    "maxRange": 0,
+    "children": [
+      {
+        "id": 0,
+        "code": 14221102,
+        "name": "İddia qiyməti 1.000 manatadək olduqda",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221103,
+        "name": "İddia qiyməti 1.000 manatdan 10.000 manatadək olduqda",
+        "isConstantAmount": false,
+        "minRange": 1000,
+        "maxRange": 10000
+      },
+      {
+        "id": 0,
+        "code": 14221104,
+        "name": "İddia qiyməti 10.000 manatdan 100.000 manatadək olduqda",
+        "isConstantAmount": false,
+        "minRange": 10000,
+        "maxRange": 100000
+      },
+      {
+        "id": 0,
+        "code": 14221105,
+        "name": "İddia qiyməti 100.000 manatdan 1.000.000 manatadək olduqda",
+        "isConstantAmount": false,
+        "minRange": 100000,
+        "maxRange": 1000000
+      },
+      {
+        "id": 0,
+        "code": 14221106,
+        "name": "İddia qiyməti 1.000.000 manatdan çox olduqda",
+        "isConstantAmount": false,
+        "minRange": 1000000,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221107,
+        "name": "Fiziki şəxs tərəfindən mülkiyyətində, istifadəsində (icarəsində) olan yaşayış evi, mənzil, həyətyanı sahənin torpağı, o cümlədən bağ sahəsi ilə bağlı ərizənin verilməsinə, habelə fiziki şəxs tərəfindən istifadəsində (icarəsində) olan kənd təsərrüfatı təyinatlı torpaqla bağlı ərizənin verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221301,
+        "name": "Qiymətləndirilməyən iddia ərizəsinin verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221302,
+        "name": "Məhkəmə əmri haqqında ərizənin verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221303,
+        "name": "Xüsusi icraat qaydasında baxılan iş üzrə ərizənin verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      }
+    ]
+  },
+  {
+    "code": 14221200,
+    "name": "İddianın predmetinə dair müstəqil tələb irəli sürən üçüncü şəxsin işə qoşulması barədə ərizənin verilməsinə görə",
+    "minRange": 0,
+    "maxRange": 0,
+    "children": [
+      {
+        "id": 0,
+        "code": 14221203,
+        "name": "İddia qiyməti 1.000 manatadək olduqda",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221204,
+        "name": "İddia qiyməti 1000 manatdan 10.000 manatadək olduqda",
+        "isConstantAmount": false,
+        "minRange": 1000,
+        "maxRange": 10000
+      },
+      {
+        "id": 0,
+        "code": 14221205,
+        "name": "İddia qiyməti 10.000 manatdan 100.000 manatadək olduqda",
+        "isConstantAmount": false,
+        "minRange": 10000,
+        "maxRange": 100000
+      },
+      {
+        "id": 0,
+        "code": 14221206,
+        "name": "İddia qiyməti 100.000 manatdan 1.000.000 manatadək olduqda",
+        "isConstantAmount": false,
+        "minRange": 100000,
+        "maxRange": 1000000
+      },
+      {
+        "id": 0,
+        "code": 14221207,
+        "name": "İddia qiyməti 1.000.000 manatdan çox olduqda",
+        "isConstantAmount": false,
+        "minRange": 1000000,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221208,
+        "name": "Fiziki şəxs tərəfindən mülkiyyətində, istifadəsində (icarəsində) olan yaşayış evi, mənzil, həyətyanı sahənin torpağı, o cümlədən bağ sahəsi ilə bağlı ərizənin verilməsinə, habelə fiziki şəxs tərəfindən istifadəsində (icarəsində) olan kənd təsərrüfatı təyinatlı torpaqla bağlı ərizənin verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221209,
+        "name": "Qiymətləndirilməyən iddia ərizəsinin, məhkəmə əmri haqqında ərizənin, xüsusi icraat qaydasında baxılan iş üzrə ərizənin verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      }
+    ]
+  },
+  {
+    "code": 14221300,
+    "name": "Müvəqqəti təminat tədbiri barədə ərizənin verilməsinə görə",
+    "minRange": 0,
+    "maxRange": 0,
+    "children": [
+      {
+        "id": 0,
+        "code": 14221304,
+        "name": "iddia qiyməti 1.000 manatadək olduqda",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221305,
+        "name": "iddia qiyməti 1.000 manatdan 10.000 manatadək olduqda",
+        "isConstantAmount": false,
+        "minRange": 1000,
+        "maxRange": 10000
+      },
+      {
+        "id": 0,
+        "code": 14221306,
+        "name": "iddia qiyməti 10.000 manatdan 100.000 manatadək olduqda",
+        "isConstantAmount": false,
+        "minRange": 10000,
+        "maxRange": 100000
+      },
+      {
+        "id": 0,
+        "code": 14221307,
+        "name": "iddia qiyməti 100.000 manatdan 1000.000 manatadək olduqda",
+        "isConstantAmount": false,
+        "minRange": 100000,
+        "maxRange": 1000000
+      },
+      {
+        "id": 0,
+        "code": 14221308,
+        "name": "İddia qiyməti 1.000.000 manatdan çox olduqda",
+        "isConstantAmount": false,
+        "minRange": 1000000,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221309,
+        "name": "Fiziki şəxs tərəfindən mülkiyyətində, istifadəsində (icarəsində) olan yaşayış evi, mənzil, həyətyanı sahənin torpağı, o cümlədən bağ sahəsi ilə bağlı ərizənin verilməsinə, habelə fiziki şəxs tərəfindən istifadəsində (icarəsində) olan kənd təsərrüfatı təyinatlı torpaqla bağlı ərizənin verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221310,
+        "name": "Qiymətləndirilməyən iddia ərizəsinin, məhkəmə əmri haqqında ərizənin, xüsusi icraat qaydasında baxılan iş üzrə ərizənin verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221313,
+        "name": "Arbitraj məhkəmələrinin qərarlarının ləğv edilməsi ilə bağlı ərizənin verilməsinə görə",
+        "isConstantAmount": false,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221314,
+        "name": "Yerli arbitraj məhkəmələrinin qərarlarının məcburi icrasının təmin edilməsi ilə bağlı ərizənin verilməsinə görə",
+        "isConstantAmount": false,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221315,
+        "name": "Xarici arbitraj məhkəmələrinin qərarlarının tanınması və icrası ilə bağlı ərizənin verilməsinə görə",
+        "isConstantAmount": false,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221312,
+        "name": "Müvəqqəti təminat tədbirlərinin tətbiqi barədə arbitraj məhkəmələrinin qərarlarının tanınması və icrası ilə bağlı ərizənin verilməsinə görə",
+        "isConstantAmount": false,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221311,
+        "name": "Arbitraja münasibətdə yardım funksiyalarının yerinə yetirilməsi ilə bağlı ərizənin verilməsinə görə",
+        "isConstantAmount": false,
+        "minRange": 0,
+        "maxRange": 0
+      }
+    ]
+  },
+  {
+    "code": 14221800,
+    "name": "İş üzrə icraata xitam verilməsi, iddianın baxılmamış saxlanılması və məhkəmə cərimələrinin qoyulması, müvəqqəti təminat tədbirinin tətbiqi və ya bundan imtina barədə qərardaddan şikayət verilməsinə görə",
+    "minRange": 0,
+    "maxRange": 0,
+    "children": [
+      {
+        "id": 0,
+        "code": 14221800,
+        "name": "İş üzrə icraata xitam verilməsi, iddianın baxılmamış saxlanılması və məhkəmə cərimələrinin qoyulması, müvəqqəti təminat tədbirinin tətbiqi və ya bundan imtina barədə qərardaddan şikayət verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      }
+    ]
+  },
+  {
+    "code": 14221500,
+    "name": "Vətəndaşlıq vəziyyəti aktlarının qeydə alınmasına görə",
+    "minRange": 0,
+    "maxRange": 0,
+    "children": [
+      {
+        "id": 0,
+        "code": 14221500,
+        "name": "Nikahın qeydə alınması üçün",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221501,
+        "name": "Yetkinlik yaşına çatmamış ümumi uşaqları olmayan ər-arvadın qarşılıqlı razılığı əsasında",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221502,
+        "name": "Məhkəmə qətnaməsi əsasında (qətnamədə dövlət rüsumunun tərəflərdən hansının ödəməli olduğu göstərilmədikdə, qeydiyyat üçün birinci müraciət etmiş tərəfdən)",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221503,
+        "name": "Digər tərəf müəyyən edilmiş qaydada xəbərsiz itkin düşmüş, yaxud fəaliyyət qabiliyyəti olmayan şəxs hesab edilmişsə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221504,
+        "name": "Soyadın, adın və ata adının dəyişdirilməsinin qeydə alınması üçün",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221505,
+        "name": "Vətəndaşlıq vəziyyəti akt qeydlərində dəyişiklik edilməsi və onların bərpası ilə əlaqədar şəhadətnamələrin verilməsi üçün",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221506,
+        "name": "Vətəndaşlıq vəziyyəti aktlarının qeydə alınması barədə təkrar şəhadətnamələrin verilməsi üçün",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      }
+    ]
+  },
+  {
+    "code": 14221400,
+    "name": "Apellyasiya, kassasiya və ya əlavə kassasiya şikayətinin, qanuni qüvvəyə minmiş məhkəmə aktlarına yeni açılmış hallar üzrə yenidən baxılması üçün ərizənin verilməsinə görə",
+    "minRange": 0,
+    "maxRange": 0,
+    "children": [
+      {
+        "id": 0,
+        "code": 14221415,
+        "name": "Apellyasiya və kassasiya şikayətlərinə görə (iddia qiyməti 1.000 manatadək olduqda)",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221424,
+        "name": "Qanuni qüvvəyə minmiş məhkəmə aktlarına yeni açılmış hallar üzrə yenidən baxılması üçün ərizənin verilməsinə görə İddia qiyməti 10.000 manatdan 100.000 manatadək olduqda",
+        "isConstantAmount": false,
+        "minRange": 10000,
+        "maxRange": 100000
+      },
+      {
+        "id": 0,
+        "code": 14221425,
+        "name": "Qanuni qüvvəyə minmiş məhkəmə aktlarına yeni açılmış hallar üzrə yenidən baxılması üçün ərizənin verilməsinə görə İddia qiyməti 100.000 manatdan 1.000.000 manatadək olduqda",
+        "isConstantAmount": false,
+        "minRange": 100000,
+        "maxRange": 1000000
+      },
+      {
+        "id": 0,
+        "code": 14221426,
+        "name": "Qanuni qüvvəyə minmiş məhkəmə aktlarına yeni açılmış hallar üzrə yenidən baxılması üçün ərizənin verilməsinə görə İddia qiyməti 1.000.000 manatdan çox olduqda",
+        "isConstantAmount": false,
+        "minRange": 1000000,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221427,
+        "name": "Fiziki şəxs tərəfindən mülkiyyətində, istifadəsində (icarəsində) olan yaşayış evi, mənzil, həyətyanı sahənin torpağı, o cümlədən bağ sahəsi ilə bağlı ərizənin verilməsinə, habelə fiziki şəxs tərəfindən istifadəsində (icarəsində) olan kənd təsərrüfatı təyinatlı torpaqla bağlı ərizənin verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221428,
+        "name": "Qanuni qüvvəyə minmiş məhkəmə aktlarına yeni açılmış hallar üzrə yenidən baxılması üçün ərizənin verilməsinə görə Qiymətləndirilməyən iddia ərizəsinin, məhkəmə əmri haqqında ərizənin, xüsusi icraat qaydasında baxılan iş üzrə ərizənin verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221416,
+        "name": "Apellyasiya və kassasiya şikayətlərinə görə (iddia qiyməti 1.000 manatdan 10.000 manatadək olduqda)",
+        "isConstantAmount": false,
+        "minRange": 1000,
+        "maxRange": 10000
+      },
+      {
+        "id": 0,
+        "code": 14221417,
+        "name": "Apellyasiya və kassasiya şikayətlərinə görə (iddia qiyməti 10.000 manatdan 100.000 manatadək olduqda)",
+        "isConstantAmount": false,
+        "minRange": 10000,
+        "maxRange": 100000
+      },
+      {
+        "id": 0,
+        "code": 14221418,
+        "name": "Apellyasiya və kassasiya şikayətlərinə görə (iddia qiyməti 100.000 manatdan 1.000.000 manatadək olduqda)",
+        "isConstantAmount": false,
+        "minRange": 100000,
+        "maxRange": 1000000
+      },
+      {
+        "id": 0,
+        "code": 14221419,
+        "name": "Apellyasiya və kassasiya şikayətlərinə görə (iddia qiyməti 1.000.000 manatdan çox olduqda)",
+        "isConstantAmount": false,
+        "minRange": 1000000,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221420,
+        "name": "Apellyasiya və kassasiya şikayətlərinə görə Fiziki şəxs tərəfindən mülkiyyətində, istifadəsində (icarəsində) olan yaşayış evi, mənzil, həyətyanı sahənin torpağı, o cümlədən bağ sahəsi ilə bağlı ərizənin verilməsinə, habelə fiziki şəxs tərəfindən istifadəsində (icarəsində) olan kənd təsərrüfatı təyinatlı torpaqla bağlı ərizənin verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221421,
+        "name": "Apellyasiya və kassasiya şikayətlərinə görə Qiymətləndirilməyən iddia ərizəsinin, məhkəmə əmri haqqında ərizənin, xüsusi icraat qaydasında baxılan iş üzrə ərizənin verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221422,
+        "name": "Qanuni qüvvəyə minmiş məhkəmə aktlarına yeni açılmış hallar üzrə yenidən baxılması üçün ərizənin verilməsinə görə iddia qiyməti 1.000 manatadək olduqda",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      },
+      {
+        "id": 0,
+        "code": 14221423,
+        "name": "Qanuni qüvvəyə minmiş məhkəmə aktlarına yeni açılmış hallar üzrə yenidən baxılması üçün ərizənin verilməsinə görə iddia qiyməti 1.000 manatdan 10.000 manatadək olduqda",
+        "isConstantAmount": false,
+        "minRange": 1000,
+        "maxRange": 10000
+      }
+    ]
+  },
+  {
+    "code": 14221900,
+    "name": "Məhkəmə aktının surətinin təkrarən verilməsinə görə",
+    "minRange": 0,
+    "maxRange": 0,
+    "children": [
+      {
+        "id": 0,
+        "code": 14221900,
+        "name": "Məhkəmə aktının surətinin təkrar verilməsinə görə",
+        "isConstantAmount": true,
+        "minRange": 0,
+        "maxRange": 0
+      }
+    ]
+  }
+]

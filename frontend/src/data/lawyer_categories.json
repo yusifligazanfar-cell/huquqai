@@ -1,0 +1,214 @@
+[
+  {
+    "id": "criminal-law",
+    "icon": "⚖️",
+    "name_az": "Cinayət Hüququ",
+    "name_en": "Criminal Law",
+    "description": "Cinayət işləri üzrə müdafiə, istintaq və məhkəmə proseslərində təmsilçilik.",
+    "examples": [
+      "Mənə qarşı cinayət işi açılıb, müdafiəçiyə ehtiyacım var",
+      "Dələduzluqla üzləşmişəm və şikayət vermək istəyirəm",
+      "Yaxınım həbs olunub, vəkil axtarıram"
+    ]
+  },
+  {
+    "id": "family-law",
+    "icon": "👨‍👩‍👧",
+    "name_az": "Ailə Hüququ",
+    "name_en": "Family Law",
+    "description": "Nikahın pozulması, aliment, uşaqların qəyyumluğu və əmlak bölgüsü məsələləri.",
+    "examples": [
+      "Həyat yoldaşımdan boşanmaq və əmlakı bölmək istəyirəm",
+      "Uşağım üçün aliment tələb etmək istəyirəm",
+      "Uşağın mənimlə qalması üçün məhkəməyə müraciət etməliyəm"
+    ]
+  },
+  {
+    "id": "civil-law",
+    "icon": "📜",
+    "name_az": "Mülki Hüquq",
+    "name_en": "Civil Law",
+    "description": "Şəxslər arası borc, ziyanın ödənilməsi, vərəsəlik və mülki müqavilə mübahisələri.",
+    "examples": [
+      "Borc verdiyim pulu geri ala bilmirəm",
+      "Mənə dəymiş maddi və mənəvi zərərin ödənilməsini istəyirəm",
+      "Mirasın (vərəsəliyin) rəsmiləşdirilməsində problemim var"
+    ]
+  },
+  {
+    "id": "corporate-law",
+    "icon": "🏢",
+    "name_az": "Kommersiya və Korporativ Hüquq",
+    "name_en": "Corporate and Commercial Law",
+    "description": "Şirkətlərin qeydiyyatı, biznes müqavilələri, payçıların hüquqları və ləğv prosesi.",
+    "examples": [
+      "Yeni şirkət (MMC) açmaq və qanuni sənədlərini hazırlamaq istəyirəm",
+      "Şəriklərimlə aramızda yaranmış biznes mübahisəsini həll etməliyəm",
+      "Tərəfdaş şirkətlə müqavilə bağlamazdan əvvəl hüquqi yoxlama lazımdır"
+    ]
+  },
+  {
+    "id": "labor-law",
+    "icon": "💼",
+    "name_az": "Əmək Hüququ",
+    "name_en": "Labor Law",
+    "description": "İşdən qanunsuz çıxarılma, əmək haqqının ödənilməməsi və əmək mübahisələri.",
+    "examples": [
+      "Məni qanunsuz olaraq işdən çıxarıblar, bərpa olunmaq istəyirəm",
+      "İşəgötürən aylarla maaşımı vermir",
+      "İş yerində xəsarət almışam və təzminat tələb edirəm"
+    ]
+  },
+  {
+    "id": "real-estate-law",
+    "icon": "🏠",
+    "name_az": "Daşınmaz Əmlak Hüququ",
+    "name_en": "Real Estate Law",
+    "description": "Ev, torpaq və obyektlərin alqı-satqısı, sənədləşdirilməsi (çıxarış) və icarə mübahisələri.",
+    "examples": [
+      "Ev almışam amma sənədləşdirmədə (kupça) problem yaranıb",
+      "Torpaq sahəmin sərhədləri ilə bağlı qonşu ilə mübahisəm var",
+      "İcarəçi obyektin pulunu ödəmir və çıxmaq istəmir"
+    ]
+  },
+  {
+    "id": "administrative-law",
+    "icon": "🏛️",
+    "name_az": "İnzibati Hüquq",
+    "name_en": "Administrative Law",
+    "description": "Dövlət orqanlarının, bələdiyyələrin qərarlarından şikayət və inzibati cərimələr.",
+    "examples": [
+      "Dövlət qurumunun qərarından məhkəməyə şikayət etmək istəyirəm",
+      "Mənə yazılmış haqsız cərimənin ləğv olunmasını istəyirəm",
+      "Sənədlərimi qəbul etməyən məmurun hərəkətindən şikayət verməliyəm"
+    ]
+  },
+  {
+    "id": "tax-law",
+    "icon": "💰",
+    "name_az": "Vergi Hüququ",
+    "name_en": "Tax Law",
+    "description": "Vergi yoxlamaları, cərimələr, vergi öhdəlikləri və hesabatlarla bağlı mübahisələr.",
+    "examples": [
+      "Şirkətimə asassız yerə böyük məbləğdə vergi cəriməsi yazılıb",
+      "Vergi yoxlaması zamanı hüquqlarımın qorunması üçün vəkil lazımdır",
+      "Gömrükdə vergi və rüsumların düzgün hesablanmaması ilə bağlı problemim var"
+    ]
+  },
+  {
+    "id": "banking-finance-law",
+    "icon": "💳",
+    "name_az": "Bank və Maliyyə Hüququ",
+    "name_en": "Banking and Finance Law",
+    "description": "Kredit müqavilələri, zaminlik, ipoteka, və banklarla yaranan problemlər.",
+    "examples": [
+      "Bank məni məhkəməyə verib, kredit borcuna görə əmlakımı müsadirə etmək istəyir",
+      "Zamin olduğum şəxs krediti ödəmir, bank məndən tələb edir",
+      "Sığorta şirkəti mənə düşən ödənişi verməkdən imtina edir"
+    ]
+  },
+  {
+    "id": "international-law",
+    "icon": "🌍",
+    "name_az": "Beynəlxalq Hüquq",
+    "name_en": "International Law",
+    "description": "Xarici ölkələrdəki hüquqi problemlər, beynəlxalq ticarət və xarici qərarların tanınması.",
+    "examples": [
+      "Xaricdəki şirkətlə olan müqavilə üzrə beynəlxalq məhkəmədə işim var",
+      "Xarici məhkəmənin qərarının Azərbaycanda icra olunmasını istəyirəm"
+    ]
+  },
+  {
+    "id": "echr",
+    "icon": "🇪🇺",
+    "name_az": "Avropa İnsan Hüquqları Məhkəməsi (AİHM)",
+    "name_en": "European Court of Human Rights (ECHR)",
+    "description": "Daxili məhkəmələrdə pozulmuş hüquqların AİHM səviyyəsində bərpası.",
+    "examples": [
+      "Yerli məhkəmələrdə bütün instansiyaları uduzmuşam, Strasburqa şikayət yazmaq istəyirəm",
+      "Mülkiyyət hüququmun dövlət tərəfindən pozulduğunu düşünürəm"
+    ]
+  },
+  {
+    "id": "migration-law",
+    "icon": "🛂",
+    "name_az": "Miqrasiya və Vətəndaşlıq",
+    "name_en": "Migration and Citizenship Law",
+    "description": "Oturum izni, deportasiya, vətəndaşlıq alınması və xaricilərin hüquqları.",
+    "examples": [
+      "Azərbaycanda müvəqqəti yaşama icazəsi (oturum) almaq istəyirəm",
+      "Ölkədən deportasiya olunma təhlükəm var",
+      "Vətəndaşlıq almaq üçün sənədlərin toplanması və təqdimatı lazımdır"
+    ]
+  },
+  {
+    "id": "execution-bankruptcy-law",
+    "icon": "📑",
+    "name_az": "İcra və İflas Hüququ",
+    "name_en": "Execution and Bankruptcy Law",
+    "description": "Məhkəmə qərarlarının məcburi icrası, borcun alınması və şirkətlərin iflası.",
+    "examples": [
+      "Məhkəməni udmuşam, amma qarşı tərəf pulu ödəmir, icra məmuruna müraciət etməliyik",
+      "Şirkətimi rəsmi olaraq müflis (bankrot) elan etmək istəyirəm"
+    ]
+  },
+  {
+    "id": "intellectual-property",
+    "icon": "🛡️",
+    "name_az": "İntellektual Mülkiyyət",
+    "name_en": "Intellectual Property",
+    "description": "Müəllif hüquqları, ticarət nişanları (brend) və patentlərin qorunması.",
+    "examples": [
+      "Mənim brendimin adını başqa şirkət qanunsuz istifadə edir",
+      "Yazdığım kitabın müəllif hüquqları pozulub",
+      "İxtiram üçün patent almaq istəyirəm"
+    ]
+  },
+  {
+    "id": "it-cyber-law",
+    "icon": "💻",
+    "name_az": "İT və Kiber Hüquq",
+    "name_en": "IT and Cyber Law",
+    "description": "Elektron ticarət, kibercinayətlər, fərdi məlumatların qorunması və proqram təminatı müqavilələri.",
+    "examples": [
+      "Startapım üçün istifadəçi razılaşması (Terms of Service) və gizlilik siyasəti (Privacy Policy) lazımdır",
+      "Fərdi məlumatlarım internetdə qanunsuz yayılıb",
+      "Saytımdan məlumatları icazəsiz kopyalayıblar"
+    ]
+  },
+  {
+    "id": "traffic-transport-law",
+    "icon": "🚗",
+    "name_az": "Yol-Nəqliyyat Hüququ",
+    "name_en": "Traffic and Transport Law",
+    "description": "Yol qəzaları, sığorta ödənişləri və sürücülük hüququndan məhrumetmə məsələləri.",
+    "examples": [
+      "Avtomobil qəzasına düşmüşəm, sığorta zərəri qarşılamır",
+      "Sürücülük vəsiqəmi haqsız yerə əlimdən alıblar",
+      "Radar və ya patrulun yazdığı inzibati cərimə ilə razı deyiləm"
+    ]
+  },
+  {
+    "id": "environmental-law",
+    "icon": "🌱",
+    "name_az": "Ekologiya və Torpaq Hüququ",
+    "name_en": "Environmental and Land Law",
+    "description": "Ətraf mühitin qorunması, sənaye fəaliyyətinin ekoloji nəticələri və torpaq təyinatı məsələləri.",
+    "examples": [
+      "Torpağımın təyinatını kənd təsərrüfatından sənayeyə dəyişmək istəyirəm",
+      "Qonşu zavod ətraf mühiti çirkləndirərək təsərrüfatıma ziyan vurur"
+    ]
+  },
+  {
+    "id": "consumer-rights",
+    "icon": "🛒",
+    "name_az": "İstehlakçı Hüquqları",
+    "name_en": "Consumer Rights",
+    "description": "Keyfiyyətsiz məhsul və xidmətlərə görə kompensasiya və istehlakçıların müdafiəsi.",
+    "examples": [
+      "Mağazadan aldığım bahalı texnika xarab çıxdı, amma geri qaytarmırlar",
+      "Göstərilən xidmət müqavilədə qeyd olunan keyfiyyətdə deyil",
+      "Tibbi xidmət (və ya kosmetoloji) nəticəsində sağlamlığıma ziyan dəyib"
+    ]
+  }
+]
