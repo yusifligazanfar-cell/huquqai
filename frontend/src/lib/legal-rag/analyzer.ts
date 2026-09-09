@@ -34,9 +34,18 @@ export function analyzeQuery(query: string, history?: { role: string; content: s
   let targetArticleNum: string | null = null;
   let targetPart: string | null = null;
 
-  const explicitArtMatch = cleanQuery.match(/(?:madd[eə]\s*)(\d+(?:\.\d+)*)/) || cleanQuery.match(/^(\d+)(?:\-c[iıuü]|\-cu|\-cü|\-cı|\.)/);
+  const explicitArtMatch = cleanQuery.match(/(?:madd[eə]\s*)(\d+(?:\.\d+)*)/i);
   if (explicitArtMatch) {
     targetArticleNum = explicitArtMatch[1];
+  } else {
+    // Only match beginning number if NOT a 4-digit year like 2026-cı il
+    const prefixArtMatch = cleanQuery.match(/^(\d+)(?:\-c[iıuü]|\-cu|\-cü|\-cı|\.)\s*(?!il\b|ild[eə]\b)/i);
+    if (prefixArtMatch) {
+      const num = parseInt(prefixArtMatch[1], 10);
+      if (num < 1900 || num > 2100) {
+        targetArticleNum = prefixArtMatch[1];
+      }
+    }
   }
 
   const partMatch = cleanQuery.match(/(?:bənd|bend|hissə|hisse|yarımbənd)\s*([a-zçşəğıöü\d\.]+)/i) || cleanQuery.match(/(\d+)\s*([a-zçşəğıöü])\s*bənd/i);
@@ -61,7 +70,9 @@ export function analyzeQuery(query: string, history?: { role: string; content: s
   for (const concept of LEGAL_CONCEPTS) {
     const isTriggered = concept.triggerPhrases.some(phrase => {
       const normPhrase = normalizeAz(phrase);
-      return norm.includes(normPhrase) || normPhrase.split(' ').every(w => norm.includes(w));
+      if (norm.includes(normPhrase)) return true;
+      const phraseWords = normPhrase.split(' ').filter(w => w.length > 3);
+      return phraseWords.length >= 2 && phraseWords.every(w => norm.includes(w));
     });
 
     if (isTriggered) {

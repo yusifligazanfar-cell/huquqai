@@ -57,21 +57,22 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
 
 DİQQƏT - ƏSAS PRİNSİP: AI HEÇ VAXT MADDƏ VƏ MƏNBƏ UYDURA BİLMƏZ:
 1. YALNIZ KONTEX-DƏ OLAN HÜQUQİ MƏNBƏLƏRƏ ƏSASLAN:
-- Kontex-də olmayan heç bir qanun, maddə nömrəsi, hissə, bənd və ya URL uydurma!
-- Sualın mövzusu ilə birbaşa əlaqəsi olmayan dəxilsiz maddələri qətiyyən əlavə etmə.
-- Məsələnin həlli üçün Kontex-də kifayət qədər əsas yoxdursa, bunu açıq şəkildə bildir.
+- Kontex-də olmayan heç bir qanun, fərman, sərəncam nömrəsi, məbləğ, tarix, maddə nömrəsi, hissə, bənd və ya URL uydurma!
+- Sualın mövzusu ilə birbaşa əlaqəsi olmayan dəxilsiz maddələri (məsələn, 'Maddə 1' kimi əlaqəsiz maddələri) qətiyyən istinadlara əlavə etmə.
+- Məsələnin həlli üçün Kontex-də kifayət qədər əsas yoxdursa və ya qanunvericilikdə hələ dəyişiklik yoxdursa, bunu birbaşa və açıq şəkildə bildir.
 
-2. RƏQƏMLİ FAKTLAR, CƏRİMƏLƏR VƏ MÜDDƏTLƏRİN DƏQİQ GÖSTƏRİLMƏSİ (MÜTLƏQ TƏLƏB):
-- Əgər sual cərimə, rüsum, müddət, faiz və ya kompensasiya ilə bağlıdırsa, məbləğləri və müddətləri HƏM RƏQƏMLƏ, HƏM DƏ YAZI İLƏ açıq qeyd et! (Məsələn: '300 (üç yüz) manat cərimə', '6 (altı) aydan artıq müddətdə', '1 (bir) il ərzində təkrar törədildikdə 700 (yeddi yüz) manat' və s.).
-- Təkrar törədilmə, ictimai işlər (məsələn: '60-dan 100 saatadək') və alternativ sanksiyaları tam detallı yaz.
-- Suallara ümumi və mücərrəd sözlərlə deyil, qanundakı dəqiq rəqəmlər, şərtlər və tələblərlə tam dolğun cavab ver.
+2. RƏQƏMLİ FAKTLAR, MƏBLƏĞLƏR, TARİXLƏR VƏ MÜDDƏTLƏRİN DƏQİQ GÖSTƏRİLMƏSİ (MÜTLƏQ TƏLƏB):
+- Əgər sual minimum əmək haqqı, pensiya, cərimə, rüsum, müddət və ya faizlə bağlıdırsa:
+  * Məbləği yalnız təqdim olunan rəsmi aktda/kontekstdə göstərilən ən son rəsmi məbləğlə qeyd et (Məsələn: Azərbaycan Respublikası Prezidentinin 2023-cü il 5 yanvar tarixli 3708 nömrəli Sərəncamına əsasən minimum aylıq əməkhaqqı 345 (üç yüz qırx beş) manat müəyyən edilmişdir).
+  * Kontekstdəki rəsmi aktın nömrəsini, tarixini və qüvvəyə minmə vaxtını dəqiqliklə yaz.
+  * Məbləğləri və müddətləri HƏM RƏQƏMLƏ, HƏM DƏ YAZI İLƏ açıq qeyd et!
 
 3. MƏHKƏMƏ AİDİYYƏTİNİN VƏ PROSESİN TƏYİNİ:
 - Əgər məsələ məhkəmə qaydasında həll edilməlidirsə, iddia ərizəsi veriləcək konkret məhkəməni və məhkəmə qərarı olmadan çıxarılmanın yolverilməzliyini aydın vurğula.
 
 4. İSTİNADLAR VƏ MƏNBƏ TƏQDİMATI:
-- Xarici saytlara çıxış linki tələb olunmur; istifadəçi bütün mənbə mətnlərini birbaşa saytın daxili 'Mətnə bax' interfeysində oxuyur.
-- 'İstinadlar' blokunda yalnız dəqiq Qanunun adını və Maddə nömrəsini göstər (məs: 'Azərbaycan Respublikasının Mənzil Məcəlləsi - Maddə 89').
+- Yalnız suala birbaşa cavab verən rəsmi aktlara və ya konkret maddələrə istinad et (məsələn: 'Azərbaycan Respublikası Prezidentinin 2023-cü il 5 yanvar tarixli 3708 nömrəli Sərəncamı' və ya 'Azərbaycan Respublikasının Əmək Məcəlləsi - Maddə 155').
+- Ümumi, əlaqəsiz və ya təsadüfi maddələri istinad kimi göstərmə!
 
 # JSON CAVAB STRUKTURU:
 MÜTLƏQ aşağıdakı JSON formatında cavab ver:
@@ -101,7 +102,7 @@ ${query}`;
     // 5. CALL AI MODEL
     const isOpr = apiKey.startsWith("sk-or-v1-")
     const endpoint = isOpr ? "https://openrouter.ai/api/v1/chat/completions" : "https://api.openai.com/v1/chat/completions"
-    let reqModel = isOpr ? "openai/gpt-4o" : "gpt-4o"
+    let reqModel = isOpr ? "openai/gpt-4o-mini" : "gpt-4o-mini"
     
     const headers = {
       "Authorization": `Bearer ${apiKey}`,
@@ -109,7 +110,7 @@ ${query}`;
       ...(isOpr ? { "HTTP-Referer": "https://huquqai.az", "X-Title": "LexAZ" } : {})
     }
     
-    let body = {
+    let body: any = {
       model: reqModel,
       response_format: { type: "json_object" },
       max_tokens: 1500,
@@ -118,7 +119,7 @@ ${query}`;
         ...history,
         { role: "user", content: userPrompt }
       ],
-      temperature: 0.3,
+      temperature: 0.2,
     }
     
     let response = await fetch(endpoint, {
@@ -128,7 +129,7 @@ ${query}`;
     })
 
     if (response.status === 402 && isOpr) {
-      body.model = "openrouter/free"
+      body.model = "openrouter/auto"
       response = await fetch(endpoint, {
         method: "POST",
         headers,

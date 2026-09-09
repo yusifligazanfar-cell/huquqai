@@ -112,9 +112,13 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     id: "labor_salary_delay",
     domain: "Əmək hüququ",
     primaryLawId: "emek",
-    triggerPhrases: ["maas gecikdiril", "emek haqqi gecikir", "maas verilmir", "maasimi alabilmirem", "emekhaqqi odenilmir"],
-    expandedTerms: ["emek haqqinin odenilmesi muddetleri", "odenilmesinin gecikdirilmesine gore isegoturenin mesuliyyeti", "faiz", "her gecikdirilen gun"],
-    priorityArticles: ["172", "178", "179", "154", "157"]
+    triggerPhrases: [
+      "maas gecikdiril", "emek haqqi gecikir", "maas verilmir", "maasimi alabilmirem", "emekhaqqi odenilmir",
+      "maasini vaxtinda", "maas vaxtinda", "emek haqqi vaxtinda", "maas odemir", "maasini odemirse",
+      "maasimi odemir", "maas gecikir", "emek haqqinin odenilmesi", "emek haqqini odemirse"
+    ],
+    expandedTerms: ["emek haqqinin odenilmesi muddetleri", "odenilmesinin gecikdirilmesine gore isegoturenin mesuliyyeti", "faiz", "her gecikdirilen gun", "azı bir faizi"],
+    priorityArticles: ["172", "173", "174", "178", "179", "154", "157"]
   },
   {
     id: "labor_vacation",
@@ -176,6 +180,21 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
       "kirayecinin huquqlari"
     ],
     priorityArticles: ["89", "90", "88", "82", "30", "1"]
+  },
+  {
+    id: "minimum_wage",
+    domain: "Əmək hüququ",
+    primaryLawId: "emek",
+    triggerPhrases: [
+      "minimum emek haqqi", "minimum ayliq emekhaqqi", "minimum maas", "minimum emekhaqqi", "en az maas",
+      "minimum emek haqqinin meblegi", "minimum emek haqqi necedir"
+    ],
+    expandedTerms: [
+      "minimum emek haqqi", "minimum ayliq emekhaqqinin meblegi", "emekhaqqinin minimum heddi",
+      "isegoturen terefinden minimum emekhaqqindan az olmamaq serti", "345 manat", "serencam",
+      "ehalinin sosial rifahinin yaxsilasdirilmasi sahesinde elave tedbirler haqqinda"
+    ],
+    priorityArticles: ["155", "156", "154", "157"]
   }
 ];
 
