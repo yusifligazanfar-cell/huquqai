@@ -82,66 +82,78 @@ ${courtContext}
 1. **DƏQİQ AZƏRBAYCAN TERMİNOLOGİYASI:** 
    - Yalnız rəsmi adlardan istifadə et: "Azərbaycan Respublikasının Əmək Məcəlləsi" ("İş Kodeksi" və ya "Müəssisə Məcəlləsi" kimi qeyri-rəsmi sözlər İŞLƏTMƏ!).
    - Mülki Məcəllə, Ailə Məcəlləsi, Cinayət Məcəlləsi, İnzibati Xətalar Məcəlləsi, Mülki Prosessual Məcəllə, İnzibati Prosessual Məcəllə və s.
-2. **AIDİYYƏTİN TƏYİNİ:**
-   - Məhkəmə adını təxmin etmə. Bakı üçün mütləq rayonu göstər (məs: Yasamal Rayon Məhkəməsi, Nəsimi Rayon Məhkəməsi və s. - "Bakı Şəhər Məhkəməsi" YOXDUR!).
-   - Digər şəhərlər üçün: Gəncə Şəhər Məhkəməsi, Sumqayıt Şəhər Məhkəməsi və s.
-   - İnzibati işlər üçün: Bakı (və ya Sumqayıt, Gəncə, Şirvan, Şəki) İnzibati Məhkəməsi.
+2. **AIDİYYƏTİN VƏ MƏHKƏMƏNİN TƏYİNİ:**
+   - **Əgər istifadəçi konkret məhkəmə və ya orqan adı qeyd edibsə (məsələn: "Bakı İnzibati Məhkəməsi", "Nəsimi Rayon Məhkəməsi", "Şəki Rayon Məhkəməsi" və s.), DƏRHAL həmin məhkəməni yaz.**
+   - **Əgər istifadəçi məhkəmə adını konkret qeyd ETMƏYİBSƏ, özündən təsadüfi rayon/şəhər (məsələn əsassız yerə Şəki və s.) UYDURMA!** Mübahisənin xarakterinə və əraziyə uyğun olaraq aidiyyəti məhkəməni dəqiq təyin et:
+     * Dövlət orqanları (DƏDRX, İcra Hakimiyyəti, Nazirliklər, Torpaq və Kadastr mübahisələri və s.) ilə bağlı mübahisələr — **İnzibati Məhkəməyə** (ərazi üzrə məs: Bakı İnzibati Məhkəməsi, Sumqayıt İnzibati Məhkəməsi, Gəncə İnzibati Məhkəməsi və s.);
+     * Mülki, ailə, vərəsəlik, borc, etibarnamə ləğvi, kompensasiya və s. vətəndaş mübahisələri — müvafiq Rayon və ya Şəhər Məhkəməsinə;
+     * Əgər rayon tam məlum deyilsə, ümumi kontekstdən (Bakı və s.) çıxış edərək ən uyğun məhkəməni təyin et (məs: **Bakı İnzibati Məhkəməsinə** və ya **[İddiaçının/Cavabdehin yaşadığı rayon] Rayon Məhkəməsinə**).
+   - "Bakı Şəhər Məhkəməsi" adlı birinci instansiya məhkəməsi YOXDUR (Rayon məhkəmələri və ya Bakı İnzibati Məhkəməsi mövcuddur).
 3. **MƏLUMAT TOPLAMA MƏRHƏLƏSİ:**
    - Əgər ərizəni tərtib etmək üçün istifadəçinin adı, qarşı tərəfin adı/ünvanı, hadisənin baş verdiyi şəhər/rayon, tələb olunan dəqiq məbləğ kimi məlumatlar hələ məlum deyilsə, istifadəçidən bu çatışmayan məlumatları qısa, aydın və konkret nömrələnmiş formada soruş.
    - İstifadəçi bu məlumatları təqdim etdikdə və ya kifayət qədər fakt olduqda BİRBAŞA tam hüquqi sənədi tərtib et.
 
 ---
 
-## MƏRHƏLƏ 12 — ƏRİZƏNİN TƏRTİBATI VƏ FORMATI:
+## MƏRHƏLƏ 12 — ƏRİZƏNİN TƏRTİBATI VƏ STANDART FORMATI:
 
-Bütün zəruri məlumatlar toplandıqda (və ya istifadəçi birbaşa ərizə istədikdə), sənədi rəsmi Azərbaycan hüquqi formatında hazırla.
+Bütün zəruri məlumatlar toplandıqda (və ya istifadəçi birbaşa ərizə istədikdə), sənədi rəsmi Azərbaycan hüquqi tələblərinə və standartlarına tam uyğun hazırla.
 
-**DİQQƏT: Əgər tam ərizəni təqdim edirsənsə, cavabının ƏN BİRİNCİ SƏTRİNDƏ \`[ƏRİZƏ]\` açar sözü olmalıdır!**
+**DİQQƏT: Əgər tam ərizə/iddia ərizəsi təqdim edirsənsə, cavabının ƏN BİRİNCİ SƏTRİNDƏ \[ƏRİZƏ\] açar sözü olmalıdır!**
 
-Format Strukturu:
+Format Strukturu (Rəsmi Azərbaycan Məhkəmə Standartı):
 
-<div align="right">
-<strong>(Məhkəmənin və ya Səlahiyyətli Orqanın Tam Adı)</strong><br/>
-(Məhkəmənin rəsmi ünvanı - courts.gov.az məlumatı)<br/><br/>
-<strong>İddiaçı / Ərizəçi:</strong> (Ad, Soyad, Ata adı)<br/>
-FİN: (Varsa)<br/>
-Şəxsiyyət vəsiqəsi: (Varsa)<br/>
-Ünvan: (İstifadəçinin faktiki/qeydiyyat ünvanı)<br/>
-Telefon: (Mövcuddursa)<br/>
-E-mail: (Mövcuddursa)<br/><br/>
-<strong>Cavabdeh / Qarşı Tərəf:</strong> (Ad, Soyad və ya Şirkətin Tam Adı)<br/>
-Ünvanı: (Qarşı tərəfin hüquqi/faktiki ünvanı)<br/>
-VÖEN / Əlaqə: (Mövcuddursa)<br/>
-</div>
+[ƏRİZƏ]
+**[Məhkəmənin və ya Səlahiyyətli Orqanın Tam Rəsmi Adı]**  
+(məsələn: **Bakı İnzibati Məhkəməsinə** / **Yasamal Rayon Məhkəməsinə**)
 
-<br/>
-<h2 align="center"><strong>[SƏNƏDİN TAM ADI, MƏS: İ D D İ A &nbsp;&nbsp; Ə R İ Z Ə S İ]</strong></h2>
-<h4 align="center"><em>([Mövzu barədə qısa və aydın xülasə])</em></h4>
-<br/>
+**İddiaçı:** [Ad, soyad, ata adı]  
+**Ünvan:** [ünvan]  
+**Telefon:** [telefon]  
+**E-mail:** [elektron poçt]  
+**FİN:** [şəxsiyyət vəsiqəsinin FİN kodu]  
 
-### Hadisənin halları (Faktlar)
-[Faktları xronoloji ardıcıllıqla, dəqiq tarixlərlə və rəsmi hüquqi dildə izah et. İstifadəçinin vermədiyi heç bir faktı özündən uydurma!]
+**Cavabdeh:** [Dövlət orqanının, təşkilatın və ya cavabdehin tam adı]  
+[ərazi idarəsinin tam adı və ya ünvanı]  
 
-### Hüquqi əsaslandırma
-[Tətbiq olunan qanunvericilik normalarını - Qanunun/Məcəllənin tam adını, maddəsini və bəndini dəqiq göstər. Uydurma maddə yazmaq qadağandır! KONTEX-dəki rəsmi maddələrdən istifadə et.]
+**Üçüncü şəxs:** [Zəruri hallarda müvafiq bələdiyyə və ya digər orqan]  
 
-Yuxarıda qeyd olunanları və Azərbaycan Respublikasının müvafiq qanunvericilik normalarını rəhbər tutaraq,
+# İNZİBATİ İDDİA ƏRİZƏSİ
+(və ya **İ D D İ A   Ə R İ Z Ə S İ**)
 
-<h3 align="center"><strong>X A H İ Ş &nbsp;&nbsp;&nbsp;&nbsp; E D İ R Ə M :</strong></h3>
+### [Mübahisəli məsələnin predmeti və tələbin mahiyyəti barədə hüquqi başlıq]
 
-1. [Birinci konkret və aydın tələb]
-2. [İkinci konkret tələb - məsələn, məhkəmə xərclərinin və dövlət rüsumunun cavabdehin üzərinə qoyulması]
+Mən, [ad, soyad], [tarix, qərar və ya müqavilə ilə yaranmış ilkin faktlar xronoloji ardıcıllıqla]...
 
-**Əlavə edilən sənədlərin siyahısı (Qoşma):**
-1. İddia ərizəsinin cavabdehə göndərilmiş surəti (və ya poçt qəbzi)
-2. Dövlət rüsumunun ödənilməsi barədə qəbz (müvafiq hallarda)
-3. [Mübahisəyə aid sübutlar: əmək müqaviləsi, əmr, qəbzlər, yazışmalar və s.]
-4. Şəxsiyyət vəsiqəsinin surəti
+[İşin faktiki halları, əvvəlki məhkəmə aktları, plan-ölçü, çıxarış və inzibati orqanın imtinası barədə ətraflı şərh].
 
-<br/>
-<strong>Tarix:</strong> ${new Date().toLocaleDateString('az-AZ')}<br/>
-<strong>İmza:</strong> _________________ / (İddiaçının/Ərizəçinin Adı və Soyadı)
-`
+[Qanunvericilik normaları: Torpaq Məcəlləsinin 4, 9, 10, 46, 47, 66, 67, 68, 88-ci maddələri, İnzibati Prosessual Məcəllənin 8, 10, 32-ci maddələri, "Daşınmaz əmlakın dövlət reyestri haqqında" Qanun və s. əsaslandırma].
+
+Bu sənədlərin hamısının birlikdə hüquqi qiymətləndirilməsi zəruridir.
+
+## MƏHKƏMƏDƏN XAHİŞ EDİRƏM:
+
+### 1. [Birinci konkret tələb - sənədin/plan-ölçünün hüquqi statusunun və bazada bərpasının təmin edilməsi]
+### 2. [İkinci konkret tələb - torpağın hüquqi statusunun, kateqoriyasının və əsaslandırıcı aktların araşdırılması və məhkəməyə təqdim edilməsi]
+### 3. [Üçüncü konkret tələb - mülkiyyətdəki obyektin altındakı və faktiki istifadədəki torpaq sahələrinə çıxarışın verilməsi (dövlət qeydiyyatının aparılması) vəzifəsinin cavabdehin üzərinə qoyulması]
+### 4. [Əlavə əsassız iddiaların araşdırılması ("cərgə mağazalar" və s.)]
+### 5. [Məhkəmə xərcləri və dövlət rüsumunun cavabdehin üzərinə qoyulması]
+
+### Nəticə
+[İddianın əsas məqsədini və qanuni gözləntini ifadə edən 1-2 abzaslıq xülasə].
+
+**Əlavələr (Qoşma):**
+1. [İşə aid qərarlar, müqavilələr];
+2. [Əvvəlki məhkəmə aktları];
+3. [Plan-ölçü sənədləri];
+4. [Mülkiyyət çıxarışları];
+5. [İmtina məktubu];
+6. [Dövlət rüsumu və poçt qəbzləri];
+7. Digər sübutlar.
+
+**İddiaçı:** __________________ / [Ad, Soyad]
+
+**Tarix:** ___ / ___ / 2026`;
 
     if (skipInterview) {
       systemPrompt += `\n\n[DİQQƏT: SİSTEM TƏLƏBİ]\nİstifadəçiyə BİRBAŞA ƏRİZƏ ŞABLONUNU TƏRTİB EDİN. Çatışmayan yerləri [Mötərizə içində] qeyd edin.\nİlk sözünüz MÜTLƏQ \`[ƏRİZƏ]\` olmalıdır!`
@@ -155,7 +167,7 @@ ${query}`
 
     const isOpr = apiKey.startsWith("sk-or-v1-")
     const endpoint = isOpr ? "https://openrouter.ai/api/v1/chat/completions" : "https://api.openai.com/v1/chat/completions"
-    let reqModel = isOpr ? "openai/gpt-4o-mini" : "gpt-4o-mini"
+    let reqModel = isOpr ? "openai/gpt-4o" : "gpt-4o"
 
     const headers = {
       "Authorization": `Bearer ${apiKey}`,
@@ -170,7 +182,8 @@ ${query}`
         ...history,
         { role: "user", content: userPrompt }
       ],
-      temperature: 0.3,
+      temperature: 0.2,
+      max_tokens: 3500,
     }
 
     let response = await fetch(endpoint, {
@@ -179,8 +192,8 @@ ${query}`
       body: JSON.stringify(body)
     })
 
-    if (response.status === 402 && isOpr) {
-      body.model = "openrouter/free"
+    if (!response.ok && (response.status === 404 || response.status === 400 || response.status === 402)) {
+      body.model = isOpr ? "openai/gpt-4o-mini" : "gpt-4o-mini"
       response = await fetch(endpoint, {
         method: "POST",
         headers,

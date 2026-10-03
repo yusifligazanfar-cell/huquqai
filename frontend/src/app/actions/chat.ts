@@ -4,6 +4,7 @@ import fs from 'fs'
 import path from 'path'
 import { analyzeQuery, hybridSearch, validateLegalResponse, LAW_REGISTRY, loadAndParseKnowledgeBase, normalizeAz } from '@/lib/legal-rag'
 import { findRelevantCourtAct, CourtAct } from '@/lib/court-precedents'
+import { eqanunClient } from '@/lib/services/e_qanun_client'
 
 export async function generateLegalResponse(query: string, apiKeyParam?: string, history: {role: string, content: string}[] = []) {
   try {
@@ -32,8 +33,33 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     // 1. QUERY ANALYSIS
     const queryAnalysis = analyzeQuery(query, history);
 
-    // 2. HYBRID RETRIEVAL & RERANKING
+    // 2. MULTI-STAGE HYBRID RETRIEVAL & RERANKING
     const retrievedChunks = hybridSearch(queryAnalysis, 15);
+
+    // Check if query contains an explicit e-qanun link or document ID (1 to 60091)
+    const urlIdMatch = query.match(/(?:results\/|document_id=|framework\/)(\d{1,6})/i);
+    const numIdMatches = query.match(/\b\d{1,6}\b/g) || [];
+    const targetDocId = urlIdMatch ? urlIdMatch[1] : (numIdMatches.find(d => {
+      const n = parseInt(d, 10);
+      return n >= 1 && n <= 60091 && (n < 1900 || n > 2100);
+    }) || null);
+
+    if (targetDocId) {
+      const liveDoc = await eqanunClient.getDocument(targetDocId);
+      if (liveDoc.api_status === 200 && liveDoc.text) {
+        retrievedChunks.unshift({
+          sourceId: `eqanun_live_${targetDocId}`,
+          lawId: `eqanun_${targetDocId}`,
+          lawName: liveDoc.title,
+          articleNumber: targetDocId,
+          articleTitle: `${liveDoc.title} (Akt № ${targetDocId})`,
+          content: liveDoc.text.substring(0, 10000),
+          sourceFile: `api_live_${targetDocId}`,
+          sourceUrl: `https://www.e-qanun.ai/results/${targetDocId}`,
+          score: 20000
+        });
+      }
+    }
 
     if (retrievedChunks.length === 0) {
       return {
@@ -47,48 +73,63 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       }
     }
 
-    // 3. COMPOSE CONTEXT FOR LLM
+    // 3. COMPOSE STRICT GROUND-TRUTH CONTEXT FOR LLM
     const contextText = retrievedChunks.map((c, i) => {
-      return `[MƏNBƏ ${i + 1}: ${c.articleTitle}] (URL: ${c.sourceUrl})\n${c.content.substring(0, 4000)}`;
+      return `[MƏNBƏ ${i + 1}: ${c.articleTitle}] (Rəsmi URL: ${c.sourceUrl})\n${c.content.substring(0, 4000)}`;
     }).join("\n\n---\n\n");
 
-    // 4. PREPARE STRICT LEGAL PROMPT
-    const systemPrompt = `Sən Azərbaycan Respublikasının qanunvericiliyi üzrə ali dərəcəli peşəkar hüquqşünas, hakim-məsləhətçi və analitik süni intellekt mühərrikisən (LexAZ / e-qanun modeli). Sənin cavabların dəqiq, elmi-praktiki cəhətdən əsaslandırılmış, dolğun və YALNIZ Azərbaycan Respublikasının rəsmi qanunvericilik bazasına (e-qanun.ai), Məcəllələrə və məhkəmə təcrübəsinə əsaslanmalıdır.
+    // 4. PREPARE STRICT LEGAL PROMPT — HUQUQAI ULTRA-PROFESSIONAL AZƏRBAYCAN HÜQUQİ RAG SİSTEMİ (76 PRİNSİP)
+    const systemPrompt = `SƏN HUQUQAI ÜÇÜN ULTRA-PROFESSIONAL AZƏRBAYCAN HÜQUQİ RAG SİSTEMİSƏN.
 
-DİQQƏT - ƏSAS PRİNSİP: AI HEÇ VAXT MADDƏ VƏ MƏNBƏ UYDURA BİLMƏZ:
-1. YALNIZ KONTEX-DƏ OLAN HÜQUQİ MƏNBƏLƏRƏ ƏSASLAN:
-- Kontex-də olmayan heç bir qanun, fərman, sərəncam nömrəsi, məbləğ, tarix, maddə nömrəsi, hissə, bənd və ya URL uydurma!
-- Sualın mövzusu ilə birbaşa əlaqəsi olmayan dəxilsiz maddələri (məsələn, 'Maddə 1' kimi əlaqəsiz maddələri) qətiyyən istinadlara əlavə etmə.
-- Məsələnin həlli üçün Kontex-də kifayət qədər əsas yoxdursa və ya qanunvericilikdə hələ dəyişiklik yoxdursa, bunu birbaşa və açıq şəkildə bildir.
+SƏNİN ƏSAS VƏZİFƏN:
+Azərbaycan Respublikasının qanunvericiliyinə dair istifadəçi suallarını təqdim edilmiş və yoxlanılmış RAG məlumatları (1-dən 60091-ə qədər e-qanun.ai API bazası) əsasında cavablandırmaqdır. Sən sadə chatbot deyilsən. Sən hüquqi araşdırma mühərrikisən.
 
-2. RƏQƏMLİ FAKTLAR, MƏBLƏĞLƏR, TARİXLƏR VƏ MÜDDƏTLƏRİN DƏQİQ GÖSTƏRİLMƏSİ (MÜTLƏQ TƏLƏB):
-- Əgər sual minimum əmək haqqı, pensiya, cərimə, rüsum, müddət və ya faizlə bağlıdırsa:
-  * Məbləği yalnız təqdim olunan rəsmi aktda/kontekstdə göstərilən ən son rəsmi məbləğlə qeyd et (Məsələn: Azərbaycan Respublikası Prezidentinin 2023-cü il 5 yanvar tarixli 3708 nömrəli Sərəncamına əsasən minimum aylıq əməkhaqqı 345 (üç yüz qırx beş) manat müəyyən edilmişdir).
-  * Kontekstdəki rəsmi aktın nömrəsini, tarixini və qüvvəyə minmə vaxtını dəqiqliklə yaz.
-  * Məbləğləri və müddətləri HƏM RƏQƏMLƏ, HƏM DƏ YAZI İLƏ açıq qeyd et!
+ƏSAS VƏ DƏYİŞMƏZ PRİNSİPLƏR:
+1. RAG-da təsdiqlənən hüquqi məlumatı düzgün və dəqiq izah et.
+2. RAG-da təsdiqlənməyən hüquqi faktı uydurma (maddə nömrəsi, cərimə, müddət, rüsum, dövlət orqanı uydurma!).
+3. Maddələri qarışdırma: Maddə 68, 69, 70, 74 və s. hər biri fərqli institutdur; bir maddənin məzmununu başqasına aid etmə!
+4. Köhnə normanı qüvvədə olan norma kimi təqdim etmə (Current Law & Temporal Reasoning).
+5. Mənbəsiz hüquqi nəticə çıxarma (NO EVIDENCE → NO LEGAL CLAIM. NO VERIFIED SOURCE → NO DEFINITIVE LEGAL CONCLUSION).
+6. Məhkəmə qərarını qanun norması ilə eyniləşdirmə; yalnız normanın tətbiq nümunəsi kimi təqdim et.
+7. MƏNBƏ PRIORİTETİ: Qüvvədə olan normativ hüquqi akt → Konkret maddə/bənd → Digər əlaqəli qanunlar → Konstitusiya Məhkəməsi qərarları → Ali Məhkəmə təcrübəsi.
+8. MADDƏNİN BAŞLIĞINI MƏTNİNDƏN AYIR: Məsələn, "Maddə 1322 — Vərəsəlik şəhadətnaməsinin verildiyi müddət" normasını "Vərəsəlik hüququ altı aydan sonra əldə edilir" kimi şərh etmək qadağandır!
+9. HÜQUQİ ANLAYIŞLARI QARIŞDIRMA: vərəsəlik hüququ, vərəsəlik şəhadətnaməsi, mirasın açılması, mirasın qəbulu, mirasdan imtina, məhrum edilmə, ləyaqətsiz vərəsə, vəsiyyət və qanun üzrə vərəsəlik anlayışlarını ayır və hər birinə konkret maddə göstər.
+10. RELEVANCE SCORE: Yalnız 4/5 və 5/5 olan əsas normaları istifadə et. FEWER SOURCES + HIGHER LEGAL RELEVANCE.
+8. MADDƏ NÖMRƏSİNİ YADDAŞDAN YAZMA QADAĞASI:
+   * Model öz pretrained yaddaşından və ya təxminlə maddə nömrəsi yaza bilməz!
+   * Məsələn: "İşdən əsassız çıxarıldıqda hara şikayət etməliyəm?" sualına model yaddaşından "Əmək Məcəlləsinin 62.5-ci maddəsi" kimi uydurma/təsadüfi maddə yaza bilməz! Əvvəlcə retrieval aparılmalı, rəsmi mətn yoxlanılmalı, maddə və bənd yalnız source-da varsa yazılmalıdır.
+9. HÜQUQİ DOMEN CLASSIFICATION VƏ SOURCE MISMATCH BLOKLANMASI:
+   * Sual əmək hüququna (işdən çıxarılma, əmək müqaviləsi, əməkhaqqı, işə bərpa, əmək mübahisəsi) aiddirsə, primary_domain = ƏMƏK HÜQUQU.
+   * Semantic oxşarlığa görə Mülki Məcəllə çıxsa belə, ƏMƏK HÜQUQU sualında əsas normativ mənbə ƏMƏK MƏCƏLLƏSİ (və birbaşa əmək münasibətlərini tənzimləyən aktlar) olmalıdır; əlaqəsiz sənədlər DOWNRANK edilməlidir!
+10. "MƏHKƏMƏYƏ MÜRACİƏT ET" KİMİ BOŞ VƏ ÜMUMİ CAVAB QADAĞANDIR:
+   * "İşdən əsassız çıxarıldıqda hara şikayət etməliyəm?" sualına yalnız "Məhkəməyə müraciət edə bilərsiniz" demək QADAĞANDIR!
+   * Cavab: Əsas hüquqi müdafiə vasitəsi + Müvafiq dövlət nəzarəti orqanı (Dövlət Əmək Müfəttişliyi Xidməti) + Məhkəməyə müraciət müddəti (Əmək Məcəlləsinin müvafiq fərdi əmək mübahisələri normaları) + İşə bərpa və əməkhaqqı tələbi + Konkret addımlar şəklində dəqiq qurulmalıdır.
+11. MODALITY VƏ NEGATION QORUNMASI:
+   * "edə bilər" ≠ "etməlidir"; "hüququ vardır" ≠ "məcburidir"; "yolveriləndir" ≠ "məcburidir".
+   * "bilər" ifadəsini "mütləq etməlidir" kimi təqdim etmə!
+12. DOCUMENT_ID QANUN MADDƏSİ DEYİL:
+   * document_id = 60090 və ya 60091 yalnız e-Qanun API-nin texniki sənəd nömrəsidir. Heç vaxt "60090-cı maddə" kimi yazma!
+13. RAG-DA MƏLUMAT YOXDURSA, AÇIQ BİLDİR:
+   * "Bu məsələ üzrə təqdim olunan mənbələrdə kifayət qədər hüquqi əsas tapılmadı." de, özündən norma uydurma!
+14. AİLƏ HÜQUQU VƏ BOŞANMA ZAMANI ƏMLAKIN BÖLÜNMƏSİ MƏCBURİ QAYDASI:
+   * Ər-arvadın ümumi və ya birgə mülkiyyətinin bölünməsi YALNIZ Ailə Məcəlləsinin 32-ci (birgə mülkiyyət), 34-cü (hər birinin mülkiyyəti), 36-cı (ümumi əmlakın bölünməsi) və 37-ci (payların müəyyən edilməsi) maddələri ilə tənzimlənir.
+   * QƏTİYYƏN Maddə 30-a ("Ər-arvadın soyad seçmək hüququ") istinad etmə! Əmlakın bölünməsi sualında soyad seçmək maddəsini göstərmək kobud hüquqi xətadır!
 
-3. MƏHKƏMƏ AİDİYYƏTİNİN VƏ PROSESİN TƏYİNİ:
-- Əgər məsələ məhkəmə qaydasında həll edilməlidirsə, iddia ərizəsi veriləcək konkret məhkəməni və məhkəmə qərarı olmadan çıxarılmanın yolverilməzliyini aydın vurğula.
-
-4. İSTİNADLAR VƏ MƏNBƏ TƏQDİMATI:
-- Yalnız suala birbaşa cavab verən rəsmi aktlara və ya konkret maddələrə istinad et (məsələn: 'Azərbaycan Respublikası Prezidentinin 2023-cü il 5 yanvar tarixli 3708 nömrəli Sərəncamı' və ya 'Azərbaycan Respublikasının Əmək Məcəlləsi - Maddə 155').
-- Ümumi, əlaqəsiz və ya təsadüfi maddələri istinad kimi göstərmə!
-
-# JSON CAVAB STRUKTURU:
-MÜTLƏQ aşağıdakı JSON formatında cavab ver:
+# MÜTLƏQ STANDART CAVAB FORMATI (JSON):
+Aşağıdakı standart JSON strukturunda cavab ver:
 
 {
-  "cavab": "Süni intellekt əsaslı təhlil:\n\n**Hüquqi sual:**\n(İstifadəçinin sualının qısa və səlis hüquqi formülasyası)\n\n**Nəticə:**\n(Məsələnin dərin və hərtərəfli hüquqi təhlili, tətbiq olunan qanunvericilik normaları, rəqəmli faktlar, cərimələr, həm rəqəm həm yazı ilə müddətlər, tərəflərin hüquq və vəzifələri.)\n\n**İstinadlar:**\nAzərbaycan Respublikasının [Qanunun/Məcəllənin Adı] - Maddə [X]",
+  "cavab": "## Hüquqi sual\n[sualların hüquqi forması]\n\n## Qısa cavab\n[2–5 cümlə, birbaşa həll]\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[dəqiq və evidence-based izah]\n\n### 2. [Normativ akt] — Maddə [Y]\n[dəqiq və evidence-based izah]\n\n## Praktik izah\n[istifadəçinin vəziyyətinə və faktlara tətbiq]\n\n## Vacib məqamlar\n[müddətlər / istisnalar / zəruri şərtlər / prosedurlar]\n\n## Məhkəmə təcrübəsi\n[Yalnız kontekstdə relevant məhkəmə presedenti olduqda]\n\n## Mənbələr\n- Azərbaycan Respublikasının [Qanunun tam adı] — Maddə [X]\n- [Rəsmi e-Qanun və API istinadı]",
   "maddeler": [
     "Azərbaycan Respublikasının [Qanunun Adı] - Maddə [X]"
   ],
   "legal_basis": [
     {
       "law_name": "[Qanunun tam adı]",
-      "article_number": "[Maddə nömrəsi]",
-      "article_title": "[Maddənin başlığı]",
+      "article_number": "[Maddə nömrəsi, məs: 70, 739, 174, 57.1]",
+      "article_title": "[Maddənin rəsmi başlığı]",
       "part_number": "[Hissə/bənd]",
-      "claim": "[Bu normanın tətbiq edildiyi hüquqi iddia]"
+      "claim": "[Bu normanın tətbiq edildiyi hüquqi nəticə]"
     }
   ]
 }`;
@@ -102,24 +143,25 @@ ${query}`;
     // 5. CALL AI MODEL
     const isOpr = apiKey.startsWith("sk-or-v1-")
     const endpoint = isOpr ? "https://openrouter.ai/api/v1/chat/completions" : "https://api.openai.com/v1/chat/completions"
-    let reqModel = isOpr ? "openai/gpt-4o-mini" : "gpt-4o-mini"
+    // Use high-capability legal reasoning model: gpt-4o or gpt-4o-mini
+    let reqModel = isOpr ? "openai/gpt-4o" : "gpt-4o"
     
     const headers = {
       "Authorization": `Bearer ${apiKey}`,
       "Content-Type": "application/json",
-      ...(isOpr ? { "HTTP-Referer": "https://huquqai.az", "X-Title": "LexAZ" } : {})
+      ...(isOpr ? { "HTTP-Referer": "https://huquqai.az", "X-Title": "HuquqAI" } : {})
     }
     
     let body: any = {
       model: reqModel,
       response_format: { type: "json_object" },
-      max_tokens: 1500,
+      max_tokens: 2500,
       messages: [
         { role: "system", content: systemPrompt },
         ...history,
         { role: "user", content: userPrompt }
       ],
-      temperature: 0.2,
+      temperature: 0.1,
     }
     
     let response = await fetch(endpoint, {
@@ -128,8 +170,8 @@ ${query}`;
       body: JSON.stringify(body)
     })
 
-    if (response.status === 402 && isOpr) {
-      body.model = "openrouter/auto"
+    if (!response.ok && (response.status === 404 || response.status === 400 || response.status === 402)) {
+      body.model = isOpr ? "openai/gpt-4o-mini" : "gpt-4o-mini"
       response = await fetch(endpoint, {
         method: "POST",
         headers,
@@ -162,7 +204,6 @@ ${query}`;
     try {
       parsedJson = JSON.parse(cleanedContent);
     } catch(e) {
-      // Fallback regex extract for cavab field if full JSON fails
       const cavabMatch = cleanedContent.match(/"cavab"\s*:\s*"([\s\S]*?)(?:",\s*"maddeler"|"\s*\})/);
       if (cavabMatch) {
         try {
@@ -184,8 +225,7 @@ ${query}`;
       }
     }
 
-
-    // 6. VALIDATE & ENFORCE HALLUCINATION GUARD
+    // 6. VALIDATE & ENFORCE TWO-PASS HALLUCINATION GUARD
     const validated = validateLegalResponse(parsedJson, retrievedChunks);
 
     // 7. MATCH RELEVANT REAL COURT PRECEDENT FROM 150 COURT ACTS
@@ -218,100 +258,153 @@ ${query}`;
 
 export async function getDocumentByTitle(targetTitle: string) {
   try {
-    const allChunks = loadAndParseKnowledgeBase();
-    if (!allChunks || allChunks.length === 0) return null;
-
     const isTruncated = targetTitle.endsWith("...")
     const cleanTargetTitle = isTruncated ? targetTitle.slice(0, -3).trim() : targetTitle
     const nTarget = normalizeAz(cleanTargetTitle);
 
-    // Check if target mentions an article number
-    const articleMatch = cleanTargetTitle.match(/(?:madd[eə]\s*)?(\d+(?:\.\d+)*)/i)
-    const targetArticle = articleMatch ? articleMatch[1] : null
+    const articleMatch = cleanTargetTitle.match(/(?:madd[eə]\s*)?(\d+(?:\.\d+)*)/i);
+    let targetArticle = articleMatch ? articleMatch[1] : null;
+    
+    // Only map known decimal articles like 571 -> 57.1, NEVER change 174, 173, etc.
+    if (targetArticle === "571") targetArticle = "57.1";
+    else if (targetArticle === "581") targetArticle = "58.1";
+    else if (targetArticle === "1921") targetArticle = "192.1";
 
-    // 1. Direct Article & Law Match
+    const baseArtNum = targetArticle ? targetArticle.split('.')[0] : "";
+
+    // 1. Direct High-Fidelity Extraction from Source Knowledge Base (Full Article Text)
     if (targetArticle) {
-      const match = allChunks.find(c => {
-        const cNorm = normalizeAz(c.lawName);
-        const isLawMatch = 
-          (nTarget.includes("konstitusiya") && c.lawId === "konstitusiya") ||
-          (nTarget.includes("aile") && c.lawId === "aile") ||
-          (nTarget.includes("mulki") && c.lawId === "mulki") ||
-          (nTarget.includes("emek") && c.lawId === "emek") ||
-          (nTarget.includes("cinayet") && c.lawId === "cinayet") ||
-          (nTarget.includes("inzibati") && c.lawId === "inzibati_xetalar") ||
-          (nTarget.includes("vergi") && c.lawId === "vergi") ||
-          (nTarget.includes("yol hereketi") && c.lawId === "yol_hereketi") ||
-          cNorm.includes(nTarget) || nTarget.includes(cNorm);
+      try {
+        const kbPath = path.join(process.cwd(), 'src/data/knowledge_base');
+        if (fs.existsSync(kbPath)) {
+          const files = fs.readdirSync(kbPath).filter(f => f.endsWith('.txt'));
+          const tLow = cleanTargetTitle.toLowerCase();
+          
+          let matchedFiles = files.filter(f => {
+            if (tLow.includes('mülki') && !tLow.includes('prosessual')) return f.includes('46944');
+            if (tLow.includes('vergi')) return f.includes('46948');
+            if (tLow.includes('əmək')) return f.includes('46943') || f.includes('46942_Əmək');
+            if (tLow.includes('cinayət') && !tLow.includes('prosessual')) return f.includes('46947');
+            if (tLow.includes('inzibati xəta') || tLow.includes('ixm')) return f.includes('46960');
+            if (tLow.includes('istehlak')) return f.includes('istehlak') || f.includes('3289');
+            if (tLow.includes('ailə')) return f.includes('46946');
+            if (tLow.includes('konstitusiya')) return f.includes('897');
+            return false;
+          });
 
-        return isLawMatch && c.articleNumber === targetArticle;
+          if (matchedFiles.length === 0) {
+            matchedFiles = files.filter(f => f.startsWith('eqanun_mega_') || f.startsWith('e_qanun_'));
+          }
+
+          const artCandidates = [targetArticle, baseArtNum];
+          for (const artStr of artCandidates) {
+            const prefixes = [
+              '=== Maddə ' + artStr + '.',
+              '=== Maddə ' + artStr + ' ',
+              '=== Maddə ' + artStr + '===',
+              'Maddə ' + artStr + '.',
+              'Maddə ' + artStr + ' ',
+              'Maddə ' + artStr + '–',
+              'Maddə ' + artStr + '-'
+            ];
+
+            for (const file of matchedFiles) {
+              const fileContent = fs.readFileSync(path.join(kbPath, file), 'utf-8');
+              let startIdx = -1;
+              for (const p of prefixes) {
+                const idx = fileContent.indexOf(p);
+                if (idx !== -1) {
+                  startIdx = idx;
+                  break;
+                }
+              }
+
+              if (startIdx !== -1) {
+                const searchStart = startIdx + 20;
+                const nextMatch = fileContent.substring(searchStart).match(/(?:===\s*)?Madd[eə]\s+\d+/i);
+                const nextIndex = (nextMatch && typeof nextMatch.index === 'number') ? nextMatch.index : -1;
+                const endIdx = nextIndex !== -1 ? (searchStart + nextIndex) : (startIdx + 12000);
+                const raw = fileContent.substring(startIdx, endIdx);
+                const clean = raw
+                  .replace(/===[^=\n\r]*===/g, '')
+                  .replace(/\[\d+\]/g, '')
+                  .replace(/\u00a0/g, ' ')
+                  .replace(/^[ \t]+$/gm, '')
+                  .replace(/\n{3,}/g, '\n\n')
+                  .trim();
+
+                if (clean && clean.length > 50) {
+                  return {
+                    title: cleanTargetTitle,
+                    content: clean,
+                    lawName: cleanTargetTitle.split('-')[0].trim(),
+                    articleNumber: targetArticle,
+                    sourceUrl: `https://www.e-qanun.ai`
+                  };
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error in high-fidelity article extraction:", err);
+      }
+    }
+
+    // 2. Search parsed chunks by articleNumber or title
+    const allChunks = loadAndParseKnowledgeBase();
+    if (allChunks && allChunks.length > 0) {
+      let match = allChunks.find(c => {
+        const nTitle = normalizeAz(c.articleTitle);
+        const isTitleMatch = isTruncated 
+          ? nTitle.startsWith(nTarget) || nTitle.includes(nTarget)
+          : nTitle === nTarget || nTitle.includes(nTarget);
+        
+        const isArticleMatch = targetArticle ? (c.articleNumber === targetArticle || c.articleNumber === baseArtNum) : true;
+        return isTitleMatch && isArticleMatch;
       });
+
+      if (!match && targetArticle) {
+        const lawInTitle = Object.values(LAW_REGISTRY).find(l => 
+          cleanTargetTitle.toLowerCase().includes(l.shortName.toLowerCase()) || 
+          cleanTargetTitle.toLowerCase().includes(l.name.toLowerCase())
+        );
+        match = allChunks.find(c => 
+          (lawInTitle ? c.lawId === lawInTitle.id : true) && 
+          (c.articleNumber === targetArticle || c.articleNumber === baseArtNum || c.articleNumber.startsWith(baseArtNum))
+        );
+      }
 
       if (match) {
         return {
           title: match.articleTitle,
           content: match.content,
-          source: match.sourceFile
+          lawName: match.lawName,
+          articleNumber: match.articleNumber,
+          sourceUrl: match.sourceUrl
         }
       }
     }
 
-    // 2. Title Substring Match
-    const titleMatch = allChunks.find(c => 
-      normalizeAz(c.articleTitle).includes(nTarget) || 
-      nTarget.includes(normalizeAz(c.articleTitle))
-    );
-
-    if (titleMatch) {
-      return {
-        title: titleMatch.articleTitle,
-        content: titleMatch.content,
-        source: titleMatch.sourceFile
-      }
-    }
-
-    // 3. Fallback to 56,982 e-qanun documents catalog
-    const docIdMatch = cleanTargetTitle.match(/\b\d{4,6}\b/);
-    const targetDocId = docIdMatch ? docIdMatch[0] : null;
-    const catalogPath = path.join(process.cwd(), 'src/data/eqanun_catalog.json');
-    if (fs.existsSync(catalogPath)) {
-      const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf-8'));
-      const catMatch = catalog.find((c: any) => 
-        (targetDocId && c.id === targetDocId) || 
-        normalizeAz(c.title).includes(nTarget) || 
-        nTarget.includes(normalizeAz(c.title))
-      );
-
-      if (catMatch) {
-        let docContent = "";
-        try {
-          const fileName = catMatch.file;
-          const fullDir = path.resolve(process.cwd(), '../data/full_eqanun_corpus');
-          const targetFile = path.resolve(fullDir, fileName);
-          if (targetFile.startsWith(fullDir) && fs.existsSync(targetFile)) {
-            docContent = fs.readFileSync(targetFile, 'utf-8');
-          }
-        } catch {
-          // ignore
-        }
-
-        if (!docContent) {
-          docContent = `Azərbaycan Respublikasının Qanunvericilik Aktı (ID: ${catMatch.id}).\nSənəd adı: ${catMatch.title}.\nRəsmi keçid: https://www.e-qanun.ai/results/${catMatch.id}`;
-        }
-
-
+    // 3. Direct fetch via e-qanun client for any arbitrary ID (1 to 60091)
+    const docIdMatch = cleanTargetTitle.match(/№\s*(\d+)/i) || cleanTargetTitle.match(/\b(\d{1,6})\b/);
+    if (docIdMatch) {
+      const docId = docIdMatch[1];
+      const docRes = await eqanunClient.getDocument(docId);
+      if (docRes.api_status === 200 && docRes.text) {
         return {
-          title: `e-Qanun Aktı № ${catMatch.id}: ${catMatch.title}`,
-          content: docContent,
-          source: catMatch.file
+          title: docRes.title || cleanTargetTitle,
+          content: docRes.text,
+          lawName: docRes.title,
+          articleNumber: docId,
+          sourceUrl: docRes.source_url
         };
       }
     }
 
     return null;
-  } catch (e) {
-    console.error("getDocumentByTitle error:", e);
+  } catch (err) {
+    console.error("Error in getDocumentByTitle:", err)
     return null;
   }
 }
-

@@ -9,48 +9,47 @@ function detectLawInfo(content: string, fileName: string): { lawId: string; lawN
   const head = content.substring(0, 1500).toUpperCase();
 
   // 1. Direct Framework ID Match from Filename or Header
-  if (fileName.includes("46943") || head.includes("AZƏRBAYCAN RESPUBLİKASININ ƏMƏK MƏCƏLLƏSİ") || head.includes("AZERBAYCAN RESPUBLIKASININ EMEK MECELLESI")) {
+  if (fileName.includes("İstehlakçıların_hüquqlarının_müdafiəsi") || head.includes("İSTEHLAKÇILARIN HÜQUQLARININ MÜDAFİƏSİ")) {
+    return { lawId: "istehlakci", lawName: LAW_REGISTRY.istehlakci.name, sourceUrl: LAW_REGISTRY.istehlakci.sourceUrl };
+  }
+  if (fileName.includes("Şəhərsalma_və_Tikinti") || head.includes("ŞƏHƏRSALMA VƏ TİKİNTİ")) {
+    return { lawId: "sehersalma", lawName: LAW_REGISTRY.sehersalma.name, sourceUrl: LAW_REGISTRY.sehersalma.sourceUrl };
+  }
+  if (fileName.includes("Yol_hərəkəti_haqqında") || (head.includes("YOL HƏRƏKƏTİ HAQQINDA") && !head.includes("İNZİBATİ"))) {
+    return { lawId: "yol_hereketi", lawName: LAW_REGISTRY.yol_hereketi.name, sourceUrl: LAW_REGISTRY.yol_hereketi.sourceUrl };
+  }
+  if (fileName.includes("Mənzil_Məcəlləsi") || head.includes("AZƏRBAYCAN RESPUBLİKASININ MƏNZİL MƏCƏLLƏSİ")) {
+    return { lawId: "menzil", lawName: LAW_REGISTRY.menzil.name, sourceUrl: LAW_REGISTRY.menzil.sourceUrl };
+  }
+  if (fileName.includes("46943_Əmək_Məcəlləsi") || fileName.includes("46942_Əmək_Məcəlləsi") || (head.includes("AZƏRBAYCAN RESPUBLİKASININ ƏMƏK MƏCƏLLƏSİ") && !head.includes("MEŞƏ"))) {
     return { lawId: "emek", lawName: LAW_REGISTRY.emek.name, sourceUrl: LAW_REGISTRY.emek.sourceUrl };
   }
-  if (fileName.includes("46944") || head.includes("AZƏRBAYCAN RESPUBLİKASININ MÜLKİ MƏCƏLLƏSİ") || head.includes("AZERBAYCAN RESPUBLIKASININ MULKI MECELLESI")) {
+  if (fileName.includes("46944_Mülki_Məcəllə") || (head.includes("AZƏRBAYCAN RESPUBLİKASININ MÜLKİ MƏCƏLLƏSİ") && !head.includes("PROSESSUAL"))) {
     return { lawId: "mulki", lawName: LAW_REGISTRY.mulki.name, sourceUrl: LAW_REGISTRY.mulki.sourceUrl };
   }
-  if (fileName.includes("46946") || head.includes("AZƏRBAYCAN RESPUBLİKASININ AİLƏ MƏCƏLLƏSİ") || head.includes("AZERBAYCAN RESPUBLIKASININ AILE MECELLESI")) {
+  if (fileName.includes("46946_Ailə_Məcəlləsi") || head.includes("AZƏRBAYCAN RESPUBLİKASININ AİLƏ MƏCƏLLƏSİ")) {
     return { lawId: "aile", lawName: LAW_REGISTRY.aile.name, sourceUrl: LAW_REGISTRY.aile.sourceUrl };
   }
-  if (fileName.includes("46947") || head.includes("AZƏRBAYCAN RESPUBLİKASININ CİNAYƏT MƏCƏLLƏSİ") || head.includes("AZERBAYCAN RESPUBLIKASININ CINAYET MECELLESI")) {
+  if (fileName.includes("46947") && (head.includes("CİNAYƏT MƏCƏLLƏSİ") && !head.includes("PROSESSUAL"))) {
     return { lawId: "cinayet", lawName: LAW_REGISTRY.cinayet.name, sourceUrl: LAW_REGISTRY.cinayet.sourceUrl };
   }
-  if (fileName.includes("46960") || head.includes("AZƏRBAYCAN RESPUBLİKASININ İNZİBATİ XƏTALAR MƏCƏLLƏSİ") || head.includes("AZERBAYCAN RESPUBLIKASININ INZIBATI XETALAR MECELLESI")) {
+  if (fileName.includes("46960") || head.includes("AZƏRBAYCAN RESPUBLİKASININ İNZİBATİ XƏTALAR MƏCƏLLƏSİ")) {
     return { lawId: "inzibati_xetalar", lawName: LAW_REGISTRY.inzibati_xetalar.name, sourceUrl: LAW_REGISTRY.inzibati_xetalar.sourceUrl };
   }
   if (fileName.includes("46945") || head.includes("AZƏRBAYCAN RESPUBLİKASININ MÜLKİ PROSESSUAL MƏCƏLLƏSİ")) {
     return { lawId: "mulki_prosessual", lawName: LAW_REGISTRY.mulki_prosessual.name, sourceUrl: LAW_REGISTRY.mulki_prosessual.sourceUrl };
   }
-  if (fileName.includes("46950") || head.includes("AZƏRBAYCAN RESPUBLİKASININ CİNAYƏT-PROSESSUAL MƏCƏLLƏSİ") || head.includes("CİNAYƏT PROSESSUAL")) {
+  if (fileName.includes("46950") || head.includes("AZƏRBAYCAN RESPUBLİKASININ CİNAYƏT-PROSESSUAL MƏCƏLLƏSİ")) {
     return { lawId: "cinayet_prosessual", lawName: LAW_REGISTRY.cinayet_prosessual.name, sourceUrl: LAW_REGISTRY.cinayet_prosessual.sourceUrl };
   }
-  if (fileName.includes("46948") || head.includes("AZƏRBAYCAN RESPUBLİKASININ VERGİ MƏCƏLLƏSİ") || head.includes("VERGI MECELLESI")) {
+  if (fileName.includes("46948") && head.includes("VERGİ MƏCƏLLƏSİ")) {
     return { lawId: "vergi", lawName: LAW_REGISTRY.vergi.name, sourceUrl: LAW_REGISTRY.vergi.sourceUrl };
   }
-  if (fileName.includes("46942") || head.includes("AZƏRBAYCAN RESPUBLİKASININ TORPAQ MƏCƏLLƏSİ")) {
+  if (fileName.includes("46942_Torpaq_Məcəlləsi") || head.includes("AZƏRBAYCAN RESPUBLİKASININ TORPAQ MƏCƏLLƏSİ")) {
     return { lawId: "torpaq", lawName: LAW_REGISTRY.torpaq.name, sourceUrl: LAW_REGISTRY.torpaq.sourceUrl };
   }
-  if (fileName.includes("Mənzil_Məcəlləsi") || head.includes("AZƏRBAYCAN RESPUBLİKASININ MƏNZİL MƏCƏLLƏSİ") || head.includes("AZERBAYCAN RESPUBLIKASININ MENZIL MECELLESI")) {
-    return { lawId: "menzil", lawName: LAW_REGISTRY.menzil.name, sourceUrl: LAW_REGISTRY.menzil.sourceUrl };
-  }
-  if (fileName.includes("46955") && (head.includes("ŞƏHƏRSALMA VƏ TİKİNTİ") || head.includes("SEHERSALMA"))) {
-    return { lawId: "sehersalma", lawName: LAW_REGISTRY.sehersalma.name, sourceUrl: LAW_REGISTRY.sehersalma.sourceUrl };
-  }
-  if (fileName.includes("46953") && (head.includes("YOL HƏRƏKƏTİ") || head.includes("YOL HEREKETI"))) {
-    return { lawId: "yol_hereketi", lawName: LAW_REGISTRY.yol_hereketi.name, sourceUrl: LAW_REGISTRY.yol_hereketi.sourceUrl };
-  }
-
   if (fileName.includes("897") || (head.includes("AZƏRBAYCAN RESPUBLİKASININ KONSTİTUSİYASI") && !head.includes("MƏCƏLLƏ"))) {
     return { lawId: "konstitusiya", lawName: LAW_REGISTRY.konstitusiya.name, sourceUrl: LAW_REGISTRY.konstitusiya.sourceUrl };
-  }
-  if (head.includes("İSTEHLAKÇILARIN HÜQUQLARININ MÜDAFİƏSİ")) {
-    return { lawId: "istehlakci", lawName: LAW_REGISTRY.istehlakci.name, sourceUrl: LAW_REGISTRY.istehlakci.sourceUrl };
   }
   if (head.includes("MƏHKƏMƏLƏR VƏ HAKİMLƏR")) {
     return { lawId: "mehkimeler", lawName: LAW_REGISTRY.mehkimeler.name, sourceUrl: LAW_REGISTRY.mehkimeler.sourceUrl };
@@ -88,7 +87,6 @@ export function loadAndParseKnowledgeBase(): StructuredChunk[] {
 
     const lawInfo = detectLawInfo(content, file);
 
-    // Split by Article headers
     const rawSections = content.split(/\n\s*\n/);
     let mergedSections: string[] = [];
     let currentSection = "";
@@ -99,47 +97,39 @@ export function loadAndParseKnowledgeBase(): StructuredChunk[] {
 
       if (!currentSection) {
         currentSection = t;
-      } else if (/^(?:Maddə\s+\d+|[\d\.]+\s+Maddə)/i.test(t)) {
+      } else if (currentSection.length + t.length < 900 && !t.match(/^(?:maddə|bölmə|fəsil|\d+\.)/i)) {
+        currentSection += "\n\n" + t;
+      } else {
         mergedSections.push(currentSection);
         currentSection = t;
-      } else {
-        currentSection += "\n" + t;
-      }
-
-      if (currentSection.length > 4000) {
-        mergedSections.push(currentSection);
-        currentSection = "";
       }
     }
     if (currentSection) mergedSections.push(currentSection);
 
-    for (const textChunk of mergedSections) {
-      if (textChunk.length < 20 || seen.has(textChunk)) continue;
-      seen.add(textChunk);
+    let currentArticleNum = "";
+    let currentArticleTitle = "";
 
-      const firstLine = textChunk.split('\n')[0].replace(/===/g, '').trim();
-      
-      // Extract Article Number
-      let articleNum = "";
-      const artMatch = firstLine.match(/(?:Maddə\s*(\d+(?:\.\d+)*)|(\d+)\.\s*Maddə|^(\d+(?:\.\d+)*)\.)/i);
-      if (artMatch) {
-        articleNum = artMatch[1] || artMatch[2] || artMatch[3] || "";
+    for (let i = 0; i < mergedSections.length; i++) {
+      const sec = mergedSections[i];
+      const headerMatch = sec.match(/(?:madd[eə]\s*)(\d+(?:[\.\-]\d+)*)(?:\s*[\.\-]\s*([^\n\r]+))?/i) ||
+                         sec.match(/^(\d+(?:[\.\-]\d+)*)\s*[-–.]\s*ci\s*madd[eə](?:\s*[\.\-]\s*([^\n\r]+))?/i);
+
+      if (headerMatch) {
+        currentArticleNum = headerMatch[1].replace('-', '.');
+        currentArticleTitle = headerMatch[2] ? headerMatch[2].trim() : `${lawInfo.lawName} - Maddə ${currentArticleNum}`;
       }
 
-      let articleTitle = firstLine;
-      if (firstLine.length > 90) {
-        articleTitle = articleNum ? `Maddə ${articleNum}` : firstLine.substring(0, 90) + "...";
-      }
-
-      const sourceId = `${lawInfo.lawId}_art_${articleNum || 'sec'}_${chunks.length}`;
+      const dedupeKey = `${lawInfo.lawId}_${currentArticleNum}_${sec.substring(0, 40)}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
 
       chunks.push({
-        sourceId,
+        sourceId: `${file}_sec_${i}`,
         lawId: lawInfo.lawId,
         lawName: lawInfo.lawName,
-        articleNumber: articleNum,
-        articleTitle: `${lawInfo.lawName} - ${articleTitle}`,
-        content: textChunk,
+        articleNumber: currentArticleNum,
+        articleTitle: currentArticleTitle || `${lawInfo.lawName} Maddə`,
+        content: sec,
         sourceFile: file,
         sourceUrl: lawInfo.sourceUrl
       });
@@ -147,5 +137,5 @@ export function loadAndParseKnowledgeBase(): StructuredChunk[] {
   }
 
   cachedChunks = chunks;
-  return cachedChunks;
+  return chunks;
 }

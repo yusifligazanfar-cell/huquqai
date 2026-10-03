@@ -3,7 +3,6 @@ import { Header } from "@/components/layout/header"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { AuthProvider } from "@/context/AuthContext"
 import { LawyerOnboardingGuard } from "@/components/layout/LawyerOnboardingGuard"
-import { CookieAndUpdateBanner } from "@/components/layout/CookieAndUpdateBanner"
 
 export default function DashboardLayout({
   children,
@@ -32,7 +31,6 @@ export default function DashboardLayout({
             </div>
           </main>
         </div>
-        <CookieAndUpdateBanner />
       </SidebarProvider>
     </LawyerOnboardingGuard>
   )

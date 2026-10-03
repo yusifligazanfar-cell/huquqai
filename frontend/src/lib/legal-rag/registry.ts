@@ -180,17 +180,20 @@ export function findLawByQuery(text: string): StructuredLaw | null {
     return LAW_REGISTRY["mulki"];
   }
   if (norm.includes("konstitusiya") || norm.includes("esas qanun")) return LAW_REGISTRY["konstitusiya"];
-  if (norm.includes("aile") || norm.includes("er-arvad") || norm.includes("nikah") || norm.includes("aliment") || norm.includes("bosanma")) return LAW_REGISTRY["aile"];
-  if (norm.includes("emek") || norm.includes("isden cixarma") || norm.includes("isgöturen") || norm.includes("isegoturen") || norm.includes("mezuniyyet") || norm.includes("emek haqqi") || norm.includes("is staji")) return LAW_REGISTRY["emek"];
+  if (norm.includes("aile") || norm.includes("er-arvad") || norm.includes("nikah") || norm.includes("aliment") || norm.includes("bosanma") || norm.includes("er arvad")) return LAW_REGISTRY["aile"];
+  if (norm.includes("emek") || norm.includes("isden cixarma") || norm.includes("isden cixarilma") || norm.includes("isgöturen") || norm.includes("isegoturen") || norm.includes("mezuniyyet") || norm.includes("emek haqqi") || norm.includes("is staji") || norm.includes("emekhaqqi") || norm.includes("maas")) return LAW_REGISTRY["emek"];
   if (norm.includes("cinayet prosessual") || norm.includes("cpm")) return LAW_REGISTRY["cinayet_prosessual"];
-  if (norm.includes("cinayet") || norm.includes("deleduzluq") || norm.includes("ogurluq") || norm.includes("qesden oldurme") || norm.includes("xuliqanliq")) return LAW_REGISTRY["cinayet"];
-  if (norm.includes("inzibati xetalar") || norm.includes("ixm") || norm.includes("cerime") || norm.includes("protokol") || norm.includes("inzibati tenbeh")) return LAW_REGISTRY["inzibati_xetalar"];
-  if (norm.includes("mulki prosessual") || norm.includes("mpm") || norm.includes("iddia erizesi") || norm.includes("aidiyyet") || norm.includes("yurisdiksiya")) return LAW_REGISTRY["mulki_prosessual"];
-  if (norm.includes("mulki") || norm.includes("alqi-satqi") || norm.includes("satilir") || norm.includes("borc") || norm.includes("zamin") || norm.includes("ipoteka") || norm.includes("vereselik") || norm.includes("muqavile") || norm.includes("avtomobil satisi")) return LAW_REGISTRY["mulki"];
-  if (norm.includes("vergi") || norm.includes("voen") || norm.includes("edv") || norm.includes("gelir vergisi") || norm.includes("sadelesdirilmis vergi")) return LAW_REGISTRY["vergi"];
-  if (norm.includes("yol hereketi") || norm.includes("suruculuk") || norm.includes("radar") || norm.includes("piyada") || norm.includes("yol qezasi") || norm.includes("dayanma durma")) return LAW_REGISTRY["yol_hereketi"];
-  if (norm.includes("menzil mecellesi") || norm.includes("menzil") || norm.includes("evden cixarma") || norm.includes("kirayeci") || norm.includes("ev sahibi") || norm.includes("kiraye haqqi") || norm.includes("sosial kiraye")) return LAW_REGISTRY["menzil"];
-  if (norm.includes("istehlakci") || norm.includes("qaytarilmasi") || norm.includes("zemanet") || norm.includes("keyfiyyetsiz mal")) return LAW_REGISTRY["istehlakci"];
+  if (norm.includes("cinayet") || norm.includes("deleduzluq") || norm.includes("ogurluq") || norm.includes("qesden oldurme") || norm.includes("xuliqanliq") || norm.includes("rusvet") || norm.includes("hebs") || norm.includes("mehkumluq")) return LAW_REGISTRY["cinayet"];
+  if (norm.includes("vergi") || norm.includes("beyanname") || norm.includes("dvx") || norm.includes("maliyye sanksiyasi") || norm.includes("voen") || norm.includes("edv") || norm.includes("gelir vergisi") || norm.includes("sadelesdirilmis vergi")) return LAW_REGISTRY["vergi"];
+  if (norm.includes("yol hereketi") || norm.includes("suruculuk") || norm.includes("radar") || norm.includes("piyada") || norm.includes("yol qezasi") || norm.includes("dayanma durma") || norm.includes("svetafor") || norm.includes("yol nisani")) return LAW_REGISTRY["yol_hereketi"];
+  if (norm.includes("menzil mecellesi") || norm.includes("menzil") || norm.includes("evden cixarma") || norm.includes("kirayeci") || norm.includes("ev sahibi") || norm.includes("kiraye haqqi") || norm.includes("sosial kiraye") || norm.includes("qonsu menzil")) return LAW_REGISTRY["menzil"];
+  if (norm.includes("istehlakci") || norm.includes("qaytarilmasi") || norm.includes("zemanet") || norm.includes("keyfiyyetsiz mal") || norm.includes("14 gun") || norm.includes("mali qaytarmaq") || norm.includes("mehsulu deyismek")) return LAW_REGISTRY["istehlakci"];
+  if (norm.includes("torpaq mecellesi") || norm.includes("torpaq sahesi") || norm.includes("torpaq payi") || norm.includes("torpaq mulkiyyeti")) return LAW_REGISTRY["torpaq"];
+  if (norm.includes("sehersalma") || norm.includes("tikintiye icaze") || norm.includes("tikinti obyekti") || norm.includes("qanunsuz tikili")) return LAW_REGISTRY["sehersalma"];
+  if (norm.includes("tehsil haqqinda") || norm.includes("ali tehsil") || norm.includes("mekteb tehsil") || norm.includes("attestat") || norm.includes("diplom")) return LAW_REGISTRY["tehsil"];
+  if (norm.includes("mulki prosessual") || norm.includes("mpm") || norm.includes("iddia erizesi") || norm.includes("aidiyyet") || norm.includes("yurisdiksiya") || norm.includes("iddia muddeti")) return LAW_REGISTRY["mulki_prosessual"];
+  if (norm.includes("mulki") || norm.includes("alqi-satqi") || norm.includes("alqi satqi") || norm.includes("satilir") || norm.includes("borc") || norm.includes("zamin") || norm.includes("ipoteka") || norm.includes("vereselik") || norm.includes("muqavile") || norm.includes("avtomobil satisi") || norm.includes("etibarname") || norm.includes("mulkiyyet huququ")) return LAW_REGISTRY["mulki"];
+  if (norm.includes("inzibati xetalar") || norm.includes("ixm") || norm.includes("cerime") || norm.includes("protokol") || norm.includes("inzibati tenbeh") || norm.includes("tutun") || norm.includes("siqaret") || norm.includes("xirda xuliqanliq")) return LAW_REGISTRY["inzibati_xetalar"];
   if (norm.includes("mehkeme") || norm.includes("hakim")) return LAW_REGISTRY["mehkimeler"];
 
   return null;

@@ -125,7 +125,8 @@ export function analyzeQuery(query: string, history?: { role: string; content: s
   if (words.some(w => ["er", "arvad", "usaq", "aliment"].includes(w))) entities.push("Ər - Arvad - Uşaq");
   if (words.some(w => ["surucu", "piyada", "avtomobil", "masin"].includes(w))) entities.push("Nəqliyyat - Sürücü");
   if (words.some(w => ["qonsu", "qonsular"].includes(w))) entities.push("Qonşular arası münasibət");
-  if (words.some(w => ["siqaret", "tutun", "zibil", "cerime", "polisi", "protokol"].includes(w))) entities.push("Vətəndaş - İnzibati Məsuliyyət");
+  if (words.some(w => ["vergi", "beyanname", "dvx", "voen", "edv"].includes(w))) entities.push("Vergi Ödəyicisi - Vergi Orqanı");
+  else if (words.some(w => ["siqaret", "tutun", "zibil", "cerime", "polisi", "protokol"].includes(w))) entities.push("Vətəndaş - İnzibati Məsuliyyət");
 
 
   return {

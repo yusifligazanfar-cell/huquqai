@@ -46,6 +46,7 @@ export const metadata: Metadata = {
 };
 
 import { AuthProvider } from "@/context/AuthContext";
+import { CookieAndUpdateBanner } from "@/components/layout/CookieAndUpdateBanner";
 
 export default function RootLayout({
   children,
@@ -70,6 +71,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
+            <CookieAndUpdateBanner />
             {children}
           </AuthProvider>
         </ThemeProvider>

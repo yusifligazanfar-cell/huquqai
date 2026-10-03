@@ -86,8 +86,21 @@ export class EQanunClient {
       // Node fetch failed
     }
 
-    // 3. Third Attempt: Ingested Full Corpus (56,982 indexed documents)
+    // 3. Third Attempt: Ingested Full Corpus (56,982 indexed documents via compressed shards)
     try {
+      const { getDocumentTextFromCorpus } = require('./eqanun_corpus_loader');
+      const textFromShards = getDocumentTextFromCorpus(docIdStr);
+      if (textFromShards) {
+        return {
+          document_id: documentId,
+          api_status: 200,
+          title: `e-Qanun Sənədi № ${docIdStr}`,
+          text: textFromShards,
+          source: `e-qanun complete corpus (${docIdStr})`,
+          source_url: sourceUrl
+        };
+      }
+
       const catalogPath = path.join(process.cwd(), 'src/data/eqanun_catalog.json');
       if (fs.existsSync(catalogPath)) {
         const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf-8'));

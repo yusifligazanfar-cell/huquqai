@@ -10,33 +10,69 @@ export interface LegalConcept {
 
 export const LEGAL_CONCEPTS: LegalConcept[] = [
   {
+    id: "tax_vat_calculation",
+    domain: "Vergi hüququ",
+    primaryLawId: "vergi",
+    triggerPhrases: [
+      "edv", "edv-nin", "edv nin", "edv hesablanmasi", "elave deyer vergisi", "edv derecesi", 
+      "edv hesablanma qaydasi", "vergi tutulan dovriyye", "evezlesdirilen edv", "budceye odenilmeli olan edv",
+      "vergi mecellesinde edv"
+    ],
+    expandedTerms: [
+      "elave deyer vergisi", "edv derecesi 18 faiz", "vergi tutulan dovriyyeden budceye odenilmeli olan edv",
+      "evezlesdirilme", "vergi mecellesi madde 173", "vergi mecellesi madde 174", "vergi mecellesi madde 175",
+      "edv-nin hesablanmasi ve odenilmesi", "gomruk borcu"
+    ],
+    priorityArticles: ["173", "174", "175", "159", "166"]
+  },
+  {
     id: "labor_termination",
     domain: "Əmək hüququ",
     primaryLawId: "emek",
     triggerPhrases: [
       "isden cixarma", "isden cixarilma", "isden cixmaq", "oz erizesi", "xeberdarliq etmeden", 
       "xeberdarliqsiz", "xitam", "muqavilenin legvi", "isden azad", "isden qovulma", "is yerinden cixarilma",
-      "emek muqavilesine xitam"
+      "emek muqavilesine xitam", "esassiz cixarildiqda", "qanunsuz cixarildiqda", "hara sikayet etmeliyem",
+      "isden esassiz cixarildiqda", "ise berpa", "emek mubahisesi", "emek mufettisliyi"
     ],
     expandedTerms: [
       "emek muqavilesine xitam", "iscinin tesebbusu ile xitam", "isegoturen terefinden xitam", 
       "emek muqavilesine xitam verilmesinin esaslari", "iscilerin teminatlari", "xeberdarliq muddetleri", 
       "emek vezifelerinin kobud sekilde pozulmasi", "sinaq muddeti", "iscinin teqsirli hereketleri", 
-      "staj", "muddet", "xitam verilmesi qaydalari"
+      "staj", "muddet", "xitam verilmesi qaydalari", "ferdi emek mubahiseleri", "ise berpa haqqinda teleb",
+      "dovlet emek mufettisliyi xidmeti", "mehkemeye muraciet muddeti", "emek mecellesi madde 287",
+      "emek mecellesi madde 288", "emek mecellesi madde 294", "emek mecellesi madde 300"
     ],
-    priorityArticles: ["70", "77", "72", "68", "69", "71", "73", "74", "76", "79", "80", "84"],
+    priorityArticles: ["68", "69", "70", "71", "72", "73", "74", "76", "77", "79", "80", "84", "287", "288", "294", "296", "300", "303"],
     forbiddenPhrases: ["inzibati tenbeh", "protokol"]
+  },
+  {
+    id: "family_property_division",
+    domain: "Ailə hüququ",
+    primaryLawId: "aile",
+    triggerPhrases: [
+      "emlakin bolunmesi", "emlak bolunmesi", "bosanma zamani emlak", "birge mulkiyyet", 
+      "er arvadin emlaki", "er-arvadin emlaki", "emlak nece bolunur", "sexsi emlak", "umumi emlak",
+      "bosanarken emlak", "bosanmada ev", "bosanmada masin"
+    ],
+    expandedTerms: [
+      "er arvadin birge mulkiyyeti", "er arvadin umumi emlakinin bolunmesi", "paylarin mueyyen edilmesi",
+      "er arvadin her birinin mulkiyyeti", "aile mecellesi madde 32", "aile mecellesi madde 36", 
+      "aile mecellesi madde 37", "aile mecellesi madde 34", "birge nikah dovrunde elde edilmis"
+    ],
+    priorityArticles: ["32", "36", "37", "34", "31", "35"],
+    forbiddenPhrases: ["soyad secmek", "madde 30", "madde 30."]
   },
   {
     id: "family_marriage_termination",
     domain: "Ailə hüququ",
     primaryLawId: "aile",
-    triggerPhrases: ["nikaha xitam", "bosanma", "nikahin pozulmasi", "nikah", "er-arvad", "er ve arvad"],
+    triggerPhrases: ["nikaha xitam", "bosanma", "nikahin pozulmasi", "nikah"],
     expandedTerms: [
       "nikaha xitam verilmesi", "nikahin pozulmasi qaydasi", "vefaetme", "mehkeme qaydasinda bosanma",
-      "qeydiyyat sobeleri", "yetkinlik yasina catmayan usaqlar", "er-arvadin emlaki"
+      "qeydiyyat sobeleri", "yetkinlik yasina catmayan usaqlar", "aile mecellesi madde 19", "aile mecellesi madde 21"
     ],
-    priorityArticles: ["19", "20", "21", "22", "23", "32", "33", "34", "35", "36", "37"]
+    priorityArticles: ["19", "20", "21", "22", "23", "32", "36", "37"]
   },
   {
     id: "family_alimony",
@@ -47,7 +83,7 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
       "valideynlerin ushaqlari saxlamaq vezifesi", "alimentin meblegi", "sabit pul mebleginde",
       "mehkeme terefinden alimentin tutulmasi", "aliment odenilmesi haqqinda sazis"
     ],
-    priorityArticles: ["75", "76", "77", "78", "79", "80", "81", "82", "83", "84"]
+    priorityArticles: ["76", "78", "75", "77", "79", "80", "81", "82", "83", "84"]
   },
   {
     id: "traffic_pedestrian_and_parking",
@@ -66,13 +102,13 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     primaryLawId: "istehlakci",
     triggerPhrases: [
       "istehlakcinin", "istehlakci", "mali qaytarmaq", "mehsulu deyismek", "14 gun", 
-      "qeyri erzaq mali", "zemanet", "qusur", "qusurli mal", "lazimi keyfiyyetli"
+      "qeyri erzaq mali", "zemanet", "qusur", "qusurli mal", "lazimi keyfiyyetli", "malin temiri"
     ],
     expandedTerms: [
       "lazimi keyfiyyetli qeyri erzaq malinin deyisdirilmesi", "istehlakcinin telebleri",
       "qusurli mal satildiqda istehlakcinin huquqlari", "zemanet muddeti", "temiri"
     ],
-    priorityArticles: ["15", "7", "8", "14", "13", "12"]
+    priorityArticles: ["15", "7", "14", "8", "13", "12"]
   },
   {
     id: "construction_and_permits",
@@ -86,116 +122,143 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     priorityArticles: ["75", "80", "81", "82", "83", "84"]
   },
   {
-    id: "property_neighbor_obstruction",
+    id: "property_movable_ownership",
     domain: "Mülki hüquq",
     primaryLawId: "mulki",
-    triggerPhrases: ["qonsu", "girisi bagla", "darvaza", "masin saxlayir", "qarshisinda avtomobil", "heyete giris", "maneə"],
+    triggerPhrases: ["dasinar esyalar", "dasinar esya", "mulkiyyet huququ hansi andan elde edilir", "mulkiyyet huququ elde"],
     expandedTerms: [
-      "qonsuluq huququ", "mulkiyyetcinin telebi", "mulkiyyet huququnun toxunulmazligi",
-      "emlakdan istifadeye maneenin aradan qaldirilmasi", "neqator iddia", "qonsu torpaq saheleri"
+      "dasinar esyalara mulkiyyet huququnun elde edilmesi", "esyalarin tehvili", "mulkiyyet huququnun kecmesi ani"
     ],
-    priorityArticles: ["157", "168", "169", "170", "171", "172"],
-    forbiddenPhrases: ["qeyyum", "himaye"]
+    priorityArticles: ["178", "179", "180", "181", "182", "183"]
   },
   {
-    id: "civil_vehicle_double_sale",
+    id: "unjust_enrichment",
     domain: "Mülki hüquq",
     primaryLawId: "mulki",
-    triggerPhrases: ["avtomobil satisi", "masin satilir", "pul odenilir", "basqasina satilir", "sifahi razilasma", "alqi-satqi"],
+    triggerPhrases: ["esassiz varlanma", "esassiz elde edilmis emlak", "esassiz varlanma neticesinde"],
     expandedTerms: [
-      "alqi-satqi muqavilesi", "saticinin vezifesi", "alincinin huquqlari", "esyanin tehvili",
-      "mulkiyyet huququnun kecmesi", "vicdanli elde eden", "esassiz varlanma", "zererin evezinin odenilmesi"
+      "esassiz varlanma neticesinde elde edilmis emlakin qaytarilmasi vezifesi", "esassiz elde edilenler"
     ],
-    priorityArticles: ["573", "572", "574", "178", "182", "405", "406", "442", "445", "1091", "21"]
+    priorityArticles: ["1091", "1092", "1093", "1094"]
   },
   {
-    id: "labor_salary_delay",
-    domain: "Əmək hüququ",
-    primaryLawId: "emek",
+    id: "civil_loan_and_guarantee",
+    domain: "Mülki hüquq",
+    primaryLawId: "mulki",
     triggerPhrases: [
-      "maas gecikdiril", "emek haqqi gecikir", "maas verilmir", "maasimi alabilmirem", "emekhaqqi odenilmir",
-      "maasini vaxtinda", "maas vaxtinda", "emek haqqi vaxtinda", "maas odemir", "maasini odemirse",
-      "maasimi odemir", "maas gecikir", "emek haqqinin odenilmesi", "emek haqqini odemirse"
+      "borc muqavilesi", "borc muqavilesinin formasi", "zaminlik muqavilesi", "zaminin mesuliyyeti", 
+      "ofertanin qebul edilmesi", "aksept", "muqavilenin baglanmasi"
     ],
-    expandedTerms: ["emek haqqinin odenilmesi muddetleri", "odenilmesinin gecikdirilmesine gore isegoturenin mesuliyyeti", "faiz", "her gecikdirilen gun", "azı bir faizi"],
-    priorityArticles: ["172", "173", "174", "178", "179", "154", "157"]
+    expandedTerms: [
+      "borc muqavilesi", "borc muqavilesinin baglanma qaydalari", "zaminin mesuliyyeti", "subsidiar mesuliyyet",
+      "aksept", "oferta"
+    ],
+    priorityArticles: ["739", "740", "473", "470", "408", "405"]
   },
   {
-    id: "labor_vacation",
-    domain: "Əmək hüququ",
-    primaryLawId: "emek",
-    triggerPhrases: ["mezuniyyet", "otpusk", "emek mezuniyyeti", "esas mezuniyyet", "odenissiz mezuniyyet"],
-    expandedTerms: ["mezuniyyet huququ", "esas ve elave mezuniyyetler", "mezuniyyet muddetleri", "is iline gore mezuniyyet"],
-    priorityArticles: ["112", "113", "114", "115", "116", "117", "128", "131"]
+    id: "housing_and_land",
+    domain: "Mənzil & Torpaq",
+    primaryLawId: "torpaq",
+    triggerPhrases: ["torpaq sahesi uzerinde", "dovlet qeydiyyati", "torpaq mulkiyyeti"],
+    expandedTerms: [
+      "torpaq sahesi uzerinde mulkiyyet huququnun dovlet qeydiyyati", "torpaq qanunvericiliyi"
+    ],
+    priorityArticles: ["67", "68", "69"]
   },
   {
-    id: "tobacco_littering",
+    id: "civil_housing_lease",
+    domain: "Mülki hüquq",
+    primaryLawId: "mulki",
+    triggerPhrases: ["yasayis sahesinin kiraye muqavilesi", "kiraye muqavilesi nece baglanir"],
+    expandedTerms: [
+      "yasayis sahesinin kiraye muqavilesi", "kirayəyə verən və kirayəçi"
+    ],
+    priorityArticles: ["228", "700", "701", "702"]
+  },
+  {
+    id: "civil_court_jurisdiction",
+    domain: "Mülki proses",
+    primaryLawId: "mulki_prosessual",
+    triggerPhrases: ["erazi aidiyyeti", "iddia erizesinin verilmesi zamani", "aidiyyet necə mueyyen"],
+    expandedTerms: [
+      "erazi aidiyyeti", "iddianin cavabdehin yasayis yerine gore verilmesi", "mehkeme aidiyyeti"
+    ],
+    priorityArticles: ["35", "36", "37"]
+  },
+  {
+    id: "administrative_violations_cigarette_and_protocol",
     domain: "İnzibati hüquq",
     primaryLawId: "inzibati_xetalar",
     triggerPhrases: [
-      "siqaret atmaq", "siqareti yere atmaq", "siqaret tullamaq", "siqareti tullamaq", "yere atmaq",
-      "siqaret kotuyu", "kotuk", "kotuyu yere atmaq", "tutun tullantisi", "tutun tullantilari",
-      "siqareti yere", "siqaret atilmasi", "zibil atmaq"
+      "siqaret kotuklerinin", "tullantilarin etraf muhite", "protokol hansi muddetde", 
+      "inzibati tenbeh novleri", "inzibati xeta haqqinda protokol"
     ],
     expandedTerms: [
-      "tutun memulatlari tullantilarinin etraf muhite atilmasina gore",
-      "etraf muhite atilmasina gore uc yuz manat mebleginde cerime edilir",
-      "tutun memulatlari tullantilarinin etraf muhite atilmasi",
-      "tutun memulatinin istehlakina dair mehdudiyyetler"
+      "meiset tullantilarinin atilmasi", "etraf muhitin muhafizesi", "inzibati xeta haqqinda protokolun tertibi",
+      "inzibati tenbeh novleri"
     ],
-    priorityArticles: ["212", "212-1", "352"]
+    priorityArticles: ["266", "100", "24", "22", "266-1", "212"]
   },
   {
-    id: "tobacco_smoking_prohibited",
-    domain: "İnzibati hüquq",
-    primaryLawId: "inzibati_xetalar",
-    triggerPhrases: [
-      "siqaret cekmek", "siqaret icmek", "tutun cekmek", "qadagan olunmus yerde siqaret",
-      "elektron siqaret", "veyp", "qelyan", "qapali yerde siqaret"
-    ],
+    id: "criminal_homicide",
+    domain: "Cinayət hüququ",
+    primaryLawId: "cinayet",
+    triggerPhrases: ["qesden adam oldurme", "adam oldurme cinayeti"],
     expandedTerms: [
-      "qadağan edilmiş digər yerlərdə tütün çəkməyə görə",
-      "tütün məmulatının istehlakına dair məhdudiyyətlər",
-      "tütün çəkmək üçün xüsusi ayrılmış yerlər",
-      "elektron siqaretlərin istifadəsi"
+      "qesden adam oldurme", "qesden adam oldurmeye gore ceza", "cinayet mecellesi madde 120"
     ],
-    priorityArticles: ["212", "212-1", "299", "305", "306", "318", "322"]
+    priorityArticles: ["120", "121", "122"]
   },
   {
-    id: "apartment_lease_eviction",
-    domain: "Mənzil hüququ",
-    primaryLawId: "menzil",
+    id: "tax_declaration_failure",
+    domain: "Vergi hüququ",
+    primaryLawId: "vergi",
     triggerPhrases: [
-      "kirayeci", "kiraye haqqi", "ev sahibi", "evden cixarma", "menzilden cixarma", "mehkeme qerari olmadan",
-      "kirayeni odemir", "kiraye pulunu vermir", "kirayeci pulu odemir", "kirayecini evden cixarmaq",
-      "alti ay", "6 ay", "alti aydan cox", "alti aydan artiq", "haqq odemedikde"
+      "vergi beyannamesi", "vergi beyanname", "beyanname teqdim", "beyanname verilmedikde",
+      "beyanname teqdim edilmedikde", "vergi hesabatini teqdim", "vergi hesabatini teqdim etmemek",
+      "vergi hesabatı", "vergi hesabatı vaxtında", "vergi cerimesi", "vergi sanksiyasi",
+      "vergi beyannamesi cerimesi", "maliyye sanksiyasi vergi", "dvx cerime", "dvx sanksiya",
+      "hesabatin teqdim edilmemesi"
     ],
     expandedTerms: [
-      "kirayeci ve onunla birlikde yasayan aile uzvleri",
-      "uzrlu sebebler olmadan alti aydan artiq muddetde yasayis sahesine ve kommunal xidmetlere gore haqq odemedikde",
-      "mehkeme qaydasinda cixarila bilerler",
-      "yasayis sahesinden mehkeme qaydasinda cixarilma",
-      "kiraye muqavilesinin legvi",
-      "mehkeme qerari olmadan yasayis sahesinden cixarilmanin yolverilmezliyi",
-      "kirayecinin huquqlari"
+      "hesabatin ve diger melumatin teqdim edilmesi ile bagli huquqpozmalara gore maliyye sanksiyalari",
+      "hesabat dovru uzre vergi tutulan ve ya vergiden azad edilen emeliyyatlar aparan",
+      "vergi hesabatini esas olmadan mueyyen edilen muddetde teqdim edilmemesine gore",
+      "40 manat mebleginde maliyye sanksiyasi tetbiq edilir",
+      "vergi mecellesi madde 57.1", "vergi mecellesi 57",
+      "budceye catasi vergi meblegi hesabat teqdim etmemekle yayindirildiqda",
+      "azaldilmis ve ya yayindirilmis vergi mebleginin 50 faizi miqdarinda maliyye sanksiyasi",
+      "vergi mecellesi madde 58.1", "vergi mecellesi 58", "dvx izahi"
     ],
-    priorityArticles: ["89", "90", "88", "82", "30", "1"]
+    priorityArticles: ["57", "57.1", "58", "58.1", "16", "72"],
+    forbiddenPhrases: ["inzibati xetalar mecellesi", "192.1", "493"]
   },
   {
-    id: "minimum_wage",
-    domain: "Əmək hüququ",
-    primaryLawId: "emek",
+    id: "tax_registration_and_income_tax",
+    domain: "Vergi hüququ",
+    primaryLawId: "vergi",
+    triggerPhrases: ["vergi odeyicisi kimi ucota", "fiziki sexslerin gelir vergisinin dereceleri", "gelir vergisinin dereceleri"],
+    expandedTerms: [
+      "vergi odeyicilerinin ucota alinmasi qaydalari", "vergi mecellesi madde 33", 
+      "fiziki sexslerin gelir vergisinin dereceleri", "vergi mecellesi madde 101"
+    ],
+    priorityArticles: ["33", "101", "34", "102"]
+  },
+  {
+    id: "civil_inheritance_succession",
+    domain: "Mülki hüquq",
+    primaryLawId: "mulki",
     triggerPhrases: [
-      "minimum emek haqqi", "minimum ayliq emekhaqqi", "minimum maas", "minimum emekhaqqi", "en az maas",
-      "minimum emek haqqinin meblegi", "minimum emek haqqi necedir"
+      "vereselik", "vereselik qaydalari", "miras", "miras emlak", "verese", "qanun uzre vereselik",
+      "vesiyyetname", "vesiyyet uzre vereselik", "mirasin qebulu", "mirasdan imtina", 
+      "vereselik sehadetnamesi", "mirasin acilmasi", "leyaqetsiz verese"
     ],
     expandedTerms: [
-      "minimum emek haqqi", "minimum ayliq emekhaqqinin meblegi", "emekhaqqinin minimum heddi",
-      "isegoturen terefinden minimum emekhaqqindan az olmamaq serti", "345 manat", "serencam",
-      "ehalinin sosial rifahinin yaxsilasdirilmasi sahesinde elave tedbirler haqqinda"
+      "vereselik anlayisi", "vereseler", "qanun uzre vereseler", "vesiyyet anlayisi",
+      "mirasin qebul edildiyi muddet", "vereselik sehadetnamesinin verildiyi muddet",
+      "mirasin acilmasi", "mirasdan imtina", "mulki mecelle madde 1133", "mulki mecelle madde 1159"
     ],
-    priorityArticles: ["155", "156", "154", "157"]
+    priorityArticles: ["1133", "1134", "1159", "1166", "1246", "1273", "1322"],
+    forbiddenPhrases: ["tikintiye vereselik", "torpaq sahesinin qeydiyyati"]
   }
 ];
-
-

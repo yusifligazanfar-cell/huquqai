@@ -6,7 +6,7 @@ import rehypeRaw from 'rehype-raw'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Paperclip, Scale, Bot, Loader2, FileText, Settings, Key, AlertCircle, CheckCircle2, Cpu, Globe, Zap, ChevronDown, Download, PlusCircle } from "lucide-react"
+import { Send, Paperclip, Scale, Bot, Loader2, FileText, Settings, Key, AlertCircle, CheckCircle2, Cpu, Globe, Zap, ChevronDown, Download, PlusCircle, Edit3, Check, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -100,6 +100,9 @@ export default function PetitionPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const [conversationId, setConversationId] = useState<string | null>(null)
+  const [editingPetitionId, setEditingPetitionId] = useState<string | number | null>(null)
+  const [editedContents, setEditedContents] = useState<{ [key: string]: string }>({})
+  const [copiedId, setCopiedId] = useState<string | number | null>(null)
 
   useEffect(() => {
     // Load API Key from local storage on mount
@@ -155,7 +158,7 @@ export default function PetitionPage() {
     setTimeout(() => setKeySaved(false), 3000)
   }
 
-  const downloadPDF = (id: number) => {
+  const downloadPDF = (id: string | number) => {
     const element = document.getElementById(`petition-${id}`);
     if (!element) return;
     
@@ -206,7 +209,7 @@ export default function PetitionPage() {
     printWindow.document.close();
   }
 
-  const downloadWord = (id: number) => {
+  const downloadWord = (id: string | number) => {
     const element = document.getElementById(`petition-${id}`);
     if (!element) return;
     
@@ -223,6 +226,27 @@ export default function PetitionPage() {
     fileDownload.download = 'LexAZ-Erize.doc';
     fileDownload.click();
     document.body.removeChild(fileDownload);
+  }
+
+  const copyPetition = (id: string | number, text: string) => {
+    const cleanText = text.replace("[ƏRİZƏ]", "").trim();
+    navigator.clipboard.writeText(cleanText);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2500);
+  }
+
+  const toggleEditPetition = (msgId: string | number, currentContent: string) => {
+    if (editingPetitionId === msgId) {
+      // Save changes back to message
+      const updatedText = editedContents[msgId] !== undefined ? editedContents[msgId] : currentContent;
+      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, content: updatedText.startsWith("[ƏRİZƏ]") ? updatedText : `[ƏRİZƏ]\n${updatedText}` } : m));
+      setEditingPetitionId(null);
+    } else {
+      if (editedContents[msgId] === undefined) {
+        setEditedContents(prev => ({ ...prev, [msgId]: currentContent.replace("[ƏRİZƏ]", "").trim() }));
+      }
+      setEditingPetitionId(msgId);
+    }
   }
 
   // Auto-scroll to bottom when messages change
@@ -365,61 +389,157 @@ export default function PetitionPage() {
 
                 <div className={`flex flex-col gap-2 max-w-[85%] md:max-w-[75%] ${msg.role === "user" ? "items-end" : "items-start"}`}>
                   <div className="flex flex-col gap-2">
-                    <div 
-                      id={`petition-${msg.id}`}
-                      contentEditable={msg.role === "assistant" && msg.content.includes("[ƏRİZƏ]")}
-                      suppressContentEditableWarning={true}
-                      className={`px-5 py-4 rounded-2xl text-[15px] leading-relaxed shadow-sm ${
-                        msg.role === "user" 
-                          ? "bg-primary text-white rounded-tr-sm shadow-[0_4px_15px_rgba(234,88,12,0.3)]" 
-                          : msg.content.includes("[ƏRİZƏ]")
-                            ? "bg-white text-black rounded-sm max-w-[21cm] min-h-[15cm] shadow-[0_10px_40px_rgba(0,0,0,0.15)] prose prose-sm max-w-none font-serif p-10 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    {msg.role === "assistant" && msg.content.includes("[ƏRİZƏ]") ? (
+                      <div className="flex flex-col gap-3 w-full">
+                        {/* Petition Toolbar */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary">
+                              <Scale className="h-3.5 w-3.5" />
+                              Hüquqi Ərizə Sənədi
+                            </span>
+                            {editingPetitionId === msg.id && (
+                              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium animate-pulse">
+                                ● Redaktə rejimi aktivdir
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              onClick={() => toggleEditPetition(msg.id, msg.content)}
+                              variant={editingPetitionId === msg.id ? "default" : "outline"}
+                              size="sm"
+                              className={`h-8 gap-1.5 text-xs font-semibold ${
+                                editingPetitionId === msg.id
+                                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  : "border-slate-300 dark:border-white/20 hover:bg-slate-200 dark:hover:bg-slate-700"
+                              }`}
+                            >
+                              {editingPetitionId === msg.id ? (
+                                <>
+                                  <Check className="h-3.5 w-3.5" />
+                                  Yadda saxla
+                                </>
+                              ) : (
+                                <>
+                                  <Edit3 className="h-3.5 w-3.5 text-primary" />
+                                  Düzəliş et (Edit)
+                                </>
+                              )}
+                            </Button>
+
+                            <Button
+                              onClick={() => copyPetition(msg.id, editedContents[msg.id] ?? msg.content)}
+                              variant="outline"
+                              size="sm"
+                              className="h-8 gap-1.5 text-xs border-slate-300 dark:border-white/20 hover:bg-slate-200 dark:hover:bg-slate-700"
+                            >
+                              {copiedId === msg.id ? (
+                                <>
+                                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                  Kopyalandı
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-3.5 w-3.5" />
+                                  Kopyala
+                                </>
+                              )}
+                            </Button>
+
+                            <Button 
+                              onClick={() => downloadPDF(msg.id)}
+                              className="h-8 gap-1.5 text-xs bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                              size="sm"
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              PDF
+                            </Button>
+                            <Button 
+                              onClick={() => downloadWord(msg.id)}
+                              className="h-8 gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                              size="sm"
+                            >
+                              <FileText className="h-3.5 w-3.5" />
+                              Word
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Petition Body (Editable Textarea vs Rendered Sheet) */}
+                        {editingPetitionId === msg.id ? (
+                          <div className="relative w-full">
+                            <textarea
+                              value={editedContents[msg.id] ?? msg.content.replace("[ƏRİZƏ]", "").trim()}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setEditedContents(prev => ({ ...prev, [msg.id]: val }));
+                              }}
+                              rows={20}
+                              className="w-full p-6 text-sm md:text-base font-serif leading-relaxed bg-white text-slate-900 border-2 border-primary/40 rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-primary min-h-[450px]"
+                              placeholder="Ərizə mətnində istədiyiniz düzəlişi edin..."
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              * Düzəlişləri bitirdikdən sonra yuxarıdakı <strong>"Yadda saxla"</strong> düyməsinə klikləyin.
+                            </p>
+                          </div>
+                        ) : (
+                          <div 
+                            id={`petition-${msg.id}`}
+                            className="bg-white text-black rounded-xl max-w-[21cm] min-h-[15cm] shadow-[0_10px_40px_rgba(0,0,0,0.12)] prose prose-sm max-w-none font-serif p-8 md:p-12 border border-slate-300 dark:border-slate-700 focus:outline-none"
+                          >
+                            <ReactMarkdown 
+                              remarkPlugins={[remarkGfm]} 
+                              rehypePlugins={[
+                                rehypeRaw, 
+                                [rehypeSanitize, {
+                                  ...defaultSchema,
+                                  attributes: {
+                                    ...defaultSchema.attributes,
+                                    '*': ['className', 'align', 'style']
+                                  }
+                                }]
+                              ]}
+                            >
+                              {editedContents[msg.id] ?? msg.content.replace("[ƏRİZƏ]", "").trim()}
+                            </ReactMarkdown>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div 
+                        className={`px-5 py-4 rounded-2xl text-[15px] leading-relaxed shadow-sm ${
+                          msg.role === "user" 
+                            ? "bg-primary text-white rounded-tr-sm shadow-[0_4px_15px_rgba(234,88,12,0.3)]" 
                             : "bg-orange-50 dark:bg-card/90 backdrop-blur-md border border-orange-200 dark:border-white/5 rounded-tl-sm prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-secondary/50 shadow-[0_2px_10px_rgba(0,0,0,0.05)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.1)] text-orange-950 dark:text-foreground"
-                      }`}
-                    >
-                      {msg.role === "user" ? (
-                        <div className="whitespace-pre-line">{msg.content}</div>
-                      ) : (
-                        <ReactMarkdown 
-                          remarkPlugins={[remarkGfm]} 
-                          rehypePlugins={[
-                            rehypeRaw, 
-                            [rehypeSanitize, {
-                              ...defaultSchema,
-                              attributes: {
-                                ...defaultSchema.attributes,
-                                '*': ['className', 'align', 'style']
-                              }
-                            }]
-                          ]}
-                        >
-                          {msg.content.replace("[ƏRİZƏ]", "")}
-                        </ReactMarkdown>
-                      )}
-                    </div>
-                    {msg.role === "assistant" && msg.content.includes("[ƏRİZƏ]") && (
-                      <div className="flex gap-2 mt-2 self-start">
-                        <Button 
-                          onClick={() => downloadPDF(msg.id)}
-                          className="bg-green-600 hover:bg-green-700 text-white border-none shadow-md"
-                          size="sm"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          PDF kimi yüklə
-                        </Button>
-                        <Button 
-                          onClick={() => downloadWord(msg.id)}
-                          className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-md"
-                          size="sm"
-                        >
-                          <FileText className="h-4 w-4 mr-2" />
-                          Word kimi yüklə
-                        </Button>
+                        }`}
+                      >
+                        {msg.role === "user" ? (
+                          <div className="whitespace-pre-line">{msg.content}</div>
+                        ) : (
+                          <ReactMarkdown 
+                            remarkPlugins={[remarkGfm]} 
+                            rehypePlugins={[
+                              rehypeRaw, 
+                              [rehypeSanitize, {
+                                ...defaultSchema,
+                                ...defaultSchema,
+                                attributes: {
+                                  ...defaultSchema.attributes,
+                                  '*': ['className', 'align', 'style']
+                                }
+                              }]
+                            ]}
+                          >
+                            {msg.content}
+                          </ReactMarkdown>
+                        )}
                       </div>
                     )}
                   </div>
 
-                  {msg.citations && msg.citations.length > 0 && (
+                  {msg.citations && msg.citations.length > 0 && !msg.content.includes("[ƏRİZƏ]") && (
                     <div className="flex flex-col gap-2 mt-2 w-full pt-2">
                       {msg.citations.map((cite: string, i: number) => (
                         <InlineCitation key={i} title={cite} />
