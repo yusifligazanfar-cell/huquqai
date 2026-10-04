@@ -78,11 +78,16 @@ export function CookieAndUpdateBanner() {
             </button>
 
             <div className="flex items-start gap-3.5 pr-4">
-              <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
-                <MessageSquareHeart className="w-5 h-5" />
+              <div className="relative w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                </span>
+                <MessageSquareHeart className="w-5 h-5 animate-pulse" />
               </div>
               <div className="flex-1">
-                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-wider mb-1">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-wider mb-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>
                   Sizin Rəyiniz Vacibdir
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
@@ -95,16 +100,20 @@ export function CookieAndUpdateBanner() {
                   <Link
                     href="/feedback"
                     onClick={dismissFeedback}
-                    className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold h-8 px-4 rounded-lg shadow-sm transition-all hover:scale-105"
+                    className="relative group inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold h-9 px-4 rounded-xl shadow-lg shadow-emerald-500/30 animate-pulse hover:animate-none transition-all hover:scale-105 ring-2 ring-emerald-400/50"
                   >
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                    </span>
                     <span>Rəy bildir</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                   </Link>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={dismissFeedback}
-                    className="text-xs h-8 px-3 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
+                    className="text-xs h-9 px-3 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
                   >
                     Daha sonra
                   </Button>
