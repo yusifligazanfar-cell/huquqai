@@ -167,7 +167,7 @@ ${query}`
 
     const isOpr = apiKey.startsWith("sk-or-v1-")
     const endpoint = isOpr ? "https://openrouter.ai/api/v1/chat/completions" : "https://api.openai.com/v1/chat/completions"
-    let reqModel = isOpr ? "openai/gpt-4o" : "gpt-4o"
+    let reqModel = isOpr ? "openai/gpt-4o-mini" : "gpt-4o-mini"
 
     const headers = {
       "Authorization": `Bearer ${apiKey}`,
@@ -192,11 +192,10 @@ ${query}`
       body: JSON.stringify(body)
     })
 
-    // If Rate Limited (429) or model issue (404/400/402), fallback to gpt-4o-mini smoothly
-    if (!response.ok && (response.status === 429 || response.status === 404 || response.status === 400 || response.status === 402)) {
-      console.warn(`Petition primary model ${reqModel} returned ${response.status}. Falling back to gpt-4o-mini...`)
-      await new Promise(res => setTimeout(res, 1500))
-      body.model = isOpr ? "openai/gpt-4o-mini" : "gpt-4o-mini"
+    // If Rate Limited (429), retry
+    if (!response.ok && response.status === 429) {
+      console.warn(`Petition rate limit encountered, waiting 2.5s and retrying...`)
+      await new Promise(res => setTimeout(res, 2500))
       response = await fetch(endpoint, {
         method: "POST",
         headers,
