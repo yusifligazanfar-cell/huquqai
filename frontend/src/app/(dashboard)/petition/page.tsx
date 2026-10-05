@@ -6,7 +6,7 @@ import rehypeRaw from 'rehype-raw'
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
 
 import { useState, useRef, useEffect } from "react"
-import { Send, Paperclip, Scale, Bot, Loader2, FileText, Settings, Key, AlertCircle, CheckCircle2, Cpu, Globe, Zap, ChevronDown, Download, PlusCircle, Edit3, Check, Copy } from "lucide-react"
+import { Send, Paperclip, Scale, Bot, Loader2, FileText, Settings, Key, AlertCircle, CheckCircle2, Cpu, Globe, Zap, ChevronDown, Download, PlusCircle, Edit3, Check, Copy, Lock, LogIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -89,7 +89,7 @@ function InlineCitation({ title }: { title: string }) {
 }
 
 export default function PetitionPage() {
-  const { supabaseUser } = useAuth()
+  const { supabaseUser, isLoggedIn, isLoaded } = useAuth()
   const [messages, setMessages] = useState<any[]>([])
   const [input, setInput] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -340,6 +340,44 @@ export default function PetitionPage() {
       setMessages(INITIAL_MESSAGES)
       setConversationId(null)
     }
+  }
+
+  // If user is loaded and not logged in, enforce login screen
+  if (isLoaded && !isLoggedIn) {
+    return (
+      <div className="flex h-[calc(100svh-6rem)] md:h-[calc(100vh-8rem)] flex-col items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white/90 dark:bg-card/60 backdrop-blur-3xl border border-slate-200 dark:border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl text-center relative overflow-hidden">
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-6 text-primary shadow-inner">
+            <Lock className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground mb-3">
+            Giriş etmək tələb olunur
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-8">
+            Hüquqi ərizə və şikayət tərtibatçısından istifadə etmək, sənədlərinizi yadda saxlamaq və redaktə etmək üçün zəhmət olmasa hesabınıza daxil olun.
+          </p>
+          <div className="space-y-3">
+            <Button
+              size="lg"
+              className="w-full h-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-emerald-500/25 transition-all hover:scale-[1.02] active:scale-[0.98] gap-2"
+              onClick={() => window.location.href = '/login'}
+            >
+              <LogIn className="w-4 h-4" />
+              Hesaba Daxil Ol
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => window.location.href = '/login'}
+            >
+              Hesabınız yoxdur? Qeydiyyatdan keçin
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
