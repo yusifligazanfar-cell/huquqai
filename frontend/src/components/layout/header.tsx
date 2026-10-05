@@ -47,16 +47,25 @@ export function Header() {
         )}
 
         <div className="h-5 w-[1px] bg-border/50"></div>
-        <Link href="/account" className="flex items-center gap-3 cursor-pointer group">
-          <div className="flex flex-col items-end hidden sm:flex">
-            <span className="text-sm font-medium leading-none group-hover:text-primary transition-colors">{displayName}</span>
-            <span className="text-xs text-muted-foreground mt-1">{displayRole}</span>
-          </div>
-          <Avatar className="h-10 w-10 border-2 border-primary/20 ring-2 ring-background group-hover:border-primary/50 transition-colors shadow-sm">
-            <AvatarImage src={user?.avatar || undefined} />
-            <AvatarFallback className="bg-gradient-to-br from-primary to-indigo-600 text-white font-semibold text-xs">{initials}</AvatarFallback>
-          </Avatar>
-        </Link>
+        {isLoaded && !isLoggedIn ? (
+          <Link
+            href="/login"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs sm:text-sm h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all hover:scale-105 active:scale-95"
+          >
+            <span>Giriş et</span>
+          </Link>
+        ) : (
+          <Link href="/account" className="flex items-center gap-3 cursor-pointer group">
+            <div className="flex flex-col items-end hidden sm:flex">
+              <span className="text-sm font-medium leading-none group-hover:text-primary transition-colors">{displayName}</span>
+              <span className="text-xs text-muted-foreground mt-1">{displayRole}</span>
+            </div>
+            <Avatar className="h-10 w-10 border-2 border-primary/20 ring-2 ring-background group-hover:border-primary/50 transition-colors shadow-sm">
+              <AvatarImage src={user?.avatar || undefined} />
+              <AvatarFallback className="bg-gradient-to-br from-primary to-indigo-600 text-white font-semibold text-xs">{initials}</AvatarFallback>
+            </Avatar>
+          </Link>
+        )}
       </div>
     </header>
   )
