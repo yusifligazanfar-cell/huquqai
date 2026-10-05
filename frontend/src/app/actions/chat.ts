@@ -184,13 +184,18 @@ ${query}`;
     if (!response.ok) {
       const errText = await response.text()
       console.error(`AI API Xətası (${response.status}):`, errText)
+      let parsedErr = errText
+      try {
+        const j = JSON.parse(errText)
+        parsedErr = j.error?.message || errText
+      } catch {}
       if (response.status === 429) {
-         throw new Error("Sistemdə qısa müddətli sıxlıq var. Zəhmət olmasa bir neçə saniyə sonra yenidən cəhd edin.")
+         throw new Error(`OpenAI 429: ${parsedErr}`)
       }
       if (response.status === 402) {
-         throw new Error("Balansınız bitib (Payment Required). Zəhmət olmasa API hesabınıza vəsait əlavə edin.")
+         throw new Error(`Balansınız bitib (Payment Required): ${parsedErr}`)
       }
-      throw new Error(`API xətası: ${response.statusText}`)
+      throw new Error(`API xətası (${response.status}): ${parsedErr}`)
     }
 
     const data = await response.json()
