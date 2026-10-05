@@ -192,7 +192,10 @@ ${query}`
       body: JSON.stringify(body)
     })
 
-    if (!response.ok && (response.status === 404 || response.status === 400 || response.status === 402)) {
+    // If Rate Limited (429) or model issue (404/400/402), fallback to gpt-4o-mini smoothly
+    if (!response.ok && (response.status === 429 || response.status === 404 || response.status === 400 || response.status === 402)) {
+      console.warn(`Petition primary model ${reqModel} returned ${response.status}. Falling back to gpt-4o-mini...`)
+      await new Promise(res => setTimeout(res, 1500))
       body.model = isOpr ? "openai/gpt-4o-mini" : "gpt-4o-mini"
       response = await fetch(endpoint, {
         method: "POST",
@@ -203,7 +206,7 @@ ${query}`
 
     if (!response.ok) {
       if (response.status === 429) {
-        throw new Error("Çox sayda sorğu göndərildi (API Limiti doldu). Zəhmət olmasa 1 dəqiqə gözləyib yenidən cəhd edin.")
+        throw new Error("Sistemdə qısa müddətli sıxlıq var. Zəhmət olmasa bir neçə saniyə sonra yenidən cəhd edin.")
       }
       if (response.status === 402) {
         throw new Error("Balansınız bitib (Payment Required). Zəhmət olmasa API hesabınıza vəsait əlavə edin.")
