@@ -22,7 +22,7 @@ const INITIAL_MESSAGES = [
   {
     id: 1,
     role: "assistant",
-    content: "Salam! Mən LexAZ Elektron Ərizə köməkçisiyəm. Hansı quruma və ya nə barədə ərizə (və ya şikayət) yazmaq istəyirsiniz? Zəhmət olmasa, qısaca mövzunu deyin, mən sizə ardıcıl suallar verərək ərizənizi peşəkar şəkildə tərtib edəcəyəm.",
+    content: "Salam! Mən LexAZ Elektron Ərizə və İddia köməkçisiyəm.\n\nHansı məsələ barədə və hansı quruma/məhkəməyə ərizə hazırlamaq istəyirsiniz? Mövzunu qeyd edin, mən sizə lazımi dinamik məlumatları (tərəflərin adları, ünvanlar, xitam/hadisə tarixi, tələblər) ardıcıl suallarla soruşaraq, boş mötərizəsiz tam hazır rəsmi sənəd tərtib edəcəyəm.",
     citations: [] as string[]
   }
 ]
