@@ -553,8 +553,18 @@ function ChatContent() {
         .slice(isPetitionMode ? -30 : -6)
         .map(m => ({ role: m.role, content: m.content }));
 
+      const lowerQ = userQuery.toLowerCase().trim();
+      const isPetitionIntent = isPetitionMode || 
+        lowerQ.includes("ərizə") || 
+        lowerQ.includes("erize") || 
+        lowerQ.includes("iddia ərizəsi") || 
+        lowerQ.includes("iddia erizesi") || 
+        lowerQ.includes("şikayət ərizəsi") || 
+        lowerQ.includes("erizə");
+
       let response;
-      if (isPetitionMode) {
+      if (isPetitionIntent) {
+        setIsPetitionMode(true);
         response = await generatePetitionResponse(userQuery, apiKey, llmHistory, false);
         if (response.content?.includes("[ƏRİZƏ]")) {
           setIsPetitionMode(false);
