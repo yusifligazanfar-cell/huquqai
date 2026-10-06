@@ -165,7 +165,15 @@ Bu halların hamısının birlikdə hüquqi qiymətləndirilməsi zəruridir.
 
 **İddiaçı:** __________________ / [Ad, Soyad]
 
-**Tarix:** ___ / ___ / 2026`;
+**Tarix:** ___ / ___ / 2026
+
+---
+
+## 5. QƏTİ QADAĞALAR:
+- ƏRİZƏNİN ƏVVƏLİNDƏ VƏ YA SONUNDA HEÇ BİR ÇAT CÜMLƏSİ YAZMA!
+  (Məsələn: "Təşəkkür edirəm, təqdim etdiyiniz məlumatlar çox faydalıdır...", "Zəhmət olmasa, təqdim etdiyim ərizədəki boş yerləri doldurun..." kimi cümlələri QƏTİYYƏN YAZMA!)
+- Cavabın DƏRHAL və BİRBAŞA \`[ƏRİZƏ]\` sözü ilə başlamalı və birbaşa sənədin özü (Məhkəmənin adı...) gəlməlidir! Sonda isə yalnız Tarix və İmza yeri ilə bitməlidir!
+- Ərizənin altında heç bir qanun maddəsi siyahısı, keçid və ya şərh yazma!`;
 
     if (skipInterview) {
       systemPrompt += `\n\n[DİQQƏT: SİSTEM TƏLƏBİ]\nİstifadəçiyə BİRBAŞA ƏRİZƏ ŞABLONUNU TƏRTİB EDİN. Çatışmayan yerləri [Mötərizə içində] qeyd edin.\nİlk sözünüz MÜTLƏQ \`[ƏRİZƏ]\` olmalıdır!`
@@ -226,10 +234,37 @@ ${query}`
     }
 
     const data = await response.json()
+    let rawAiContent = (data.choices[0].message.content || "").trim()
+    const isFinalPetition = rawAiContent.includes("[ƏRİZƏ]")
+
+    if (isFinalPetition) {
+      // Sənədin əvvəlindəki söhbəti təmizlə (birbaşa [ƏRİZƏ]-dən başlasın)
+      const petitionStartIndex = rawAiContent.indexOf("[ƏRİZƏ]")
+      if (petitionStartIndex !== -1) {
+        rawAiContent = rawAiContent.substring(petitionStartIndex)
+      }
+
+      // Sənədin sonunda "Zəhmət olmasa...", "Qeyd:...", "Hər hansı bir düzəliş..." kimi cümlələri təmizlə
+      const outroMarkers = [
+        "\nZəhmət olmasa",
+        "\nQeyd:",
+        "\n*Qeyd:",
+        "\n**Qeyd:",
+        "\nHər hansı bir",
+        "\nÜmid edirəm"
+      ]
+      for (const marker of outroMarkers) {
+        const markerIdx = rawAiContent.lastIndexOf(marker)
+        if (markerIdx !== -1) {
+          rawAiContent = rawAiContent.substring(0, markerIdx).trim()
+        }
+      }
+    }
 
     return {
-      content: data.choices[0].message.content,
-      citations: retrievedChunks.map(c => c.articleTitle)
+      content: rawAiContent,
+      // Ərizə rejimində altında qanun maddələri siyahısı çıxarılmasın
+      citations: []
     }
   } catch (error: any) {
     console.error("Petition Generator Error:", error)
