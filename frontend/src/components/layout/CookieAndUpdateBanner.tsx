@@ -65,7 +65,7 @@ export function CookieAndUpdateBanner() {
 
       {/* 2. Feedback Request Floating Banner (https://huquqai.az/feedback) */}
       {showFeedbackBanner && (
-        <div className="fixed bottom-4 md:bottom-6 right-3 sm:right-6 z-[9999] max-w-md w-[calc(100vw-1.5rem)] animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-4 md:bottom-6 right-3 sm:right-6 z-[9999] max-w-lg w-[calc(100vw-1.5rem)] animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="bg-white/95 dark:bg-slate-900/95 border-2 border-emerald-500/50 rounded-2xl p-4 sm:p-5 shadow-2xl shadow-emerald-950/20 dark:shadow-black/70 backdrop-blur-xl relative">
             <button
               type="button"
@@ -78,7 +78,7 @@ export function CookieAndUpdateBanner() {
             </button>
 
             <div className="flex items-start gap-3.5 pr-4">
-              <div className="relative w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+              <div className="relative w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5">
                 <span className="absolute -top-1 -right-1 flex h-3 w-3">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
@@ -88,15 +88,23 @@ export function CookieAndUpdateBanner() {
               <div className="flex-1">
                 <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-bold text-[10px] uppercase tracking-wider mb-1">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                  Sizin Rəyiniz Vacibdir
+                  Fikriniz bizim üçün önəmlidir 💬
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                  Huquq AI-ın inkişafı üçün rəy bildirin
+                  Huquq AI-ı birlikdə daha yaxşı edək!
                 </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-300 mt-1 leading-relaxed">
-                  Xahiş olunur, Huquq AI platformasını daha da təkmilləşdirmək üçün təklif və rəylərinizi bizimlə bölüşəsiniz.
-                </p>
-                <div className="mt-3 flex items-center gap-2">
+                <div className="text-xs text-slate-600 dark:text-slate-300 mt-2 space-y-2 leading-relaxed max-h-56 overflow-y-auto pr-1">
+                  <p>
+                    Platformada bəyəndiyiniz və ya sizi narahat edən məqamlar, qarşılaşdığınız çətinliklər və təklifləriniz bizim üçün çox dəyərlidir.
+                  </p>
+                  <p>
+                    Müsbət və ya mənfi — hər bir rəyiniz inkişafımız üçün vacibdir. Fikirlərinizi bizimlə bölüşməkdən çəkinməyin. Sizi dinləyirik və hər rəyi daha yaxşı bir Huquq AI yaratmaq üçün fürsət kimi görürük.
+                  </p>
+                  <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    Vaxt ayırıb rəy bildirdiyiniz üçün təşəkkür edirik! ❤️
+                  </p>
+                </div>
+                <div className="mt-3.5 flex items-center gap-2">
                   <Link
                     href="/feedback"
                     onClick={dismissFeedback}
