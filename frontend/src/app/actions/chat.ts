@@ -146,6 +146,12 @@ const QUESTION_STOP_WORDS = new Set([
   'madde', 'qanun', 'mecelle', 'ceza', 'cezasi', 'sual', 'cavab'
 ]);
 
+const GENERIC_PROCEDURAL_TOKENS = new Set([
+  'inzibati', 'xeta', 'xetalar', 'cinayet', 'mulki', 'emek', 'aile', 'vergi',
+  'protokol', 'protokolun', 'tertibi', 'elave', 'tenbeh', 'tenbehler', 'novleri',
+  'huquqi', 'qayda', 'qaydasi', 'normativ', 'akt', 'respublikasinin', 'azerbaycan'
+]);
+
 function cleanClauseNoise(text: string): string {
   return text
     .replace(/\[\d+\]/g, '')
@@ -171,21 +177,24 @@ function buildSearchStems(
 ): Array<{ norm: string; stem: string; weight: number }> {
   const tokenWeights = new Map<string, number>();
 
-  const pushTokens = (raw: string, weight: number) => {
+  const pushTokens = (raw: string, baseWeight: number) => {
     const parts = normalizeAz(raw).split(/[^a-z0-9.\-]+/i);
     for (const part of parts) {
       const cleaned = part.replace(/^[\.\-]+|[\.\-]+$/g, '');
       if (cleaned.length < 3 || QUESTION_STOP_WORDS.has(cleaned)) continue;
+      const effectiveWeight = GENERIC_PROCEDURAL_TOKENS.has(cleaned)
+        ? 1
+        : baseWeight;
       const prev = tokenWeights.get(cleaned) ?? 0;
-      if (weight > prev) tokenWeights.set(cleaned, weight);
+      if (effectiveWeight > prev) tokenWeights.set(cleaned, effectiveWeight);
     }
   };
 
-  pushTokens(query, 4);
+  pushTokens(query, 7);
   for (const kw of queryAnalysis.keywords || []) pushTokens(kw, 5);
   for (const term of extraTerms || []) pushTokens(term, 5);
   if (queryAnalysis.targetArticleNum) {
-    tokenWeights.set(queryAnalysis.targetArticleNum, 10);
+    tokenWeights.set(queryAnalysis.targetArticleNum, 12);
   }
 
   return Array.from(tokenWeights.entries()).map(([norm, weight]) => ({
@@ -217,9 +226,9 @@ function extractScoredClauses(
     if (!rawText) return;
 
     // Split on article or numbered sub-clause boundaries while preserving marker text
-    // Require trailing dot on standalone clause numbers (and exclude 4-digit years) so dates/cross-refs are never split
+    // Require trailing dot on standalone clause numbers (and exclude 4-digit years / hyphenated prefixes like 189-3.1)
     const segments = rawText
-      .split(/(?=(?:\bMaddə\s+\d+(?:\.\d+)*(?:-\d+)?\.|\b(?!19\d\d|20\d\d)\d{1,3}(?:\.\d{1,2})+(?:-\d+)?\.)\s)/g)
+      .split(/(?=(?:\bMaddə\s+\d+(?:\.\d+)*(?:-\d+)?\.|(?<![-\d])(?!19\d\d|20\d\d)\d{1,3}(?:-\d+)?(?:\.\d{1,2})+(?:-\d+)?\.)\s)/g)
       .map((s) => s.trim())
       .filter((s) => s.length >= 24);
 
@@ -234,38 +243,44 @@ function extractScoredClauses(
         continue;
       }
 
-      const subNumMatch = seg.match(/^(?:Maddə\s+)?(\d{1,3}(?:\.\d{1,2})+(?:-\d+)?)(?=\.|\s)/i);
+      const subNumMatch = seg.match(/^(?:Maddə\s+)?(\d{1,3}(?:-\d+)?(?:\.\d{1,2})+(?:-\d+)?)(?=\.|\s)/i);
       const artNumMatch = seg.match(/^Maddə\s+(\d{1,4}(?:-\d+)?)(?=\.|\s)/i);
       const clauseNum = subNumMatch?.[1] || artNumMatch?.[1] || ch.articleNumber || '';
+
+      // Skip bare article title headers without operative rule text (e.g. "Maddə 212. Tütün məmulatının istehlakına dair məhdudiyyətlərə riayət edilməməsi")
+      if (!subNumMatch && seg.length < 130 && !wantsSpecificRule.test(seg)) {
+        continue;
+      }
 
       const fp = normalizeAz(seg).slice(0, 72);
       if (seenFingerprints.has(fp)) continue;
       seenFingerprints.add(fp);
 
       const normSeg = normalizeAz(seg);
-      let score = Math.max(0, 6 - chunkIdx);
+      let score = Math.max(0, 8 - chunkIdx * 2);
 
-      let matchedStems = 0;
+      let specificMatches = 0;
       for (const s of stems) {
-        if (normSeg.includes(s.norm)) {
+        const hitExact = normSeg.includes(s.norm);
+        const hitStem = !hitExact && s.stem.length >= 5 && normSeg.includes(s.stem);
+        if (hitExact) {
           score += s.weight * 2;
-          matchedStems++;
-        } else if (s.stem.length >= 5 && normSeg.includes(s.stem)) {
+          if (s.weight >= 3) specificMatches++;
+        } else if (hitStem) {
           score += s.weight * 1.4;
-          matchedStems++;
+          if (s.weight >= 3) specificMatches++;
         }
       }
 
       // Bonus for concrete statutory specifics (amounts, deadlines, penalties, duties) when topic matches
-      if (matchedStems > 0 && wantsSpecificRule.test(seg)) {
-        score += 5;
+      if (specificMatches > 0 && wantsSpecificRule.test(seg)) {
+        score += 6;
       }
       if (queryAnalysis.targetArticleNum && clauseNum.startsWith(queryAnalysis.targetArticleNum)) {
-        score += 12;
+        score += 14;
       }
-      // Slight preference for substantive sub-clauses over bare chapter/article headings
       if (subNumMatch) {
-        score += 3;
+        score += 4;
       }
 
       results.push({
@@ -277,6 +292,20 @@ function extractScoredClauses(
       });
     }
   });
+
+  // Boost sibling clauses in the primary article that explicitly reference the winning clause (e.g. 212.4-1 referencing 212.4)
+  if (results.length > 0) {
+    results.sort((a, b) => b.score - a.score || a.chunkIdx - b.chunkIdx);
+    const winner = results[0];
+    if (winner.clauseNum) {
+      const refRegex = new RegExp(`\\b${winner.clauseNum.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:-c[ıiuü]|\\.|\b)`);
+      for (const item of results) {
+        if (item !== winner && item.chunkIdx === winner.chunkIdx && refRegex.test(item.body)) {
+          item.score = Math.max(item.score, winner.score * 0.85);
+        }
+      }
+    }
+  }
 
   return results.sort((a, b) => b.score - a.score || a.chunkIdx - b.chunkIdx);
 }
@@ -291,10 +320,12 @@ function buildStatutoryFallbackResponse(
   const stems = buildSearchStems(query, queryAnalysis, extraTerms);
   const scoredClauses = extractScoredClauses(topChunks, stems, queryAnalysis);
 
-  // Pick top distinct clauses for Qısa cavab so user immediately sees exact rules & amounts
+  // Pick top distinct high-relevance clauses for Qısa cavab so user immediately sees exact rules & amounts
   const summaryClauses: ScoredClause[] = [];
   const usedClauseKeys = new Set<string>();
+  const topScore = scoredClauses[0]?.score ?? 0;
   for (const cl of scoredClauses) {
+    if (summaryClauses.length > 0 && cl.score < topScore * 0.55) break;
     const key = `${cl.chunk.lawId}:${cl.clauseNum}:${normalizeAz(cl.body).slice(0, 40)}`;
     if (usedClauseKeys.has(key)) continue;
     usedClauseKeys.add(key);
@@ -307,7 +338,8 @@ function buildStatutoryFallbackResponse(
       ? summaryClauses
           .map((cl) => {
             const label = cl.clauseNum ? `Maddə ${cl.clauseNum}` : (cl.chunk.articleTitle || 'Normativ müddəa');
-            return `**${cl.chunk.lawName} — ${label}:** ${trimCleanly(cl.body, 520)}`;
+            const cleanBody = cl.body.replace(/^(?:Maddə\s+)?\d+(?:-\d+)?(?:\.\d+)*(?:-\d+)?\.?\s+/i, '').trim() || cl.body;
+            return `**${cl.chunk.lawName} — ${label}:** ${trimCleanly(cleanBody, 520)}`;
           })
           .join('\n\n')
       : 'Sorğunuz üzrə rəsmi qanunvericilik bazasında birbaşa uyğun maddə tapılmadı. Zəhmət olmasa sualınızı daha dəqiq açar sözlərlə ifadə edin.';
