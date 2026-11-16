@@ -17,7 +17,7 @@ import {
   isRemoteRagConfigured,
 } from '@/lib/legal-rag'
 import { findCandidateLawsByQuery } from '@/lib/legal-rag/registry'
-import type { StructuredChunk } from '@/lib/legal-rag'
+import type { QueryAnalysis, StructuredChunk } from '@/lib/legal-rag'
 import { generateLlmCompletion } from '@/lib/llm/client'
 import { findRelevantCourtAct, CourtAct } from '@/lib/court-precedents'
 import { eqanunClient } from '@/lib/services/e_qanun_client'
@@ -138,6 +138,231 @@ function buildBasisFromChunks(chunks: StructuredChunk[]) {
   };
 }
 
+const QUESTION_STOP_WORDS = new Set([
+  'ne', 'nedir', 'nece', 'necedir', 'qeder', 'qederdir', 'hansi', 'kim', 'hara',
+  'haraya', 'haradan', 'niye', 'ucun', 'haqqinda', 'haqda', 'olar', 'olarmi',
+  'edilir', 'edir', 'biler', 'bilerem', 'lazimdir', 'gerektir', 've', 'ya',
+  'ile', 'bu', 'bir', 'olan', 'zaman', 'zamani', 'halda', 'gore', 'esas', 'bax',
+  'madde', 'qanun', 'mecelle', 'ceza', 'cezasi', 'sual', 'cavab'
+]);
+
+function cleanClauseNoise(text: string): string {
+  return text
+    .replace(/\[\d+\]/g, '')
+    .replace(/\u2011|\u2010|\u2212/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function trimCleanly(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  const slice = text.slice(0, maxLen);
+  const lastStop = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('; '));
+  if (lastStop > maxLen * 0.55) {
+    return slice.slice(0, lastStop + 1).trim();
+  }
+  return `${slice.trim()}...`;
+}
+
+function buildSearchStems(
+  query: string,
+  queryAnalysis: QueryAnalysis,
+  extraTerms: string[]
+): Array<{ norm: string; stem: string; weight: number }> {
+  const tokenWeights = new Map<string, number>();
+
+  const pushTokens = (raw: string, weight: number) => {
+    const parts = normalizeAz(raw).split(/[^a-z0-9.\-]+/i);
+    for (const part of parts) {
+      const cleaned = part.replace(/^[\.\-]+|[\.\-]+$/g, '');
+      if (cleaned.length < 3 || QUESTION_STOP_WORDS.has(cleaned)) continue;
+      const prev = tokenWeights.get(cleaned) ?? 0;
+      if (weight > prev) tokenWeights.set(cleaned, weight);
+    }
+  };
+
+  pushTokens(query, 4);
+  for (const kw of queryAnalysis.keywords || []) pushTokens(kw, 5);
+  for (const term of extraTerms || []) pushTokens(term, 5);
+  if (queryAnalysis.targetArticleNum) {
+    tokenWeights.set(queryAnalysis.targetArticleNum, 10);
+  }
+
+  return Array.from(tokenWeights.entries()).map(([norm, weight]) => ({
+    norm,
+    stem: norm.length >= 6 ? norm.slice(0, 5) : norm,
+    weight,
+  }));
+}
+
+interface ScoredClause {
+  clauseNum: string;
+  body: string;
+  score: number;
+  chunkIdx: number;
+  chunk: StructuredChunk;
+}
+
+function extractScoredClauses(
+  chunks: StructuredChunk[],
+  stems: Array<{ norm: string; stem: string; weight: number }>,
+  queryAnalysis: QueryAnalysis
+): ScoredClause[] {
+  const results: ScoredClause[] = [];
+  const seenFingerprints = new Set<string>();
+  const wantsSpecificRule = /\b(manat|azn|cərimə|cerimə|müddət|muddet|gün|gun|ay|il|saat|faiz|%|hüquq|huquq|borclu|qadağan|qadagan)\b/i;
+
+  chunks.forEach((ch, chunkIdx) => {
+    const rawText = cleanClauseNoise(ch.content);
+    if (!rawText) return;
+
+    // Split on article or numbered sub-clause boundaries while preserving marker text
+    // Require trailing dot on standalone clause numbers (and exclude 4-digit years) so dates/cross-refs are never split
+    const segments = rawText
+      .split(/(?=(?:\bMaddə\s+\d+(?:\.\d+)*(?:-\d+)?\.|\b(?!19\d\d|20\d\d)\d{1,3}(?:\.\d{1,2})+(?:-\d+)?\.)\s)/g)
+      .map((s) => s.trim())
+      .filter((s) => s.length >= 24);
+
+    const candidates = segments.length > 0 ? segments : [rawText];
+
+    for (const seg of candidates) {
+      // Skip broken truncated fragment stubs like "nə cəlb edilməsi..." or corrupted overlap fragments
+      if (
+        (/^[a-zəöüğıçş]{1,3}\s+/i.test(seg) && !/^(bu|hər|bütün|əgər|yalnız)\s/i.test(seg)) ||
+        /\d+\.\d+\s+[a-zəöüğıçş]{1,4}\s+[a-zəöüğıçş]+/.test(seg.slice(0, 120))
+      ) {
+        continue;
+      }
+
+      const subNumMatch = seg.match(/^(?:Maddə\s+)?(\d{1,3}(?:\.\d{1,2})+(?:-\d+)?)(?=\.|\s)/i);
+      const artNumMatch = seg.match(/^Maddə\s+(\d{1,4}(?:-\d+)?)(?=\.|\s)/i);
+      const clauseNum = subNumMatch?.[1] || artNumMatch?.[1] || ch.articleNumber || '';
+
+      const fp = normalizeAz(seg).slice(0, 72);
+      if (seenFingerprints.has(fp)) continue;
+      seenFingerprints.add(fp);
+
+      const normSeg = normalizeAz(seg);
+      let score = Math.max(0, 6 - chunkIdx);
+
+      let matchedStems = 0;
+      for (const s of stems) {
+        if (normSeg.includes(s.norm)) {
+          score += s.weight * 2;
+          matchedStems++;
+        } else if (s.stem.length >= 5 && normSeg.includes(s.stem)) {
+          score += s.weight * 1.4;
+          matchedStems++;
+        }
+      }
+
+      // Bonus for concrete statutory specifics (amounts, deadlines, penalties, duties) when topic matches
+      if (matchedStems > 0 && wantsSpecificRule.test(seg)) {
+        score += 5;
+      }
+      if (queryAnalysis.targetArticleNum && clauseNum.startsWith(queryAnalysis.targetArticleNum)) {
+        score += 12;
+      }
+      // Slight preference for substantive sub-clauses over bare chapter/article headings
+      if (subNumMatch) {
+        score += 3;
+      }
+
+      results.push({
+        clauseNum,
+        body: seg,
+        score,
+        chunkIdx,
+        chunk: ch,
+      });
+    }
+  });
+
+  return results.sort((a, b) => b.score - a.score || a.chunkIdx - b.chunkIdx);
+}
+
+function buildStatutoryFallbackResponse(
+  query: string,
+  retrievedChunks: StructuredChunk[],
+  queryAnalysis: QueryAnalysis,
+  extraTerms: string[]
+) {
+  const topChunks = retrievedChunks.slice(0, 5);
+  const stems = buildSearchStems(query, queryAnalysis, extraTerms);
+  const scoredClauses = extractScoredClauses(topChunks, stems, queryAnalysis);
+
+  // Pick top distinct clauses for Qısa cavab so user immediately sees exact rules & amounts
+  const summaryClauses: ScoredClause[] = [];
+  const usedClauseKeys = new Set<string>();
+  for (const cl of scoredClauses) {
+    const key = `${cl.chunk.lawId}:${cl.clauseNum}:${normalizeAz(cl.body).slice(0, 40)}`;
+    if (usedClauseKeys.has(key)) continue;
+    usedClauseKeys.add(key);
+    summaryClauses.push(cl);
+    if (summaryClauses.length >= 3) break;
+  }
+
+  const shortAnswerBody =
+    summaryClauses.length > 0
+      ? summaryClauses
+          .map((cl) => {
+            const label = cl.clauseNum ? `Maddə ${cl.clauseNum}` : (cl.chunk.articleTitle || 'Normativ müddəa');
+            return `**${cl.chunk.lawName} — ${label}:** ${trimCleanly(cl.body, 520)}`;
+          })
+          .join('\n\n')
+      : 'Sorğunuz üzrə rəsmi qanunvericilik bazasında birbaşa uyğun maddə tapılmadı. Zəhmət olmasa sualınızı daha dəqiq açar sözlərlə ifadə edin.';
+
+  // Build Hüquqi əsaslar using the best matching sub-clauses inside each chunk (never cutting off mid-article before key clauses)
+  const sectionsMd = topChunks
+    .map((ch, idx) => {
+      const chunkClauses = scoredClauses.filter((c) => c.chunk === ch);
+      const bestClause = chunkClauses[0];
+      const artNum = bestClause?.clauseNum || ch.articleNumber;
+      const artLabel = artNum ? `Maddə ${artNum}` : (ch.articleTitle || 'Normativ müddəa');
+
+      const excerptText =
+        chunkClauses.length > 0
+          ? trimCleanly(
+              chunkClauses
+                .slice(0, 3)
+                .map((c) => c.body)
+                .join(' '),
+              1200
+            )
+          : trimCleanly(cleanClauseNoise(ch.content), 1100);
+
+      return `### ${idx + 1}. ${ch.lawName} — ${artLabel}\n${excerptText}\n- Mənbə: ${ch.sourceUrl}`;
+    })
+    .join('\n\n');
+
+  const enrichedChunks = topChunks.map((ch) => {
+    const best = scoredClauses.find((c) => c.chunk === ch);
+    if (!best) return ch;
+    return {
+      ...ch,
+      articleNumber: best.clauseNum || ch.articleNumber,
+      content: best.body || ch.content,
+    };
+  });
+
+  const sourcesMd =
+    enrichedChunks.length > 0
+      ? enrichedChunks
+          .map(
+            (c) =>
+              `- ${c.lawName}${c.articleNumber ? ` — Maddə ${c.articleNumber}` : ''} (${c.sourceUrl})`
+          )
+          .join('\n')
+      : '- https://www.e-qanun.ai';
+
+  const cavab = `## Hüquqi sual\n${query}\n\n## Qısa cavab\n${shortAnswerBody}\n\n## Hüquqi əsaslar\n\n${sectionsMd || 'Müvafiq normativ akt tapılmadı.'}\n\n## Mənbələr\n${sourcesMd}`;
+
+  return {
+    cavab,
+    ...buildBasisFromChunks(enrichedChunks),
+  };
+}
+
 function recoverPartialJsonResponse(cleanedContent: string, rawContent: string, retrievedChunks: StructuredChunk[]) {
   const cavabMatch = cleanedContent.match(/"cavab"\s*:\s*"([\s\S]*?)(?:",\s*"(?:maddeler|legal_basis)"|"\s*\})/);
   let cavab = rawContent;
@@ -225,8 +450,9 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       !queryAnalysis.targetArticleNum &&
       (retrievedChunks.length < 4 || lawMatch.confidence === "weak" || lawMatch.confidence === "none" || topScore < 760);
 
+    let llmExpandedTerms: string[] = [];
     if (needsLlmExpansion) {
-      const llmExpandedTerms = await expandColloquialLegalQuery(query, passedKey || undefined);
+      llmExpandedTerms = await expandColloquialLegalQuery(query, passedKey || undefined);
       if (llmExpandedTerms.length > 0) {
         retrievedChunks = await hybridSearchAsync(queryAnalysis, 18, query, {
           mode: "hybrid",
@@ -317,6 +543,10 @@ Azərbaycan Respublikasının qanunvericiliyinə dair istifadəçi suallarını 
    * document_id = 60090 və ya 60091 yalnız e-Qanun API-nin texniki sənəd nömrəsidir. Heç vaxt "60090-cı maddə" kimi yazma!
 13. RAG-DA MƏLUMAT YOXDURSA, AÇIQ BİLDİR:
    * "Bu məsələ üzrə təqdim olunan mənbələrdə kifayət qədər hüquqi əsas tapılmadı." de, özündən norma uydurma!
+14. "QISA CAVAB" BÖLMƏSİNƏ DAİR MƏCBURİ TƏLƏB:
+   * İstifadəçi aşağıdakı bölmələrə keçmədən belə YALNIZ "## Qısa cavab" hissəsini oxuyaraq sualına tam, dəqiq və praktiki cavab tapmalıdır!
+   * "Qısa cavab"-da heç vaxt maddəsiz ümumi cümlə yazma — mütləq tətbiq olunan **Qanunun/Məcəllənin adını və konkret Maddə/bənd nömrəsini** (məs: "Azərbaycan Respublikasının İnzibati Xətalar Məcəlləsinin 212.4-cü maddəsinə əsasən...") birbaşa qeyd et.
+   * Mənbə maddələrdə olan bütün əsas detalları — dəqiq cərimə/rüsum/ödəniş məbləği, qanuni müddətlər (gün/ay/il), əsas şərtlər, təkrar və ya istisna hallar və müraciət edilməli orqanı — 3–6 aydın cümlədə cəmləşdir!
 15. ƏRİZƏ VƏ YA İDDİA ƏRİZƏSİ TƏLƏB EDİLDİKDƏ:
    * Əgər istifadəçi "ərizə yaz", "mənə ərizə hazırla" deyirsə, heç vaxt dərhal boş mötərizəli ([Ad, soyad], [ünvan], [tarix]) şablon yazma!
    * MƏLUMATLARI EYNİ ANDA TOPLU HALDA DEYİL, TƏK-TƏK (BİR-BİR) ADDIMLA SORUŞ:
@@ -327,7 +557,7 @@ Azərbaycan Respublikasının qanunvericiliyinə dair istifadəçi suallarını 
 Aşağıdakı standart JSON strukturunda cavab ver:
 
 {
-  "cavab": "## Hüquqi sual\n[sualların hüquqi forması]\n\n## Qısa cavab\n[2–5 cümlə, birbaşa həll]\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[dəqiq və evidence-based izah]\n\n### 2. [Normativ akt] — Maddə [Y]\n[dəqiq və evidence-based izah]\n\n## Praktik izah\n[istifadəçinin vəziyyətinə və faktlara tətbiq]\n\n## Vacib məqamlar\n[müddətlər / istisnalar / zəruri şərtlər / prosedurlar]\n\n## Məhkəmə təcrübəsi\n[Yalnız kontekstdə relevant məhkəmə presedenti olduqda]\n\n## Mənbələr\n- Azərbaycan Respublikasının [Qanunun tam adı] — Maddə [X]\n- [Rəsmi e-Qanun və API istinadı]",
+  "cavab": "## Hüquqi sual\n[sualların hüquqi forması]\n\n## Qısa cavab\n[3–6 konkret cümlə: tətbiq olunan Qanun adı və Maddə/bənd nömrələri göstərilməklə sualın maddələrə əsaslanan birbaşa, detallı cavabı — dəqiq məbləğ, müddət, şərt, təkrar/istisna halı və müraciət qaydası daxil olmaqla]\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[dəqiq və evidence-based izah]\n\n### 2. [Normativ akt] — Maddə [Y]\n[dəqiq və evidence-based izah]\n\n## Praktik izah\n[istifadəçinin vəziyyətinə və faktlara tətbiq]\n\n## Vacib məqamlar\n[müddətlər / istisnalar / zəruri şərtlər / prosedurlar]\n\n## Məhkəmə təcrübəsi\n[Yalnız kontekstdə relevant məhkəmə presedenti olduqda]\n\n## Mənbələr\n- Azərbaycan Respublikasının [Qanunun tam adı] — Maddə [X]\n- [Rəsmi e-Qanun və API istinadı]",
   "maddeler": [
     "Azərbaycan Respublikasının [Qanunun Adı] - Maddə [X]"
   ],
@@ -385,28 +615,12 @@ ${query}`;
     } catch (llmErr: any) {
       usedLlmFallback = true;
       console.error("[chat.ts] LLM synthesis failed, falling back to statutory extracts:", llmErr?.message);
-      const topChunks = retrievedChunks.slice(0, 5);
-      const sectionsMd = topChunks.map((ch, idx) => {
-        const artLabel = ch.articleNumber ? `Maddə ${ch.articleNumber}` : (ch.articleTitle || "Normativ müddəa");
-        const excerpt = ch.content.replace(/\s+/g, " ").trim().slice(0, 950);
-        return `### ${idx + 1}. ${ch.lawName} — ${artLabel}\n${excerpt}${ch.content.length > 950 ? "..." : ""}\n- Mənbə: ${ch.sourceUrl}`;
-      }).join("\n\n");
-
-      const leadChunk = topChunks[0];
-      const leadSummary = leadChunk
-        ? `${leadChunk.lawName}${leadChunk.articleNumber ? ` (Maddə ${leadChunk.articleNumber})` : ""} üzrə əsas normativ müddəa: ${leadChunk.content.replace(/\s+/g, " ").trim().slice(0, 320)}${leadChunk.content.length > 320 ? "..." : ""}`
-        : "Sorğunuz üzrə rəsmi qanunvericilik bazasından birbaşa uyğun maddə tapılmadı. Zəhmət olmasa sualınızı daha dəqiq açar sözlərlə ifadə edin.";
-
-      const sourcesMd = topChunks.length > 0
-        ? topChunks.map(c => `- ${c.lawName}${c.articleNumber ? ` — Maddə ${c.articleNumber}` : ""} (${c.sourceUrl})`).join("\n")
-        : "- https://www.e-qanun.ai";
-
-      const fallbackAnswer = `## Hüquqi sual\n${query}\n\n## Qısa cavab\n${leadSummary}\n\n## Hüquqi əsaslar\n\n${sectionsMd || "Müvafiq normativ akt tapılmadı."}\n\n## Mənbələr\n${sourcesMd}`;
-
-      parsedJson = {
-        cavab: fallbackAnswer,
-        ...buildBasisFromChunks(topChunks),
-      };
+      parsedJson = buildStatutoryFallbackResponse(
+        query,
+        retrievedChunks,
+        queryAnalysis,
+        llmExpandedTerms
+      );
     }
 
     // 6. VALIDATE & ENFORCE TWO-PASS HALLUCINATION GUARD
