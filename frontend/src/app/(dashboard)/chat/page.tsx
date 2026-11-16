@@ -770,7 +770,7 @@ function ChatContent() {
                     }}
                     rows={1}
                     aria-label="Hüquqi sualınızı daxil edin"
-                    placeholder={isDictating ? "Dinləyirəm, danışın..." : "Hüquqi sualınızı bura yazın..."}
+                    placeholder={isDictating ? "Dinləyirəm, danışın..." : "Hüquqi sualınızı yazın..."}
                     className={`w-full resize-none overflow-y-auto overscroll-contain relative pl-4 sm:pl-7 pr-24 md:pr-28 py-3.5 sm:py-4 md:py-5 min-h-[54px] md:min-h-[64px] max-h-[140px] md:max-h-[200px] rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-slate-900/80 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500 text-base md:text-lg shadow-xl shadow-slate-200/50 dark:shadow-2xl dark:shadow-black/50 backdrop-blur-xl transition-all group-hover:border-slate-400 dark:group-hover:border-slate-700 ${isDictating ? 'border-emerald-500 ring-2 ring-emerald-500/30' : ''}`}
                   />
                   <div className="absolute right-2 bottom-2 sm:right-2.5 sm:bottom-2.5 flex items-center gap-1.5 md:gap-2">
@@ -1079,7 +1079,7 @@ function ChatContent() {
                 }}
                 rows={1}
                 aria-label="Hüquqi sualınızı daxil edin"
-                placeholder={isDictating ? "Dinləyirəm, danışın..." : "Hüquqi sualınızı bura yazın..."}
+                placeholder={isDictating ? "Dinləyirəm, danışın..." : "Hüquqi sualınızı yazın..."}
                 className={`w-full resize-none overflow-y-auto overscroll-contain pl-4 sm:pl-14 pr-24 md:pr-24 py-3 md:py-4 min-h-[48px] md:min-h-[56px] max-h-[120px] md:max-h-[200px] rounded-2xl sm:rounded-3xl md:rounded-[2rem] bg-slate-50 dark:bg-card/50 border border-slate-200 dark:border-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/50 text-base sm:text-[15px] shadow-inner transition-all text-foreground ${isDictating ? 'border-blue-400 dark:border-blue-500/60 ring-2 ring-blue-400/30' : ''}`}
               />
               <div className="absolute right-1.5 md:right-2 bottom-1.5 md:bottom-1.5 flex items-center gap-1">
