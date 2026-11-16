@@ -23,6 +23,9 @@ frontend/build/
 data/full_eqanun_corpus/
 data/*.sqlite*
 e_qanun_links.txt
+cloudflare-worker/public/
+cloudflare-worker/.wrangler/
+cloudflare-worker/node_modules/
 
 # Temporary / Scratch files
 scratch/
