@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Scale, MessageSquare, Search, LayoutDashboard, Settings, ChevronRight, FileText, User, MessageCircle, Users, MessageSquareHeart, Landmark, Calculator } from "lucide-react"
+import { Scale, MessageSquare, Search, LayoutDashboard, Settings, ChevronRight, FileText, User, MessageCircle, Users, MessageSquareHeart, Landmark, Calculator, X } from "lucide-react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { useEffect, useState } from "react"
@@ -132,13 +132,21 @@ export function AppSidebar() {
 
   return (
     <Sidebar className="border-r border-slate-200 dark:border-white/5 bg-white dark:bg-background shadow-[4px_0_24px_rgba(0,0,0,0.06)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.2)]">
-      <SidebarHeader className="flex h-16 items-center justify-between px-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-primary/5">
-        <Link href="/chat" onClick={handleNav} className="flex items-center gap-3 transition-all hover:opacity-80">
-          <img src="/logo.png" alt="HÜQUQ AI" className="h-9 w-auto drop-shadow-md" />
-          <span className="text-xl font-black tracking-tighter text-slate-900 dark:text-white">
+      <SidebarHeader className="flex h-16 flex-row items-center justify-between px-4 border-b border-slate-200 dark:border-white/5 bg-slate-50/50 dark:bg-primary/5">
+        <Link href="/chat" onClick={handleNav} className="flex items-center gap-3 transition-all hover:opacity-80 min-w-0">
+          <img src="/logo.png" alt="HÜQUQ AI" className="h-9 w-auto shrink-0 drop-shadow-md" />
+          <span className="text-xl font-black tracking-tighter text-slate-900 dark:text-white truncate">
             HÜQUQ AI
           </span>
         </Link>
+        <button
+          type="button"
+          onClick={() => setOpenMobile(false)}
+          aria-label="Menyunu bağla"
+          className="md:hidden h-11 w-11 -mr-2 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-white/10 transition-colors shrink-0"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </SidebarHeader>
       <SidebarContent className="px-3 pt-6">
         <SidebarGroup>
@@ -207,8 +215,8 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
       </SidebarContent>
-      <SidebarFooter className="border-t border-white/5 p-4 bg-background/80 flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-2.5 text-xs font-medium text-muted-foreground/80 px-2 py-1.5 rounded-lg bg-black/20 border border-white/5 shadow-inner">
+      <SidebarFooter className="border-t border-slate-200 dark:border-white/5 p-4 bg-slate-50/80 dark:bg-background/80 flex flex-col gap-3">
+        <div className="flex items-center justify-between gap-2.5 text-xs font-medium text-slate-700 dark:text-muted-foreground/80 px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-black/20 border border-slate-200 dark:border-white/5 shadow-inner">
           <div className="flex items-center gap-2">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>

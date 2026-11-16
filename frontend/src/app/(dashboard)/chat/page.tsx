@@ -187,13 +187,13 @@ function InlineCitation({ title, source }: { title: string; source?: CitationSou
   }
 
   return (
-    <div className="w-full mt-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-950/10 p-2.5 transition-all">
+    <div className="w-full mt-2 rounded-xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-950/10 p-2.5 sm:p-3 transition-all">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+        <div className="flex items-start sm:items-center gap-2 flex-1 min-w-0">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500 mt-0.5 sm:mt-0" />
           <div className="flex flex-col min-w-0">
-            <span className="text-[13px] font-semibold text-foreground truncate">{title}</span>
-            <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">✓ Yoxlanılmış rəsmi hüquqi mənbə</span>
+            <span className="text-[13px] font-semibold text-slate-900 dark:text-foreground line-clamp-2 sm:truncate [overflow-wrap:anywhere]">{title}</span>
+            <span className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">✓ Yoxlanılmış rəsmi hüquqi mənbə</span>
           </div>
         </div>
 
@@ -202,7 +202,7 @@ function InlineCitation({ title, source }: { title: string; source?: CitationSou
             href={sourceUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-neutral-600 hover:text-emerald-600 dark:text-neutral-400 dark:hover:text-emerald-400 bg-neutral-100 dark:bg-neutral-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-neutral-200 dark:border-neutral-700/60 rounded-lg transition-all"
+            className="inline-flex items-center gap-1 min-h-9 sm:min-h-8 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:text-emerald-600 dark:text-neutral-300 dark:hover:text-emerald-400 bg-neutral-100 dark:bg-neutral-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-neutral-200 dark:border-neutral-700/60 rounded-lg transition-all"
             title="Rəsmi e-Qanun bazasında aç"
           >
             <span>e-Qanun</span>
@@ -213,16 +213,16 @@ function InlineCitation({ title, source }: { title: string; source?: CitationSou
               href={apiUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-mono font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 rounded-lg transition-all"
+              className="inline-flex items-center gap-1 min-h-9 sm:min-h-8 px-2.5 py-1.5 text-xs font-mono font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 rounded-lg transition-all"
               title="Rəsmi e-Qanun API JSON çağırışını birbaşa aç"
             >
               <span>API</span>
               <ExternalLink className="h-2.5 w-2.5" />
             </a>
           )}
-          <button 
+          <button
             onClick={toggle}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 rounded-lg transition-all cursor-pointer shadow-sm"
+            className="inline-flex items-center gap-1.5 min-h-9 sm:min-h-8 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 rounded-lg transition-all cursor-pointer shadow-sm"
           >
             <span>{isOpen ? "Gizlət" : "Maddənin tam mətni"}</span>
             <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
@@ -711,22 +711,23 @@ function ChatContent() {
   }
 
   return (
-    <div className={`flex h-[calc(100svh-6rem)] md:h-[calc(100vh-8rem)] flex-col relative transition-all duration-500 ${messages.length === 0 ? "bg-transparent border-transparent shadow-none" : "bg-white/80 dark:bg-background/50 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)]"}`}>
+    <div className={`flex h-[calc(100dvh-5.25rem)] md:h-[calc(100dvh-7.5rem)] min-h-[420px] flex-col relative transition-all duration-500 ${messages.length === 0 ? "bg-transparent border-transparent shadow-none" : "bg-white/85 dark:bg-background/50 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)]"}`}>
       {/* Header */}
       {messages.length > 0 && (
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/5 bg-white/50 dark:bg-background/40 backdrop-blur-md z-10">
-          <div className="flex items-center gap-4">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-[0_0_15px_rgba(234,88,12,0.4)] border border-white/10">
-              <Scale className="h-5 w-5 text-white" />
+        <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-2.5 sm:py-4 border-b border-slate-200 dark:border-white/5 bg-white/70 dark:bg-background/40 backdrop-blur-md z-10">
+          <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-primary shadow-[0_0_15px_rgba(234,88,12,0.4)] border border-white/10">
+              <Scale className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
-            <div>
-              <h2 className="text-lg font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-primary dark:from-orange-400 dark:to-primary">{greeting}</h2>
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-lg font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-primary dark:from-orange-400 dark:to-primary truncate">{greeting}</h2>
             </div>
           </div>
-          
-          <div className="flex items-center gap-2">
-            <Button onClick={handleReset} variant="outline" size="sm" className="gap-2 bg-slate-50 dark:bg-secondary/50 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-secondary/80 text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400">
-              <PlusCircle className="h-4 w-4" />
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Button onClick={handleReset} variant="outline" size="sm" className="min-h-10 sm:min-h-9 gap-1.5 sm:gap-2 px-2.5 sm:px-3 bg-slate-50 dark:bg-secondary/50 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-secondary/80 text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400">
+              <PlusCircle className="h-4 w-4 shrink-0" />
+              <span className="sm:hidden text-xs font-semibold">Yeni</span>
               <span className="hidden sm:inline">Yeni Söhbət</span>
             </Button>
           </div>
@@ -734,27 +735,25 @@ function ChatContent() {
       )}
 
       {/* Chat Area */}
-      <div className={`flex-1 overflow-y-auto p-4 md:p-6 z-10 relative ${messages.length === 0 ? 'flex flex-col items-center justify-center pb-24' : ''}`}>
-        
-        {messages.length === 0 && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none overflow-hidden rounded-3xl m-2">
-            <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(circle at center, #10b981 1.5px, transparent 1.5px)', backgroundSize: '32px 32px' }}></div>
-            
-            {/* Subtle floating emerald ambient light */}
-            <div className="absolute top-[20%] w-[500px] h-[350px] bg-emerald-500/10 rounded-full blur-[130px] pointer-events-none" />
+      <div className={`flex-1 overflow-y-auto overflow-x-hidden p-2.5 sm:p-4 md:p-6 z-10 relative ${messages.length === 0 ? 'flex flex-col items-center justify-center pb-8 sm:pb-16' : ''}`}>
 
-            <div 
-              className="w-full max-w-3xl flex flex-col items-center justify-center z-10 pointer-events-auto px-4 sm:px-6"
-            >
-              <div className="w-full min-h-[4.5rem] md:min-h-[5.5rem] flex items-center justify-center mb-8 md:mb-10">
-                <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-md text-center leading-tight">
+        {messages.length === 0 && (
+          <>
+            <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl sm:rounded-3xl">
+              <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(circle at center, #10b981 1.5px, transparent 1.5px)', backgroundSize: '32px 32px' }}></div>
+              <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[320px] sm:w-[500px] h-[250px] sm:h-[350px] bg-emerald-500/10 rounded-full blur-[130px] pointer-events-none" />
+            </div>
+
+            <div className="w-full max-w-3xl mx-auto my-auto flex flex-col items-center justify-center z-10 pointer-events-auto px-1.5 sm:px-6 py-4">
+              <div className="w-full min-h-[3.5rem] md:min-h-[5.5rem] flex items-center justify-center mb-5 sm:mb-8 md:mb-10">
+                <h1 className="text-2xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-slate-950 dark:text-white drop-shadow-sm dark:drop-shadow-md text-center leading-tight">
                   {greeting}
                 </h1>
               </div>
-              
-              <form onSubmit={handleSend} className="w-full relative flex flex-col items-center group mb-8 max-w-2xl">
+
+              <form onSubmit={handleSend} className="w-full relative flex flex-col items-center group mb-6 sm:mb-8 max-w-2xl">
                 <div className="w-full relative flex items-end">
-                  <textarea 
+                  <textarea
                     ref={textareaRef1}
                     value={input}
                     onChange={(e) => {
@@ -771,43 +770,43 @@ function ChatContent() {
                     }}
                     rows={1}
                     aria-label="Hüquqi sualınızı daxil edin"
-                    placeholder={isDictating ? "Dinləyirəm, danışın..." : "Hüquqi sualınızı bura yazın və ya danışın..."}
-                    className={`w-full resize-none overflow-y-auto overscroll-contain relative pl-6 pr-24 md:pl-7 md:pr-28 py-4 md:py-5 min-h-[58px] md:min-h-[64px] max-h-[120px] md:max-h-[200px] rounded-3xl bg-white/95 dark:bg-slate-900/80 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500 text-base md:text-lg shadow-xl shadow-slate-200/50 dark:shadow-2xl dark:shadow-black/50 backdrop-blur-xl transition-all group-hover:border-slate-400 dark:group-hover:border-slate-700 ${isDictating ? 'border-emerald-500 ring-2 ring-emerald-500/30' : ''}`}
+                    placeholder={isDictating ? "Dinləyirəm, danışın..." : "Hüquqi sualınızı bura yazın..."}
+                    className={`w-full resize-none overflow-y-auto overscroll-contain relative pl-4 sm:pl-7 pr-24 md:pr-28 py-3.5 sm:py-4 md:py-5 min-h-[54px] md:min-h-[64px] max-h-[140px] md:max-h-[200px] rounded-2xl sm:rounded-3xl bg-white/95 dark:bg-slate-900/80 border border-slate-300 dark:border-slate-800 text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500 text-base md:text-lg shadow-xl shadow-slate-200/50 dark:shadow-2xl dark:shadow-black/50 backdrop-blur-xl transition-all group-hover:border-slate-400 dark:group-hover:border-slate-700 ${isDictating ? 'border-emerald-500 ring-2 ring-emerald-500/30' : ''}`}
                   />
-                  <div className="absolute right-2.5 bottom-2.5 flex items-center gap-1.5 md:gap-2 pr-0.5">
+                  <div className="absolute right-2 bottom-2 sm:right-2.5 sm:bottom-2.5 flex items-center gap-1.5 md:gap-2">
                     <button
                       type="button"
                       onClick={toggleDictation}
                       aria-label="Səslə daxiletmə"
-                      className={`h-9 w-9 md:h-10 md:w-10 rounded-full flex items-center justify-center transition-all ${
+                      className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${
                         isDictating
                           ? 'bg-emerald-500 hover:bg-emerald-600 shadow-[0_0_20px_rgba(16,185,129,0.5)] animate-pulse text-white'
                           : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-700/60'
                       }`}
                       title="Səsli daxiletmə"
                     >
-                      <Mic className="h-4 w-4 md:h-4.5 md:w-4.5" />
+                      <Mic className="h-4 w-4" />
                     </button>
-                    <Button 
-                      type="submit" 
-                      size="icon" 
+                    <Button
+                      type="submit"
+                      size="icon"
                       aria-label="Sualı göndər"
                       title="Sualı göndər"
                       disabled={!input.trim() || isLoading}
-                      className="rounded-full h-9 w-9 md:h-10 md:w-10 bg-emerald-600 text-white hover:bg-emerald-500 shadow-md shadow-emerald-950/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
+                      className="rounded-full h-10 w-10 bg-emerald-600 text-white hover:bg-emerald-500 shadow-md shadow-emerald-950/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
                     >
-                      <Send className="h-4 w-4 md:h-4.5 md:w-4.5 md:ml-0.5" />
+                      <Send className="h-4 w-4 md:ml-0.5" />
                     </Button>
                   </div>
                 </div>
               </form>
 
               {/* Modern Minimalist Prompt Suggestion Chips */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.2 }}
-                className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 w-full max-w-2xl px-1"
+                className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5 w-full max-w-2xl"
               >
                 {suggestions.map((suggestion, idx) => (
                   <button
@@ -817,7 +816,7 @@ function ChatContent() {
                       setMessages([{ id: Date.now(), role: "user", content: suggestion, citations: [] }]);
                       triggerAIResponse(suggestion, []);
                     }}
-                    className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-full bg-white/90 dark:bg-emerald-500/10 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 border border-slate-200 dark:border-emerald-500/20 hover:border-emerald-400 dark:hover:border-emerald-500/40 text-slate-800 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-300 text-xs sm:text-sm font-medium transition-all duration-200 backdrop-blur-md shadow-sm hover:scale-[1.02] active:scale-[0.98] group"
+                    className="inline-flex items-center gap-2 min-h-10 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl sm:rounded-full bg-white/90 dark:bg-emerald-500/10 hover:bg-emerald-50 dark:hover:bg-emerald-500/20 border border-slate-200 dark:border-emerald-500/20 hover:border-emerald-400 dark:hover:border-emerald-500/40 text-slate-800 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-300 text-xs sm:text-sm font-medium transition-all duration-200 backdrop-blur-md shadow-sm hover:scale-[1.02] active:scale-[0.98] group max-w-full"
                   >
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 group-hover:scale-125 transition-transform shrink-0" />
                     <span className="text-left leading-snug">{suggestion}</span>
@@ -825,11 +824,11 @@ function ChatContent() {
                 ))}
               </motion.div>
             </div>
-          </div>
+          </>
         )}
 
         {messages.length > 0 && (
-          <div className="max-w-4xl mx-auto space-y-8 pb-4 relative z-10">
+          <div className="max-w-4xl mx-auto space-y-5 sm:space-y-8 pb-3 relative z-10 min-w-0">
             <AnimatePresence initial={false}>
             {messages.map((msg) => (
               <motion.div
@@ -837,9 +836,9 @@ function ChatContent() {
                 initial={{ opacity: 0, y: 15, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
-                className={`flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
+                className={`flex gap-2 sm:gap-4 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
               >
-                <Avatar className={`h-10 w-10 border shadow-sm ${msg.role === "user" ? "border-primary/20 ring-2 ring-primary/10" : "border-slate-200 dark:border-white/10"}`}>
+                <Avatar className={`hidden sm:flex h-10 w-10 shrink-0 border shadow-sm ${msg.role === "user" ? "border-primary/20 ring-2 ring-primary/10" : "border-slate-200 dark:border-white/10"}`}>
                   {msg.role === "user" ? (
                     <AvatarFallback className="bg-primary text-white font-medium text-xs">Siz</AvatarFallback>
                   ) : (
@@ -851,12 +850,12 @@ function ChatContent() {
 
 
 
-                <div className={`flex flex-col gap-2 max-w-[85%] md:max-w-[75%] ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                <div className={`flex flex-col gap-2 min-w-0 ${msg.role === "user" ? "max-w-[88%] sm:max-w-[75%] items-end" : "w-full sm:w-auto sm:max-w-[82%] md:max-w-[78%] items-start"}`}>
                     {msg.role === "assistant" && msg.content.includes("[ƏRİZƏ]") ? (
                       <div className="flex flex-col gap-3 w-full">
                         {/* Petition Toolbar */}
                         <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary">
                               <Scale className="h-3.5 w-3.5" />
                               Hüquqi Ərizə Sənədi
@@ -868,7 +867,7 @@ function ChatContent() {
                             )}
                           </div>
 
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <Button
                               onClick={() => toggleEditPetition(msg.id, msg.content)}
                               variant={editingPetitionId === msg.id ? "default" : "outline"}
@@ -948,26 +947,30 @@ function ChatContent() {
                             </p>
                           </div>
                         ) : (
-                          <div 
+                          <div
                             id={`petition-${msg.id}`}
-                            className="bg-white text-black rounded-xl max-w-[21cm] min-h-[15cm] shadow-[0_10px_40px_rgba(0,0,0,0.12)] prose prose-sm max-w-none font-serif p-8 md:p-12 border border-slate-300 dark:border-slate-700 focus:outline-none"
+                            className="bg-white text-black rounded-xl w-full max-w-[21cm] min-h-[15cm] shadow-[0_10px_40px_rgba(0,0,0,0.12)] prose prose-sm max-w-none prose-headings:font-extrabold prose-headings:text-black prose-strong:text-black font-serif p-4 sm:p-8 md:p-12 border border-slate-300 dark:border-slate-700 focus:outline-none overflow-x-auto"
                           >
-                            <MessageMarkdown content={editedContents[msg.id] ?? msg.content.replace("[ƏRİZƏ]", "").trim()} />
+                            <MessageMarkdown content={editedContents[msg.id] ?? msg.content.replace("[ƏRİZƏ]", "").trim()} paper />
                           </div>
                         )}
                       </div>
                     ) : (
-                      <div 
-                        className={`px-5 py-4 rounded-2xl text-[15px] leading-relaxed shadow-sm ${
-                          msg.role === "user" 
-                            ? "bg-primary text-white rounded-tr-sm shadow-[0_4px_15px_rgba(234,88,12,0.3)]" 
-                            : "bg-orange-50 dark:bg-card/90 backdrop-blur-md border border-orange-200 dark:border-white/5 rounded-tl-sm prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-secondary/50 shadow-[0_2px_10px_rgba(0,0,0,0.05)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.1)] text-orange-950 dark:text-foreground"
+                      <div
+                        className={`px-3.5 py-3 sm:px-5 sm:py-4 rounded-2xl text-[14.5px] sm:text-[15px] leading-relaxed shadow-sm min-w-0 max-w-full ${
+                          msg.role === "user"
+                            ? "bg-primary text-white rounded-tr-sm shadow-[0_4px_15px_rgba(234,88,12,0.3)] [overflow-wrap:anywhere]"
+                            : "w-full bg-orange-50/90 dark:bg-card/90 backdrop-blur-md border border-orange-200 dark:border-white/10 rounded-tl-sm prose prose-sm dark:prose-invert max-w-none prose-headings:font-extrabold prose-headings:text-slate-950 dark:prose-headings:text-white prose-strong:font-bold prose-strong:text-slate-950 dark:prose-strong:text-white prose-p:leading-relaxed prose-pre:bg-secondary/50 shadow-[0_2px_10px_rgba(0,0,0,0.05)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.1)] text-slate-900 dark:text-foreground"
                         }`}
                       >
                         {msg.role === "user" ? (
                           <div className="whitespace-pre-line">{msg.content}</div>
                         ) : (
-                          <div className="relative group">
+                          <div className="relative group min-w-0">
+                            <div className="flex sm:hidden items-center gap-1.5 text-xs font-extrabold text-slate-950 dark:text-white mb-2.5 pb-1.5 border-b border-orange-200/80 dark:border-white/10">
+                              <Bot className="h-3.5 w-3.5 text-primary shrink-0" />
+                              <span>LexAZ AI</span>
+                            </div>
                             <MessageMarkdown content={msg.content} />
                             <div className="flex justify-end mt-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                               <TTSButton text={msg.content} />
@@ -1034,15 +1037,15 @@ function ChatContent() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex gap-4"
+              className="flex gap-2 sm:gap-4"
             >
-              <Avatar className="h-10 w-10 border border-slate-200 dark:border-white/10 shadow-sm">
+              <Avatar className="hidden sm:flex h-10 w-10 border border-slate-200 dark:border-white/10 shadow-sm shrink-0">
                 <AvatarFallback className="bg-card">
                   <Bot className="h-5 w-5 text-primary" />
                 </AvatarFallback>
               </Avatar>
-              <div className="px-5 py-4 rounded-2xl bg-orange-50 dark:bg-card/90 backdrop-blur-md border border-orange-200 dark:border-white/5 rounded-tl-sm flex items-center gap-3 shadow-sm">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <div className="px-4 py-3 sm:px-5 sm:py-4 rounded-2xl bg-orange-50 dark:bg-card/90 backdrop-blur-md border border-orange-200 dark:border-white/5 rounded-tl-sm flex items-center gap-3 shadow-sm">
+                <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
                 <span className="text-sm font-medium text-muted-foreground animate-pulse">LexAZ analiz edir...</span>
               </div>
             </motion.div>
@@ -1053,13 +1056,13 @@ function ChatContent() {
 
       {/* Input Area */}
       {messages.length > 0 && (
-        <div className="p-4 md:p-6 border-t border-slate-200 dark:border-white/5 bg-white/80 dark:bg-background/60 backdrop-blur-xl z-10 relative">
+        <div className="p-2.5 sm:p-4 md:p-6 pb-[max(0.625rem,env(safe-area-inset-bottom))] border-t border-slate-200 dark:border-white/5 bg-white/85 dark:bg-background/60 backdrop-blur-xl z-10 relative">
           <form onSubmit={handleSend} className="max-w-4xl mx-auto relative flex flex-col">
             <div className="relative flex items-end">
-              <Button type="button" variant="ghost" size="icon" aria-label="Fayl əlavə et" title="Fayl əlavə et" className="absolute left-2 bottom-1 md:bottom-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full h-10 w-10 transition-colors hidden sm:flex">
+              <Button type="button" variant="ghost" size="icon" aria-label="Fayl əlavə et" title="Fayl əlavə et" className="absolute left-2 bottom-1.5 md:bottom-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full h-10 w-10 transition-colors hidden sm:flex">
                 <Paperclip className="h-5 w-5" />
               </Button>
-              <textarea 
+              <textarea
                 ref={textareaRef2}
                 value={input}
                 onChange={(e) => {
@@ -1077,14 +1080,14 @@ function ChatContent() {
                 rows={1}
                 aria-label="Hüquqi sualınızı daxil edin"
                 placeholder={isDictating ? "Dinləyirəm, danışın..." : "Hüquqi sualınızı bura yazın..."}
-                className={`w-full resize-none overflow-y-auto overscroll-contain pl-4 sm:pl-14 pr-20 md:pr-24 py-3 md:py-4 min-h-[48px] md:min-h-[56px] max-h-[120px] md:max-h-[200px] rounded-3xl md:rounded-[2rem] bg-slate-50 dark:bg-card/50 border border-slate-200 dark:border-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/50 text-[15px] shadow-inner transition-all text-foreground ${isDictating ? 'border-blue-400 dark:border-blue-500/60 ring-2 ring-blue-400/30' : ''}`}
+                className={`w-full resize-none overflow-y-auto overscroll-contain pl-4 sm:pl-14 pr-24 md:pr-24 py-3 md:py-4 min-h-[48px] md:min-h-[56px] max-h-[120px] md:max-h-[200px] rounded-2xl sm:rounded-3xl md:rounded-[2rem] bg-slate-50 dark:bg-card/50 border border-slate-200 dark:border-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/50 text-base sm:text-[15px] shadow-inner transition-all text-foreground ${isDictating ? 'border-blue-400 dark:border-blue-500/60 ring-2 ring-blue-400/30' : ''}`}
               />
-              <div className="absolute right-1 md:right-2 bottom-1 md:bottom-1.5 flex items-center pr-1 gap-1">
+              <div className="absolute right-1.5 md:right-2 bottom-1.5 md:bottom-1.5 flex items-center gap-1">
                 <button
                   type="button"
                   onClick={toggleDictation}
                   aria-label="Səslə daxiletmə"
-                  className={`h-9 w-9 md:h-10 md:w-10 rounded-full flex items-center justify-center transition-all ${
+                  className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${
                     isDictating
                       ? 'bg-blue-500 text-white shadow-[0_0_16px_rgba(59,130,246,0.5)] animate-pulse'
                       : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
@@ -1093,20 +1096,20 @@ function ChatContent() {
                 >
                   <Mic className="h-4 w-4" />
                 </button>
-                <Button 
-                  type="submit" 
-                  size="icon" 
+                <Button
+                  type="submit"
+                  size="icon"
                   aria-label="Sualı göndər"
                   title="Sualı göndər"
                   disabled={!input.trim() || isLoading}
                   className="rounded-full h-10 w-10 md:h-11 md:w-11 bg-primary text-white hover:opacity-90 shadow-[0_4px_15px_rgba(234,88,12,0.4)] transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
                 >
-                  <Send className="h-4 w-4 md:h-5 md:w-5 md:ml-1" />
+                  <Send className="h-4 w-4 md:h-5 md:w-5 md:ml-0.5" />
                 </Button>
               </div>
             </div>
           </form>
-          <p className="text-xs text-center text-muted-foreground py-3 bg-white/50 dark:bg-background/50 border-t border-slate-200 dark:border-white/5 backdrop-blur-xl mt-3 rounded-b-3xl">
+          <p className="text-[11px] sm:text-xs text-center text-muted-foreground pt-2 sm:pt-3">
             LexAZ səhv edə bilər. Vacib məlumatları yoxlayın.
           </p>
         </div>
@@ -1118,7 +1121,7 @@ function ChatContent() {
 export default function ChatPage() {
   return (
     <Suspense fallback={
-      <div className="flex h-[calc(100svh-6rem)] md:h-[calc(100vh-8rem)] items-center justify-center">
+      <div className="flex h-[calc(100dvh-5.25rem)] md:h-[calc(100dvh-7.5rem)] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     }>

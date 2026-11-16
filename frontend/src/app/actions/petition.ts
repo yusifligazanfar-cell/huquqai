@@ -206,11 +206,12 @@ ${query}`
       })
       rawAiContent = (llmRes.content || "").trim()
     } catch (llmErr: any) {
+      console.error("[petition.ts] LLM synthesis failed:", llmErr?.message)
       const refs = retrievedChunks.slice(0, 4)
         .map(c => `- **${c.lawName}**${c.articleNumber ? ` — Maddə ${c.articleNumber}` : ""}: ${c.content.replace(/\s+/g, " ").trim().slice(0, 320)}...`)
         .join("\n")
       return {
-        content: `AI ərizə generasiyası üçün aktiv model provayderi qoşulmayıb (${llmErr?.message || "Açar və ya sessiya tələb olunur"}).\n\nPulsuz \`GEMINI_API_KEY\` / \`GROQ_API_KEY\`, lokal \`Ollama\`, və ya aktiv ödənişli \`muse login\` / \`META_API_KEY\` qoşun.\n\n### Sualınız üzrə 56,983 sənədlik bazadan tapılan normativ əsaslar:\n${refs || "Müvafiq normativ akt tapılmadı."}`,
+        content: `## Hüquqi əsaslar\n\n${refs || "Müvafiq normativ akt tapılmadı."}\n\n## Qısa cavab\nHazırda ərizənin tam mətnini tərtib etmək mümkün olmadı. Zəhmət olmasa bir qədər sonra yenidən cəhd edin.`,
         citations: []
       }
     }

@@ -384,15 +384,24 @@ ${query}`;
       }
     } catch (llmErr: any) {
       usedLlmFallback = true;
+      console.error("[chat.ts] LLM synthesis failed, falling back to statutory extracts:", llmErr?.message);
       const topChunks = retrievedChunks.slice(0, 5);
-      const errReason = llmErr?.message || "Aktiv AI model provayderi tapılmadı";
       const sectionsMd = topChunks.map((ch, idx) => {
         const artLabel = ch.articleNumber ? `Maddə ${ch.articleNumber}` : (ch.articleTitle || "Normativ müddəa");
         const excerpt = ch.content.replace(/\s+/g, " ").trim().slice(0, 950);
         return `### ${idx + 1}. ${ch.lawName} — ${artLabel}\n${excerpt}${ch.content.length > 950 ? "..." : ""}\n- Mənbə: ${ch.sourceUrl}`;
       }).join("\n\n");
 
-      const fallbackAnswer = `> **Qeyd:** Hazırda AI sintez provayderi aktiv deyil (*${errReason}*). Tam AI təhlili üçün \`GEMINI_API_KEY\` (pulsuz), \`GROQ_API_KEY\` (pulsuz), lokal \`Ollama\`, və ya aktiv ödənişli \`muse login\` / \`META_API_KEY\` əlavə edin.\n> Aşağıda **56,983 sənədlik rəsmi qanunvericilik bazasından** sorğunuza birbaşa uyğun tapılan normativ maddələr təqdim olunur:\n\n## Hüquqi sual\n${query}\n\n## Hüquqi əsaslar (Birbaşa Rəsmi Baza Çıxarışı)\n\n${sectionsMd}\n\n## Mənbələr\n${topChunks.map(c => `- ${c.lawName}${c.articleNumber ? ` — Maddə ${c.articleNumber}` : ""} (${c.sourceUrl})`).join("\n")}`;
+      const leadChunk = topChunks[0];
+      const leadSummary = leadChunk
+        ? `${leadChunk.lawName}${leadChunk.articleNumber ? ` (Maddə ${leadChunk.articleNumber})` : ""} üzrə əsas normativ müddəa: ${leadChunk.content.replace(/\s+/g, " ").trim().slice(0, 320)}${leadChunk.content.length > 320 ? "..." : ""}`
+        : "Sorğunuz üzrə rəsmi qanunvericilik bazasından birbaşa uyğun maddə tapılmadı. Zəhmət olmasa sualınızı daha dəqiq açar sözlərlə ifadə edin.";
+
+      const sourcesMd = topChunks.length > 0
+        ? topChunks.map(c => `- ${c.lawName}${c.articleNumber ? ` — Maddə ${c.articleNumber}` : ""} (${c.sourceUrl})`).join("\n")
+        : "- https://www.e-qanun.ai";
+
+      const fallbackAnswer = `## Hüquqi sual\n${query}\n\n## Qısa cavab\n${leadSummary}\n\n## Hüquqi əsaslar\n\n${sectionsMd || "Müvafiq normativ akt tapılmadı."}\n\n## Mənbələr\n${sourcesMd}`;
 
       parsedJson = {
         cavab: fallbackAnswer,

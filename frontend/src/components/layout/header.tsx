@@ -30,37 +30,46 @@ export function Header() {
   const initials = displayName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()
 
   return (
-    <header className="sticky top-2 md:top-4 z-50 mx-2 md:mx-8 mb-4 md:mb-6 flex h-14 md:h-16 items-center justify-between rounded-2xl border border-slate-200 dark:border-white/5 bg-white/80 dark:bg-background/60 px-4 md:px-6 shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-2xl transition-all">
-      <div className="flex items-center gap-2 md:gap-4">
-        <SidebarTrigger className="h-10 w-10 sm:h-9 sm:w-9 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100/80 dark:bg-white/5 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center p-0" />
+    <header className="sticky top-2 md:top-4 z-40 mx-1 sm:mx-2 md:mx-8 mb-2.5 sm:mb-4 md:mb-6 flex h-14 md:h-16 items-center justify-between gap-2 rounded-2xl border border-slate-200 dark:border-white/5 bg-white/85 dark:bg-background/70 px-2.5 sm:px-4 md:px-6 shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-2xl transition-all">
+      <div className="flex items-center gap-2 md:gap-4 min-w-0">
+        <SidebarTrigger
+          aria-label="Menyunu aç"
+          className="h-11 w-11 sm:h-9 sm:w-9 shrink-0 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100/80 dark:bg-white/5 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-200 dark:hover:bg-white/10 active:scale-95 transition-all flex items-center justify-center p-0"
+        />
+        <Link href="/chat" className="flex items-center gap-2 md:hidden min-w-0">
+          <img src="/logo.png" alt="HÜQUQ AI" className="h-7 w-auto shrink-0" />
+          <span className="text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white truncate">
+            HÜQUQ AI
+          </span>
+        </Link>
       </div>
-      <div className="flex items-center gap-3 sm:gap-5">
+      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
         {mounted && (
           <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="w-9 h-9 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all hover:scale-105 active:scale-95"
+            className="w-11 h-11 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all hover:scale-105 active:scale-95"
             title={theme === "dark" ? "İşıqlı rejimə keç" : "Qaranlıq rejimə keç"}
-            aria-label="Toggle Theme"
+            aria-label="Mövzunu dəyiş"
           >
             {theme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
           </button>
         )}
 
-        <div className="h-5 w-[1px] bg-border/50"></div>
+        <div className="h-5 w-[1px] bg-border/50 hidden sm:block"></div>
         {isLoaded && !isLoggedIn ? (
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs sm:text-sm h-9 sm:h-10 px-3.5 sm:px-4 rounded-xl shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all hover:scale-105 active:scale-95"
+            className="inline-flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold text-xs sm:text-sm min-h-11 sm:min-h-10 px-3.5 sm:px-4 rounded-xl shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all hover:scale-105 active:scale-95 whitespace-nowrap"
           >
             <span>Giriş et</span>
           </Link>
         ) : (
-          <Link href="/account" className="flex items-center gap-3 cursor-pointer group">
+          <Link href="/account" className="flex items-center gap-2.5 sm:gap-3 cursor-pointer group min-h-11">
             <div className="flex flex-col items-end hidden sm:flex">
               <span className="text-sm font-medium leading-none group-hover:text-primary transition-colors">{displayName}</span>
               <span className="text-xs text-muted-foreground mt-1">{displayRole}</span>
             </div>
-            <Avatar className="h-10 w-10 border-2 border-primary/20 ring-2 ring-background group-hover:border-primary/50 transition-colors shadow-sm">
+            <Avatar className="h-9 w-9 sm:h-10 sm:w-10 border-2 border-primary/20 ring-2 ring-background group-hover:border-primary/50 transition-colors shadow-sm">
               <AvatarImage src={user?.avatar || undefined} />
               <AvatarFallback className="bg-gradient-to-br from-primary to-indigo-600 text-white font-semibold text-xs">{initials}</AvatarFallback>
             </Avatar>

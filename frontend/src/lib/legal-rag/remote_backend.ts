@@ -14,7 +14,7 @@ export function getRagBackendUrl(): string {
   const url =
     process.env.LEXAZ_RAG_BACKEND_URL ||
     process.env.RAG_BACKEND_URL ||
-    "http://127.0.0.1:8000";
+    (process.env.VERCEL ? "https://huquqai-rag.huquqai-rag.workers.dev" : "http://127.0.0.1:8000");
   return url.trim().replace(/\/$/, "");
 }
 
@@ -22,7 +22,7 @@ export function isRemoteRagConfigured(): boolean {
   const explicit = (
     process.env.LEXAZ_RAG_BACKEND_URL ||
     process.env.RAG_BACKEND_URL ||
-    ""
+    (process.env.VERCEL ? "https://huquqai-rag.huquqai-rag.workers.dev" : "")
   ).trim();
   return explicit.length > 0;
 }

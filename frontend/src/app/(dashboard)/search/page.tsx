@@ -185,24 +185,24 @@ export default function SearchPage() {
       <div className="fixed top-20 left-1/4 w-96 h-96 bg-primary/20 dark:bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
       <div className="fixed bottom-20 right-1/4 w-96 h-96 bg-orange-600/20 dark:bg-orange-600/10 rounded-full blur-[100px] pointer-events-none" />
 
-      <div className="max-w-5xl w-full mx-auto px-4 md:px-6 pt-6 md:pt-10 flex-1 z-10">
+      <div className="max-w-5xl w-full mx-auto px-2 sm:px-4 md:px-6 pt-3 sm:pt-6 md:pt-10 flex-1 z-10 min-w-0">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center space-y-4 mb-8"
+          className="text-center space-y-3 sm:space-y-4 mb-6 sm:mb-8"
         >
-          <div className="inline-flex items-center justify-center p-4 bg-primary rounded-2xl mb-4 shadow-[0_0_20px_rgba(234,88,12,0.3)]">
-            <Sparkles className="h-7 w-7 text-white" aria-hidden="true" />
+          <div className="inline-flex items-center justify-center p-3 sm:p-4 bg-primary rounded-2xl mb-2 sm:mb-4 shadow-[0_0_20px_rgba(234,88,12,0.3)]">
+            <Sparkles className="h-6 w-6 sm:h-7 sm:w-7 text-white" aria-hidden="true" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-slate-950 dark:text-white">
             Ağıllı Hüquq Axtarışı
           </h1>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-sm sm:text-lg max-w-2xl mx-auto px-1">
             56,983 rəsmi e-Qanun sənədi üzərində Hibrid BM25 + Semantik RAG mühərriki ilə dəqiq maddələri saniyələr içində tapın.
           </p>
         </motion.div>
 
-        <search className="relative max-w-3xl mx-auto mb-10">
+        <search className="relative max-w-3xl mx-auto mb-8 sm:mb-10">
           <form
             method="GET"
             action="/search"
@@ -216,15 +216,15 @@ export default function SearchPage() {
               </label>
               <span
                 id="search-hint"
-                className="text-xs text-muted-foreground text-center"
+                className="text-xs text-muted-foreground text-center px-2"
               >
                 Məsələn: &ldquo;Yaşa görə əmək pensiyası&rdquo;, &ldquo;Mülki Məcəllə 408&rdquo;, &ldquo;gecə vaxtı iş haqqı&rdquo;
               </span>
 
               <div className="relative group">
                 <div className="absolute -inset-1 bg-primary/50 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-700 pointer-events-none" />
-                <div className="relative flex items-center bg-white/85 dark:bg-background/70 backdrop-blur-3xl border border-slate-200 dark:border-white/10 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] p-2 pl-5">
-                  <Search className="h-5 w-5 text-muted-foreground mr-3 shrink-0" aria-hidden="true" />
+                <div className="relative flex items-center gap-1.5 bg-white/85 dark:bg-background/70 backdrop-blur-3xl border border-slate-200 dark:border-white/10 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.2)] p-1.5 pl-3.5 sm:p-2 sm:pl-5">
+                  <Search className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground mr-1 sm:mr-2 shrink-0" aria-hidden="true" />
                   <Input
                     id="legal-search-input"
                     name="q"
@@ -239,12 +239,12 @@ export default function SearchPage() {
                     autoCapitalize="none"
                     spellCheck={false}
                     enterKeyHint="search"
-                    className="flex-1 bg-transparent border-none text-base focus-visible:ring-0 px-0 h-11"
+                    className="flex-1 min-w-0 bg-transparent border-none text-base focus-visible:ring-0 px-0 h-11"
                   />
                   <Button
                     type="submit"
                     disabled={isSearching || !query.trim()}
-                    className="rounded-full h-11 px-7 font-medium bg-primary text-white shadow-[0_4px_15px_rgba(234,88,12,0.35)] hover:scale-[1.02] active:scale-[0.98] transition-all"
+                    className="rounded-full h-11 px-4 sm:px-7 shrink-0 text-sm font-medium bg-primary text-white shadow-[0_4px_15px_rgba(234,88,12,0.35)] hover:scale-[1.02] active:scale-[0.98] transition-all"
                   >
                     {isSearching ? (
                       <>
@@ -369,7 +369,7 @@ export default function SearchPage() {
                         </div>
                       </CardHeader>
 
-                      <CardContent className="pt-5 pb-4 text-muted-foreground leading-relaxed whitespace-pre-line text-[15px]">
+                      <CardContent className="pt-4 sm:pt-5 pb-4 text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line text-sm sm:text-[15px] [overflow-wrap:anywhere]">
                         {renderHighlightedText(result.content, query)}
                       </CardContent>
 
@@ -379,9 +379,9 @@ export default function SearchPage() {
                             href={result.sourceUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
+                            className="inline-flex items-center gap-1.5 min-h-9 text-xs font-medium text-muted-foreground hover:text-primary transition-colors"
                           >
-                            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                            <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                             e-qanun.ai rəsmi sənəd
                           </a>
                         ) : (
@@ -394,7 +394,7 @@ export default function SearchPage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="text-primary hover:bg-primary/10 ml-auto group/btn"
+                                className="min-h-9 text-primary hover:bg-primary/10 ml-auto group/btn"
                               />
                             }
                           >
@@ -404,17 +404,17 @@ export default function SearchPage() {
                               aria-hidden="true"
                             />
                           </DialogTrigger>
-                          <DialogContent className="sm:max-w-[740px] bg-white/95 dark:bg-card/95 backdrop-blur-2xl border-slate-200 dark:border-white/10 max-h-[85vh] overflow-y-auto">
+                          <DialogContent className="w-[calc(100vw-1.5rem)] max-w-[740px] bg-white/95 dark:bg-card/95 backdrop-blur-2xl border-slate-200 dark:border-white/10 max-h-[85dvh] overflow-y-auto p-4 sm:p-6">
                             <DialogHeader>
-                              <DialogTitle className="text-2xl font-bold flex items-center gap-3 text-foreground">
+                              <DialogTitle className="text-lg sm:text-2xl font-bold flex items-start sm:items-center gap-2.5 sm:gap-3 text-slate-950 dark:text-white pr-6">
                                 <div className="p-2 bg-primary/10 rounded-lg shrink-0">
                                   <FileText className="h-5 w-5 text-primary" aria-hidden="true" />
                                 </div>
-                                {result.title}
+                                <span className="[overflow-wrap:anywhere]">{result.title}</span>
                               </DialogTitle>
                             </DialogHeader>
                             <div className="flex flex-wrap items-center gap-2 mt-1 mb-4">
-                              <Badge variant="secondary" className="bg-secondary/70 border-slate-200 dark:border-white/5 text-foreground">
+                              <Badge variant="secondary" className="bg-secondary/70 border-slate-200 dark:border-white/5 text-foreground max-w-full whitespace-normal">
                                 Mənbə: {result.source}
                               </Badge>
                               {result.sourceUrl && (
@@ -422,14 +422,14 @@ export default function SearchPage() {
                                   href={result.sourceUrl}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline break-all"
                                 >
-                                  <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                                  <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                                   {result.sourceUrl}
                                 </a>
                               )}
                             </div>
-                            <div className="text-[15px] leading-relaxed text-foreground/90 whitespace-pre-line bg-secondary/30 dark:bg-secondary/20 p-6 rounded-xl border border-slate-200 dark:border-white/5">
+                            <div className="text-sm sm:text-[15px] leading-relaxed text-slate-900 dark:text-slate-100 whitespace-pre-line bg-secondary/30 dark:bg-secondary/20 p-4 sm:p-6 rounded-xl border border-slate-200 dark:border-white/5 [overflow-wrap:anywhere]">
                               {loadingDocKey === enlargeKey ? (
                                 <span className="inline-flex items-center gap-2 text-muted-foreground">
                                   <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

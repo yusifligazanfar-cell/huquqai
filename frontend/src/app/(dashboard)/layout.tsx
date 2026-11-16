@@ -23,10 +23,10 @@ export default function DashboardLayout({
         
         <AppSidebar />
         
-        <div className="flex flex-1 flex-col min-w-0 w-full min-h-[100svh] overflow-hidden relative z-10">
+        <div className="flex flex-1 flex-col min-w-0 w-full min-h-dvh overflow-x-clip relative z-10">
           <Header />
-          <main className="flex-1 overflow-y-auto overflow-x-hidden p-3 md:p-4 md:px-8 lg:px-12 pb-12 pt-2 scroll-smooth">
-            <div className="mx-auto max-w-7xl w-full">
+          <main className="flex-1 overflow-y-auto overflow-x-clip p-2 sm:p-3 md:px-8 lg:px-12 pb-3 sm:pb-6 md:pb-8 pt-1.5 sm:pt-2 scroll-smooth">
+            <div className="mx-auto max-w-7xl w-full min-w-0">
               {children}
             </div>
           </main>

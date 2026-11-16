@@ -1,9 +1,11 @@
 "use client"
 
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeRaw from 'rehype-raw'
-import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
+import dynamic from 'next/dynamic'
+
+const MessageMarkdown = dynamic(() => import('@/components/chat/MessageMarkdown'), {
+  loading: () => <div className="animate-pulse h-8 bg-slate-200 dark:bg-slate-800 rounded w-48 my-2" />,
+  ssr: false
+})
 
 import { useState, useRef, useEffect } from "react"
 import { Send, Paperclip, Scale, Bot, Loader2, FileText, Settings, Key, AlertCircle, CheckCircle2, Cpu, Globe, Zap, ChevronDown, Download, PlusCircle, Edit3, Check, Copy, Lock, LogIn } from "lucide-react"
@@ -381,29 +383,30 @@ export default function PetitionPage() {
   }
 
   return (
-    <div className="flex h-[calc(100svh-6rem)] md:h-[calc(100vh-8rem)] flex-col bg-white/80 dark:bg-background/50 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)] relative">
+    <div className="flex h-[calc(100dvh-5.25rem)] md:h-[calc(100dvh-7.5rem)] min-h-[420px] flex-col bg-white/85 dark:bg-background/50 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-2xl sm:rounded-3xl overflow-hidden shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)] relative">
 
 
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-white/5 bg-white/50 dark:bg-background/40 backdrop-blur-md z-10">
-        <div className="flex items-center gap-4">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-[0_0_15px_rgba(234,88,12,0.4)] border border-white/10">
-            <Scale className="h-5 w-5 text-white" />
+      <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-2.5 sm:py-4 border-b border-slate-200 dark:border-white/5 bg-white/70 dark:bg-background/40 backdrop-blur-md z-10">
+        <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
+          <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-primary shadow-[0_0_15px_rgba(234,88,12,0.4)] border border-white/10">
+            <Scale className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
           </div>
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight">LexAZ Ərizə/Şikayət Tərtibatçısı</h2>
+          <div className="min-w-0">
+            <h2 className="text-sm sm:text-lg font-extrabold tracking-tight text-slate-950 dark:text-white truncate">LexAZ Ərizə/Şikayət Tərtibatçısı</h2>
           </div>
         </div>
-        
-        <Button onClick={handleReset} variant="outline" size="sm" className="gap-2 bg-slate-50 dark:bg-secondary/50 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-secondary/80 text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400">
-          <PlusCircle className="h-4 w-4" />
+
+        <Button onClick={handleReset} variant="outline" size="sm" className="min-h-10 sm:min-h-9 shrink-0 gap-1.5 sm:gap-2 px-2.5 sm:px-3 bg-slate-50 dark:bg-secondary/50 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-secondary/80 text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400">
+          <PlusCircle className="h-4 w-4 shrink-0" />
+          <span className="sm:hidden text-xs font-semibold">Yeni</span>
           <span className="hidden sm:inline">Yeni Söhbət</span>
         </Button>
       </div>
 
       {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 z-10">
-        <div className="max-w-4xl mx-auto space-y-8 pb-4">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden p-2.5 sm:p-4 md:p-6 z-10">
+        <div className="max-w-4xl mx-auto space-y-5 sm:space-y-8 pb-4 min-w-0">
           <AnimatePresence initial={false}>
             {messages.map((msg) => (
               <motion.div
@@ -411,9 +414,9 @@ export default function PetitionPage() {
                 initial={{ opacity: 0, y: 15, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.4, type: "spring", bounce: 0.3 }}
-                className={`flex gap-4 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
+                className={`flex gap-2 sm:gap-4 ${msg.role === "user" ? "flex-row-reverse" : ""}`}
               >
-                <Avatar className={`h-10 w-10 border shadow-sm ${msg.role === "user" ? "border-primary/20 ring-2 ring-primary/10" : "border-slate-200 dark:border-white/10"}`}>
+                <Avatar className={`hidden sm:flex h-10 w-10 shrink-0 border shadow-sm ${msg.role === "user" ? "border-primary/20 ring-2 ring-primary/10" : "border-slate-200 dark:border-white/10"}`}>
                   {msg.role === "user" ? (
                     <AvatarFallback className="bg-primary text-white font-medium text-xs">Siz</AvatarFallback>
                   ) : (
@@ -425,8 +428,8 @@ export default function PetitionPage() {
 
 
 
-                <div className={`flex flex-col gap-2 max-w-[85%] md:max-w-[75%] ${msg.role === "user" ? "items-end" : "items-start"}`}>
-                  <div className="flex flex-col gap-2">
+                <div className={`flex flex-col gap-2 min-w-0 ${msg.role === "user" ? "max-w-[88%] sm:max-w-[75%] items-end" : "w-full sm:w-auto sm:max-w-[82%] md:max-w-[75%] items-start"}`}>
+                  <div className="flex flex-col gap-2 w-full min-w-0">
                     {msg.role === "assistant" && msg.content.includes("[ƏRİZƏ]") ? (
                       <div className="flex flex-col gap-3 w-full">
                         {/* Petition Toolbar */}
@@ -443,7 +446,7 @@ export default function PetitionPage() {
                             )}
                           </div>
 
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <Button
                               onClick={() => toggleEditPetition(msg.id, msg.content)}
                               variant={editingPetitionId === msg.id ? "default" : "outline"}
@@ -523,55 +526,35 @@ export default function PetitionPage() {
                             </p>
                           </div>
                         ) : (
-                          <div 
+                          <div
                             id={`petition-${msg.id}`}
-                            className="bg-white text-black rounded-xl max-w-[21cm] min-h-[15cm] shadow-[0_10px_40px_rgba(0,0,0,0.12)] prose prose-sm max-w-none font-serif p-8 md:p-12 border border-slate-300 dark:border-slate-700 focus:outline-none"
+                            className="bg-white text-black rounded-xl w-full max-w-[21cm] min-h-[15cm] shadow-[0_10px_40px_rgba(0,0,0,0.12)] prose prose-sm max-w-none prose-headings:font-extrabold prose-headings:text-black prose-strong:text-black font-serif p-4 sm:p-8 md:p-12 border border-slate-300 dark:border-slate-700 focus:outline-none overflow-x-auto"
                           >
-                            <ReactMarkdown 
-                              remarkPlugins={[remarkGfm]} 
-                              rehypePlugins={[
-                                rehypeRaw, 
-                                [rehypeSanitize, {
-                                  ...defaultSchema,
-                                  attributes: {
-                                    ...defaultSchema.attributes,
-                                    '*': ['className', 'align', 'style']
-                                  }
-                                }]
-                              ]}
-                            >
-                              {editedContents[msg.id] ?? msg.content.replace("[ƏRİZƏ]", "").trim()}
-                            </ReactMarkdown>
+                            <MessageMarkdown
+                              content={editedContents[msg.id] ?? msg.content.replace("[ƏRİZƏ]", "").trim()}
+                              paper
+                            />
                           </div>
                         )}
                       </div>
                     ) : (
-                      <div 
-                        className={`px-5 py-4 rounded-2xl text-[15px] leading-relaxed shadow-sm ${
-                          msg.role === "user" 
-                            ? "bg-primary text-white rounded-tr-sm shadow-[0_4px_15px_rgba(234,88,12,0.3)]" 
-                            : "bg-orange-50 dark:bg-card/90 backdrop-blur-md border border-orange-200 dark:border-white/5 rounded-tl-sm prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-secondary/50 shadow-[0_2px_10px_rgba(0,0,0,0.05)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.1)] text-orange-950 dark:text-foreground"
+                      <div
+                        className={`px-3.5 py-3 sm:px-5 sm:py-4 rounded-2xl text-[14.5px] sm:text-[15px] leading-relaxed shadow-sm min-w-0 max-w-full ${
+                          msg.role === "user"
+                            ? "bg-primary text-white rounded-tr-sm shadow-[0_4px_15px_rgba(234,88,12,0.3)] [overflow-wrap:anywhere]"
+                            : "w-full bg-orange-50/90 dark:bg-card/90 backdrop-blur-md border border-orange-200 dark:border-white/10 rounded-tl-sm prose prose-sm dark:prose-invert max-w-none prose-headings:font-extrabold prose-headings:text-slate-950 dark:prose-headings:text-white prose-strong:font-bold prose-strong:text-slate-950 dark:prose-strong:text-white prose-p:leading-relaxed prose-pre:bg-secondary/50 shadow-[0_2px_10px_rgba(0,0,0,0.05)] dark:shadow-[0_2px_10px_rgba(0,0,0,0.1)] text-slate-900 dark:text-foreground"
                         }`}
                       >
                         {msg.role === "user" ? (
                           <div className="whitespace-pre-line">{msg.content}</div>
                         ) : (
-                          <ReactMarkdown 
-                            remarkPlugins={[remarkGfm]} 
-                            rehypePlugins={[
-                              rehypeRaw, 
-                              [rehypeSanitize, {
-                                ...defaultSchema,
-                                ...defaultSchema,
-                                attributes: {
-                                  ...defaultSchema.attributes,
-                                  '*': ['className', 'align', 'style']
-                                }
-                              }]
-                            ]}
-                          >
-                            {msg.content}
-                          </ReactMarkdown>
+                          <>
+                            <div className="flex sm:hidden items-center gap-1.5 text-xs font-extrabold text-slate-950 dark:text-white mb-2.5 pb-1.5 border-b border-orange-200/80 dark:border-white/10">
+                              <Bot className="h-3.5 w-3.5 text-primary shrink-0" />
+                              <span>LexAZ AI</span>
+                            </div>
+                            <MessageMarkdown content={msg.content} />
+                          </>
                         )}
                       </div>
                     )}
@@ -593,15 +576,15 @@ export default function PetitionPage() {
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex gap-4"
+              className="flex gap-2 sm:gap-4"
             >
-              <Avatar className="h-10 w-10 border border-slate-200 dark:border-white/10 shadow-sm">
+              <Avatar className="hidden sm:flex h-10 w-10 border border-slate-200 dark:border-white/10 shadow-sm shrink-0">
                 <AvatarFallback className="bg-card">
                   <Bot className="h-5 w-5 text-primary" />
                 </AvatarFallback>
               </Avatar>
-              <div className="px-5 py-4 rounded-2xl bg-orange-50 dark:bg-card/90 backdrop-blur-md border border-orange-200 dark:border-white/5 rounded-tl-sm flex items-center gap-3 shadow-sm">
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <div className="px-4 py-3 sm:px-5 sm:py-4 rounded-2xl bg-orange-50 dark:bg-card/90 backdrop-blur-md border border-orange-200 dark:border-white/5 rounded-tl-sm flex items-center gap-3 shadow-sm">
+                <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
                 <span className="text-sm font-medium text-muted-foreground animate-pulse">LexAZ analiz edir...</span>
               </div>
             </motion.div>
@@ -611,27 +594,28 @@ export default function PetitionPage() {
       </div>
 
       {/* Input Area */}
-      <div className="p-4 md:p-6 border-t border-slate-200 dark:border-white/5 bg-white/80 dark:bg-background/60 backdrop-blur-xl z-10 relative">
+      <div className="p-2.5 sm:p-4 md:p-6 pb-[max(0.625rem,env(safe-area-inset-bottom))] border-t border-slate-200 dark:border-white/5 bg-white/85 dark:bg-background/60 backdrop-blur-xl z-10 relative">
         <form onSubmit={handleSend} className="max-w-4xl mx-auto relative flex items-center">
-          <Button type="button" variant="ghost" size="icon" className="absolute left-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full h-10 w-10 transition-colors">
+          <Button type="button" variant="ghost" size="icon" aria-label="Fayl əlavə et" className="hidden sm:flex absolute left-2 text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full h-10 w-10 transition-colors">
             <Paperclip className="h-5 w-5" />
           </Button>
-          <Input 
+          <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Cavabınızı bura yazın..." 
-            className="w-full pl-6 pr-14 py-6 md:pl-14 md:pr-14 md:py-7 rounded-[2rem] md:rounded-full bg-slate-50 dark:bg-card/50 border-slate-200 dark:border-white/10 focus-visible:ring-primary/40 focus-visible:border-primary/50 text-[15px] shadow-inner transition-all text-foreground"
+            placeholder="Cavabınızı bura yazın..."
+            className="w-full pl-4 pr-14 py-5 sm:py-6 md:pl-14 md:pr-14 md:py-7 rounded-2xl sm:rounded-[2rem] md:rounded-full bg-slate-50 dark:bg-card/50 border-slate-200 dark:border-white/10 focus-visible:ring-primary/40 focus-visible:border-primary/50 text-base sm:text-[15px] shadow-inner transition-all text-foreground"
           />
-          <Button 
-            type="submit" 
-            size="icon" 
+          <Button
+            type="submit"
+            size="icon"
+            aria-label="Göndər"
             disabled={!input.trim() || isLoading}
-            className="absolute right-2 rounded-full h-11 w-11 bg-primary text-white hover:opacity-90 shadow-[0_4px_15px_rgba(234,88,12,0.4)] transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
+            className="absolute right-1.5 sm:right-2 rounded-full h-10 w-10 sm:h-11 sm:w-11 bg-primary text-white hover:opacity-90 shadow-[0_4px_15px_rgba(234,88,12,0.4)] transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
           >
-            <Send className="h-5 w-5 ml-1" />
+            <Send className="h-4 w-4 sm:h-5 sm:w-5 sm:ml-0.5" />
           </Button>
         </form>
-        <p className="text-xs text-center text-muted-foreground py-3 bg-white/50 dark:bg-background/50 border-t border-slate-200 dark:border-white/5 backdrop-blur-xl">
+        <p className="text-[11px] sm:text-xs text-center text-muted-foreground pt-2 sm:pt-3">
           LexAZ səhv edə bilər. Vacib məlumatları yoxlayın.
         </p>
       </div>

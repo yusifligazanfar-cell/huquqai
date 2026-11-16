@@ -93,7 +93,7 @@ function SidebarProvider({
     return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
   }, [isMobile, setOpen, setOpenMobile])
 
-  // Adds a keyboard shortcut to toggle the sidebar.
+  // Adds keyboard shortcuts: Cmd/Ctrl+B to toggle, Escape to close mobile drawer.
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (
@@ -102,12 +102,15 @@ function SidebarProvider({
       ) {
         event.preventDefault()
         toggleSidebar()
+      } else if (event.key === "Escape" && isMobile && openMobile) {
+        event.preventDefault()
+        setOpenMobile(false)
       }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [toggleSidebar])
+  }, [toggleSidebar, isMobile, openMobile, setOpenMobile])
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
@@ -186,7 +189,7 @@ function Sidebar({
         <div
           onClick={() => setOpenMobile(false)}
           className={cn(
-            "fixed inset-0 z-50 bg-black/50 transition-opacity duration-200",
+            "fixed inset-0 z-50 bg-black/50 backdrop-blur-[1px] transition-opacity duration-200",
             openMobile ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
           )}
           aria-hidden="true"
@@ -194,15 +197,18 @@ function Sidebar({
 
         {/* Instant Hardware-Accelerated Drawer */}
         <div
+          role={openMobile ? "dialog" : undefined}
+          aria-modal={openMobile ? true : undefined}
+          aria-label="Naviqasiya menyusu"
           className={cn(
-            "fixed inset-y-0 left-0 z-50 h-full w-[18rem] bg-sidebar text-sidebar-foreground shadow-2xl transition-transform duration-200 ease-out flex flex-col will-change-transform",
+            "fixed inset-y-0 left-0 z-50 h-dvh w-[min(18rem,84dvw)] bg-sidebar text-sidebar-foreground shadow-2xl transition-transform duration-200 ease-out flex flex-col will-change-transform overscroll-contain",
             openMobile ? "translate-x-0" : "-translate-x-full pointer-events-none"
           )}
           data-mobile="true"
           data-slot="sidebar"
           data-sidebar="sidebar"
         >
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className="flex h-full w-full flex-col overflow-y-auto overscroll-contain">{children}</div>
         </div>
       </div>
     )
