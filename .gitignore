@@ -21,6 +21,7 @@ frontend/build/
 
 # Large raw dataset (56,000+ files / 700MB)
 data/full_eqanun_corpus/
+data/*.sqlite*
 e_qanun_links.txt
 
 # Temporary / Scratch files

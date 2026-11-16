@@ -1,5 +1,5 @@
 import { QueryAnalysis } from './types';
-import { findLawByQuery, LAW_REGISTRY } from './registry';
+import { findCandidateLawsByQuery, LAW_REGISTRY } from './registry';
 import { LEGAL_CONCEPTS, LegalConcept } from './thesaurus';
 
 export function normalizeAz(text: string): string {
@@ -59,11 +59,13 @@ export function analyzeQuery(query: string, history?: { role: string; content: s
   const expandedKeywords = new Set<string>();
   const priorityArticlesSet = new Set<string>();
 
-  // Direct Law Match
-  const matchedLaw = findLawByQuery(norm);
-  if (matchedLaw) {
-    legalDomain = matchedLaw.category;
-    possibleLawsSet.add(matchedLaw.name);
+  // Direct / Topic-Scored Law Candidates
+  const lawMatch = findCandidateLawsByQuery(norm);
+  if (lawMatch.primary) {
+    legalDomain = lawMatch.primary.category;
+  }
+  for (const cl of lawMatch.candidates) {
+    possibleLawsSet.add(cl.name);
   }
 
   // Concept & Thesaurus Expansion
@@ -100,21 +102,91 @@ export function analyzeQuery(query: string, history?: { role: string; content: s
   ]);
 
   const rawWords = norm
-    .split(/[\s\.\,\;\:\!\?]+/)
-    .map(w => w.replace(/\.+$/, ''))
+    .replace(/[^a-z0-9\s]+/g, ' ')
+    .split(/\s+/)
+    .map(w => w.trim())
     .filter(w => w.length > 2 && !stopWords.has(w));
 
   rawWords.forEach(w => expandedKeywords.add(w));
 
-  // Contextualization from history if short query
-  if (rawWords.length <= 3 && history && history.length > 0) {
-    const lastUser = [...history].reverse().find(m => m.role === 'user');
-    if (lastUser) {
-      const prevWords = normalizeAz(lastUser.content)
-        .split(/[\s\.\,\;\:\!\?]+/)
-        .map(w => w.replace(/\.+$/, ''))
-        .filter(w => w.length > 3 && !stopWords.has(w));
-      prevWords.slice(0, 4).forEach(w => expandedKeywords.add(w));
+  // Smart Follow-Up Detection: ONLY inherit previous turn context when query is anaphoric ("bəs...", "təkrar...", "bunun...")
+  // and NOT an independent new topic like "Pensiya yaşı neçədir?" or "Boşanma necə olur?"
+  const hasIndependentSubject =
+    lawMatch.confidence === 'explicit' ||
+    lawMatch.confidence === 'strong' ||
+    priorityArticlesSet.size > 0 ||
+    targetArticleNum !== null;
+  const anaphoricRegex =
+    /\b(bes|bunun|buna|bunu|bunda|bundan|bunlar|bunlara|onun|ona|onu|onda|ondan|onlar|hemin|tekrar|ikinci|novbeti|daha sonra|basqa|elave|hara sikayet|hara muraciet|ne etmeli)\b/;
+  const isFollowUp =
+    Boolean(history && history.length > 0) &&
+    !hasIndependentSubject &&
+    (anaphoricRegex.test(norm) || rawWords.length <= 2);
+
+  const followUpContextTerms: string[] = [];
+  const followUpPriorityArticles: string[] = [];
+  if (isFollowUp && history && history.length > 0) {
+    const prevUsers = history.filter((m) => m.role === 'user').slice(-2);
+    const lastAssistant = [...history].reverse().find((m) => m.role === 'assistant');
+
+    // Recover the legal domain/code and statutory concepts discussed in the immediately preceding turn
+    for (const pu of [...prevUsers].reverse()) {
+      const puNorm = normalizeAz(pu.content);
+      const puLaw = findCandidateLawsByQuery(puNorm);
+      if (puLaw.primary) {
+        if (legalDomain === 'Ümumi hüquq') legalDomain = puLaw.primary.category;
+        for (const c of puLaw.candidates) possibleLawsSet.add(c.name);
+      }
+      for (const concept of LEGAL_CONCEPTS) {
+        const matched = concept.triggerPhrases.some((phrase) => {
+          const np = normalizeAz(phrase);
+          if (puNorm.includes(np)) return true;
+          const pw = np.split(' ').filter((w) => w.length > 3);
+          return pw.length >= 2 && pw.every((w) => puNorm.includes(w));
+        });
+        if (matched) {
+          if (legalDomain === 'Ümumi hüquq') legalDomain = concept.domain;
+          const regLaw = LAW_REGISTRY[concept.primaryLawId];
+          if (regLaw) possibleLawsSet.add(regLaw.name);
+          for (const et of concept.expandedTerms.slice(0, 2)) {
+            if (!followUpContextTerms.includes(et)) followUpContextTerms.push(et);
+          }
+          for (const pa of concept.priorityArticles.slice(0, 3)) {
+            if (!followUpPriorityArticles.includes(pa)) followUpPriorityArticles.push(pa);
+          }
+        }
+      }
+      const prevMetaSkip = new Set([
+        'ceza', 'cezasi', 'cerime', 'cerimesi', 'cinayet', 'cinayeti', 'cinayetinin',
+        'qeder', 'qederdir', 'madde', 'hansi', 'nece',
+      ]);
+      const prevTokens = puNorm
+        .replace(/[^a-z0-9\s]+/g, ' ')
+        .split(/\s+/)
+        .filter((w) => w.length >= 4 && !stopWords.has(w) && !prevMetaSkip.has(w));
+      for (const pt of prevTokens.slice(0, 5)) {
+        expandedKeywords.add(pt);
+        if (!followUpContextTerms.includes(pt)) followUpContextTerms.push(pt);
+      }
+      if (puLaw.primary) break;
+    }
+
+    if (lastAssistant?.content) {
+      const assistantHead = lastAssistant.content.slice(0, 2200);
+      const aNorm = normalizeAz(assistantHead);
+      const aLaw = findCandidateLawsByQuery(aNorm);
+      if (aLaw.primary) {
+        if (legalDomain === 'Ümumi hüquq') legalDomain = aLaw.primary.category;
+        possibleLawsSet.add(aLaw.primary.name);
+      }
+      const artMatches = assistantHead.matchAll(/Madd[eə]\s*(\d+(?:[.\-]\d+)*)/gi);
+      for (const m of artMatches) {
+        const baseArt = m[1].split(/[.\-]/)[0];
+        if (baseArt && !followUpPriorityArticles.includes(baseArt)) {
+          followUpPriorityArticles.push(baseArt);
+        }
+        if (followUpPriorityArticles.length >= 4) break;
+      }
     }
   }
 
@@ -137,6 +209,9 @@ export function analyzeQuery(query: string, history?: { role: string; content: s
     keywords: Array.from(expandedKeywords),
     possibleLaws: Array.from(possibleLawsSet),
     targetArticleNum,
-    targetPart
+    targetPart,
+    isFollowUp,
+    followUpContextTerms,
+    followUpPriorityArticles,
   };
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { analyzeQuery } from "@/lib/legal-rag/analyzer";
-import { hybridSearch } from "@/lib/legal-rag/search";
+import { hybridSearchAsync } from "@/lib/legal-rag/search";
 import { generateLegalResponse } from "@/app/actions/chat";
 
 export async function POST(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     const queryAnalysis = analyzeQuery(question);
 
     // 2. Retrieval of Real Legal Articles
-    const retrievedChunks = hybridSearch(queryAnalysis, 5);
+    const retrievedChunks = await hybridSearchAsync(queryAnalysis, 5, question);
 
     const retrievedDocuments = Array.from(new Set(retrievedChunks.map(c => ({
       lawId: c.lawId,

@@ -86,18 +86,24 @@ export class EQanunClient {
       // Node fetch failed
     }
 
-    // 3. Third Attempt: Ingested Full Corpus (56,982 indexed documents via compressed shards)
+    // 3. Third Attempt: Full 56,983-document SQLite / Remote RAG / Disk Corpus (UNTRUNCATED), then truncated shards fallback
     try {
-      const { getDocumentTextFromCorpus } = require('./eqanun_corpus_loader');
-      const textFromShards = getDocumentTextFromCorpus(docIdStr);
-      if (textFromShards) {
+      const { getSqliteDocumentById, isSqliteCorpusAvailable } = require('../legal-rag/corpus_sqlite');
+      let fullDoc = isSqliteCorpusAvailable() ? getSqliteDocumentById(docIdStr) : null;
+      if ((!fullDoc || !fullDoc.content)) {
+        const { fetchRemoteDocumentById, isRemoteRagConfigured } = require('../legal-rag/remote_backend');
+        if (isRemoteRagConfigured()) {
+          fullDoc = await fetchRemoteDocumentById(docIdStr);
+        }
+      }
+      if (fullDoc && fullDoc.content) {
         return {
           document_id: documentId,
           api_status: 200,
-          title: `e-Qanun Sənədi № ${docIdStr}`,
-          text: textFromShards,
-          source: `e-qanun complete corpus (${docIdStr})`,
-          source_url: sourceUrl
+          title: fullDoc.title,
+          text: fullDoc.content,
+          source: `e-qanun full sqlite corpus (${docIdStr})`,
+          source_url: fullDoc.sourceUrl
         };
       }
 
@@ -120,6 +126,19 @@ export class EQanunClient {
             };
           }
         }
+      }
+
+      const { getDocumentTextFromCorpus } = require('./eqanun_corpus_loader');
+      const textFromShards = getDocumentTextFromCorpus(docIdStr);
+      if (textFromShards) {
+        return {
+          document_id: documentId,
+          api_status: 200,
+          title: `e-Qanun Sənədi № ${docIdStr}`,
+          text: textFromShards,
+          source: `e-qanun complete corpus (${docIdStr})`,
+          source_url: sourceUrl
+        };
       }
     } catch (e) {
       // ignore

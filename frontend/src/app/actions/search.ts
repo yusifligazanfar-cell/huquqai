@@ -2,6 +2,21 @@
 
 import fs from 'fs'
 import path from 'path'
+import { analyzeQuery } from '@/lib/legal-rag/analyzer'
+import { hybridSearchAsync, type RagSearchMode } from '@/lib/legal-rag/search'
+import {
+  searchSqliteDocuments,
+  isSqliteCorpusAvailable,
+  getSqliteDocumentById,
+} from '@/lib/legal-rag/corpus_sqlite'
+import { searchSupabaseDocuments } from '@/lib/legal-rag/supabase_search'
+import {
+  fetchRemoteDocSearch,
+  fetchRemoteDocumentById,
+  isRemoteRagConfigured,
+} from '@/lib/legal-rag/remote_backend'
+
+export type SearchMode = RagSearchMode
 
 export interface SearchResult {
   id: string;
@@ -9,6 +24,12 @@ export interface SearchResult {
   content: string;
   source: string;
   score: number;
+  documentId?: string;
+  sourceUrl?: string;
+  articleNumber?: string;
+  semanticScore?: number;
+  modeUsed?: SearchMode;
+  elapsedMs?: number;
 }
 
 let cachedCatalog: Array<{ id: string; title: string; file: string }> | null = null;
@@ -28,8 +49,154 @@ function getEqanunCatalog() {
   return [];
 }
 
-export async function executeSearch(query: string): Promise<SearchResult[]> {
+async function searchPrimary56kCorpus(query: string): Promise<SearchResult[]> {
+  const mergedFullResults: SearchResult[] = [];
+  const seenIds = new Set<string>();
+
+  const hasLocalSqlite = isSqliteCorpusAvailable();
+  const [supaDocs, sqliteDocs] = await Promise.all([
+    searchSupabaseDocuments(query, 15).catch(() => []),
+    hasLocalSqlite
+      ? Promise.resolve(searchSqliteDocuments(query, 25))
+      : isRemoteRagConfigured()
+      ? fetchRemoteDocSearch(query, 25).catch(() => [])
+      : Promise.resolve([]),
+  ]);
+
+  for (const sd of supaDocs) {
+    if (seenIds.has(sd.documentId)) continue;
+    seenIds.add(sd.documentId);
+    mergedFullResults.push({
+      id: `supabase-doc-${sd.documentId}`,
+      title: sd.articleNumber
+        ? `${sd.title} — Maddə ${sd.articleNumber}`
+        : sd.title,
+      content: `${sd.snippet}\n\nRəsmi keçid: ${sd.sourceUrl}`,
+      source: `e-Qanun / Supabase (ID: ${sd.documentId})`,
+      score: Math.round(sd.score + 400),
+    });
+  }
+
+  for (const sq of sqliteDocs) {
+    const idKey = `doc-${sq.documentId}-${sq.articleNumber || "main"}`;
+    if (seenIds.has(idKey) || seenIds.has(sq.documentId)) continue;
+    seenIds.add(sq.documentId);
+    mergedFullResults.push({
+      id: `eqanun-sqlite-${sq.documentId}-${sq.articleNumber || "0"}`,
+      title: sq.articleNumber
+        ? `${sq.title} — Maddə ${sq.articleNumber}`
+        : sq.title,
+      content: `${sq.snippet}${sq.isRepealed ? " [Qüvvədən düşüb]" : ""}`,
+      source: `e-Qanun 56,983 Baza (ID: ${sq.documentId})`,
+      score: Math.round(sq.score + 300),
+      documentId: sq.documentId,
+      sourceUrl: sq.sourceUrl,
+      articleNumber: sq.articleNumber || undefined,
+    });
+  }
+
+  return mergedFullResults.sort((a, b) => b.score - a.score);
+}
+
+export async function enlargeSearchDocument(
+  documentId: string,
+  articleNumber?: string
+): Promise<{
+  documentId: string;
+  title: string;
+  sourceUrl: string;
+  content: string;
+} | null> {
+  if (!documentId) return null;
+  const hasLocalSqlite = isSqliteCorpusAvailable();
+  let doc = hasLocalSqlite
+    ? getSqliteDocumentById(documentId, articleNumber || undefined)
+    : null;
+  if (hasLocalSqlite && (!doc || !doc.content) && articleNumber) {
+    doc = getSqliteDocumentById(documentId);
+  }
+  if (!hasLocalSqlite && (!doc || !doc.content) && isRemoteRagConfigured()) {
+    doc = await fetchRemoteDocumentById(documentId, articleNumber || undefined);
+    if ((!doc || !doc.content) && articleNumber) {
+      doc = await fetchRemoteDocumentById(documentId);
+    }
+  }
+  if (!doc) return null;
+  return {
+    documentId: doc.documentId,
+    title: doc.title,
+    sourceUrl: doc.sourceUrl,
+    content: doc.content.slice(0, 18000),
+  };
+}
+
+export async function executeSearch(
+  query: string,
+  mode: SearchMode = "hybrid"
+): Promise<SearchResult[]> {
   try {
+    if (!query || !query.trim()) return [];
+    const startedAt = Date.now();
+    const cleanQuery = query.trim();
+
+    // 1. Primary Universal Multi-Stage Hybrid Search (e-qanun.ai pattern: SQLite FTS5 + SBERT dense vectors + RRF rerank)
+    if (isSqliteCorpusAvailable() || isRemoteRagConfigured()) {
+      const analysis = analyzeQuery(cleanQuery);
+      const [ragChunks, docTitleHits] = await Promise.all([
+        hybridSearchAsync(analysis, 16, cleanQuery, { mode }),
+        mode !== "semantic" ? searchPrimary56kCorpus(cleanQuery) : Promise.resolve([] as SearchResult[]),
+      ]);
+
+      const combined: SearchResult[] = [];
+      const seenKeys = new Set<string>();
+
+      for (const ch of ragChunks) {
+        const docId =
+          ch.documentId ||
+          ch.sourceUrl.match(/\/results\/(\d+)/)?.[1] ||
+          "";
+        const dedupKey = docId
+          ? `${docId}::${ch.articleNumber || "0"}`
+          : ch.sourceId;
+        if (seenKeys.has(dedupKey)) continue;
+        seenKeys.add(dedupKey);
+
+        combined.push({
+          id: ch.sourceId,
+          title: ch.articleTitle || `${ch.lawName}${ch.articleNumber ? ` — Maddə ${ch.articleNumber}` : ""}`,
+          content: ch.content,
+          source: docId ? `e-Qanun (ID: ${docId})` : ch.lawName,
+          score: Math.round((ch.score ?? 0) + 1000),
+          documentId: docId || undefined,
+          sourceUrl: ch.sourceUrl || (docId ? `https://www.e-qanun.ai/results/${docId}` : undefined),
+          articleNumber: ch.articleNumber || undefined,
+          semanticScore: ch.semanticScore,
+        });
+      }
+
+      for (const docHit of docTitleHits) {
+        const dedupKey = docHit.documentId
+          ? `${docHit.documentId}::${docHit.articleNumber || "0"}`
+          : docHit.id;
+        const alreadyHasDoc =
+          docHit.documentId &&
+          combined.some((r) => r.documentId === docHit.documentId);
+        if (seenKeys.has(dedupKey) || (alreadyHasDoc && mode === "hybrid")) continue;
+        seenKeys.add(dedupKey);
+        combined.push(docHit);
+      }
+
+      const elapsedMs = Date.now() - startedAt;
+      if (combined.length > 0) {
+        return combined.slice(0, 20).map((item) => ({
+          ...item,
+          modeUsed: mode,
+          elapsedMs,
+        }));
+      }
+    }
+
+    // 2. Fallback to legacy Knowledge Base only if SQLite is unavailable or yielded 0 hits
     const kbPath = path.join(process.cwd(), 'src/data/knowledge_base')
     if (!fs.existsSync(kbPath)) return []
 
@@ -309,7 +476,22 @@ export async function executeSearch(query: string): Promise<SearchResult[]> {
 
     scoredChunks.sort((a, b) => b.score - a.score);
 
-    // Also check the 56,982 e-qanun documents catalog for exact document ID (e.g. 60090) or matching title
+    // Merge Supabase / SQLite if reached via fallback
+    const mergedFullResults = await searchPrimary56kCorpus(query);
+
+    for (const sc of scoredChunks) {
+      if (!mergedFullResults.some((m) => m.title === sc.title)) {
+        mergedFullResults.push(sc);
+      }
+    }
+
+    if (mergedFullResults.length > 0) {
+      return mergedFullResults
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 20);
+    }
+
+    // Legacy catalog fallback only if SQLite FTS5 index is absent
     const catalog = getEqanunCatalog();
     if (catalog.length > 0) {
       const qClean = query.trim().toLowerCase();

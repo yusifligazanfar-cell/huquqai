@@ -1,10 +1,10 @@
 "use server"
 
-import fs from 'fs'
-import path from 'path'
 import { analyzeQuery } from '@/lib/legal-rag/analyzer'
-import { hybridSearch } from '@/lib/legal-rag/search'
+import { hybridSearchAsync } from '@/lib/legal-rag/search'
+import { generateLlmCompletion } from '@/lib/llm/client'
 import { ALL_COURTS, findBestCourtMatch, Court } from '@/lib/courts'
+import { getDocumentByTitle as resolveDocumentFromCorpus } from './chat'
 
 export async function generatePetitionResponse(
   query: string,
@@ -19,7 +19,6 @@ export async function generatePetitionResponse(
     if (passedKey.startsWith("gsk_")) {
       passedKey = ""
     }
-    const apiKey = passedKey.length > 10 ? passedKey : process.env.OPENAI_API_KEY || ""
 
     // 1. Match Official Court from courts.gov.az database based on conversation text
     const fullConvText = (query + " " + history.map(h => h.content).join(" ")).toLowerCase()
@@ -43,9 +42,9 @@ Rəsmi Portal Səhifəsi: ${matchedCourt.url}
 QEYD: Ərizənin yuxarı sağ küncündəki müraciət hissəsində MÜTLƏQ məhz bu rəsmi adı ("${matchedCourt.title}") və ünvanı ("${matchedCourt.address}") yaz!\n`
     }
 
-    // 2. RAG Search for Relevant Legal Provisions
+    // 2. RAG Search for Relevant Legal Provisions (56,983-doc SQLite + Knowledge Base + Supabase)
     const analysis = analyzeQuery(query, history)
-    const retrievedChunks = hybridSearch(analysis, 8)
+    const retrievedChunks = await hybridSearchAsync(analysis, 8, query)
 
     let contextText = retrievedChunks.length > 0
       ? retrievedChunks.map(c => `[SƏNƏD: ${c.articleTitle}]\nURL: ${c.sourceUrl}\n${c.content.substring(0, 3000)}`).join("\n\n---\n\n")
@@ -185,56 +184,36 @@ ${contextText}
 İSTİFADƏÇİNİN SORĞUSU VƏ TARİXÇƏSİ:
 ${query}`
 
-    const isOpr = apiKey.startsWith("sk-or-v1-")
-    const endpoint = isOpr ? "https://openrouter.ai/api/v1/chat/completions" : "https://api.openai.com/v1/chat/completions"
-    let reqModel = isOpr ? "openai/gpt-4o-mini" : "gpt-4o-mini"
+    const formattedHistory = history
+      .filter((h) => h.role === "user" || h.role === "assistant")
+      .map((h) => ({
+        role: h.role as "user" | "assistant",
+        content: h.content,
+      }))
 
-    const headers = {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      ...(isOpr ? { "HTTP-Referer": "https://huquqai.az", "X-Title": "HuquqAI" } : {})
-    }
-
-    let body = {
-      model: reqModel,
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...history,
-        { role: "user", content: userPrompt }
-      ],
-      temperature: 0.2,
-      max_tokens: 3500,
-    }
-
-    let response = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body)
-    })
-
-    // If Rate Limited (429), retry
-    if (!response.ok && response.status === 429) {
-      console.warn(`Petition rate limit encountered, waiting 2.5s and retrying...`)
-      await new Promise(res => setTimeout(res, 2500))
-      response = await fetch(endpoint, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body)
+    let rawAiContent = ""
+    try {
+      const llmRes = await generateLlmCompletion({
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...formattedHistory,
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.2,
+        maxTokens: 3500,
+        responseFormatJson: false,
+        apiKeyParam: passedKey || undefined,
       })
-    }
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        throw new Error("Sistemdə qısa müddətli sıxlıq var. Zəhmət olmasa bir neçə saniyə sonra yenidən cəhd edin.")
+      rawAiContent = (llmRes.content || "").trim()
+    } catch (llmErr: any) {
+      const refs = retrievedChunks.slice(0, 4)
+        .map(c => `- **${c.lawName}**${c.articleNumber ? ` — Maddə ${c.articleNumber}` : ""}: ${c.content.replace(/\s+/g, " ").trim().slice(0, 320)}...`)
+        .join("\n")
+      return {
+        content: `AI ərizə generasiyası üçün aktiv model provayderi qoşulmayıb (${llmErr?.message || "Açar və ya sessiya tələb olunur"}).\n\nPulsuz \`GEMINI_API_KEY\` / \`GROQ_API_KEY\`, lokal \`Ollama\`, və ya aktiv ödənişli \`muse login\` / \`META_API_KEY\` qoşun.\n\n### Sualınız üzrə 56,983 sənədlik bazadan tapılan normativ əsaslar:\n${refs || "Müvafiq normativ akt tapılmadı."}`,
+        citations: []
       }
-      if (response.status === 402) {
-        throw new Error("Balansınız bitib (Payment Required). Zəhmət olmasa API hesabınıza vəsait əlavə edin.")
-      }
-      throw new Error(`API error: ${response.statusText}`)
     }
-
-    const data = await response.json()
-    let rawAiContent = (data.choices[0].message.content || "").trim()
     const isFinalPetition = rawAiContent.includes("[ƏRİZƏ]")
 
     if (isFinalPetition) {
@@ -277,27 +256,16 @@ ${query}`
 
 export async function getDocumentByTitle(targetTitle: string) {
   try {
-    const kbPath = path.join(process.cwd(), 'src/data/knowledge_base')
-    if (!fs.existsSync(kbPath)) return null
-
-    const files = fs.readdirSync(kbPath).filter(f => f.endsWith('.txt'))
-    const isTruncated = targetTitle.endsWith("...")
-    const matchTitle = isTruncated ? targetTitle.slice(0, -3).trim() : targetTitle
-
-    for (const file of files) {
-      const filePath = path.join(kbPath, file)
-      const text = fs.readFileSync(filePath, 'utf-8')
-      const firstLine = text.split('\n')[0].replace(/===/g, '').trim()
-
-      if (firstLine.toLowerCase().includes(matchTitle.toLowerCase()) || file.toLowerCase().includes(matchTitle.toLowerCase())) {
-        return {
-          title: firstLine,
-          content: text,
-          source: file.replace('.txt', '')
-        }
-      }
+    const resolved = await resolveDocumentFromCorpus(targetTitle)
+    if (!resolved) return null
+    return {
+      title: resolved.title,
+      content: resolved.content,
+      lawName: resolved.lawName,
+      articleNumber: resolved.articleNumber,
+      sourceUrl: resolved.sourceUrl,
+      source: resolved.lawName,
     }
-    return null
   } catch (error) {
     console.error("getDocumentByTitle error:", error)
     return null

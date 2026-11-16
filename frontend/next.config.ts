@@ -5,9 +5,21 @@ const nextConfig: NextConfig = {
     root: process.cwd(),
   },
   outputFileTracingIncludes: {
-    '/*': ['./src/data/knowledge_base/**/*'],
-    '/chat': ['./src/data/knowledge_base/**/*'],
-    '/api/**/*': ['./src/data/knowledge_base/**/*'],
+    '/*': [
+      './src/data/knowledge_base/**/*',
+      './src/data/eqanun_catalog.json',
+      './src/data/eqanun_shards/**/*',
+    ],
+    '/chat': [
+      './src/data/knowledge_base/**/*',
+      './src/data/eqanun_catalog.json',
+      './src/data/eqanun_shards/**/*',
+    ],
+    '/api/**/*': [
+      './src/data/knowledge_base/**/*',
+      './src/data/eqanun_catalog.json',
+      './src/data/eqanun_shards/**/*',
+    ],
   },
 };
 

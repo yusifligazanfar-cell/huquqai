@@ -33,6 +33,9 @@ export interface StructuredChunk {
   sourceFile: string;
   sourceUrl: string;
   score?: number;
+  chunkId?: number;
+  documentId?: string;
+  semanticScore?: number;
 }
 
 export interface QueryAnalysis {
@@ -44,6 +47,9 @@ export interface QueryAnalysis {
   possibleLaws: string[];
   targetArticleNum: string | null;
   targetPart: string | null;
+  isFollowUp?: boolean;
+  followUpContextTerms?: string[];
+  followUpPriorityArticles?: string[];
 }
 
 export interface LegalBasisItem {

@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateLegalResponse } from "@/app/actions/chat";
 
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

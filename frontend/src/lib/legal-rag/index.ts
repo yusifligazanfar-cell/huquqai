@@ -4,3 +4,6 @@ export * from './analyzer';
 export * from './parser';
 export * from './search';
 export * from './validator';
+export * from './corpus_sqlite';
+export * from './remote_backend';
+export * from './supabase_search';

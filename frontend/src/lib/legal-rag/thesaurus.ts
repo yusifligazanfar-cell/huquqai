@@ -2,6 +2,7 @@ export interface LegalConcept {
   id: string;
   domain: string;
   primaryLawId: string;
+  primaryDocId?: string;
   triggerPhrases: string[];
   expandedTerms: string[];
   priorityArticles: string[];
@@ -31,7 +32,7 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     primaryLawId: "emek",
     triggerPhrases: [
       "isden cixarma", "isden cixarilma", "isden cixmaq", "oz erizesi", "xeberdarliq etmeden", 
-      "xeberdarliqsiz", "xitam", "muqavilenin legvi", "isden azad", "isden qovulma", "is yerinden cixarilma",
+      "xeberdarliqsiz", "is muqavilesine xitam", "muqavilenin legvi", "isden azad", "isden qovulma", "is yerinden cixarilma",
       "emek muqavilesine xitam", "esassiz cixarildiqda", "qanunsuz cixarildiqda", "hara sikayet etmeliyem",
       "isden esassiz cixarildiqda", "ise berpa", "emek mubahisesi", "emek mufettisliyi"
     ],
@@ -78,7 +79,10 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     id: "family_alimony",
     domain: "Ailə hüququ",
     primaryLawId: "aile",
-    triggerPhrases: ["aliment", "ushaq pulu", "usaq ucun pul", "aliment meblegi", "alimentin tutulmasi"],
+    triggerPhrases: [
+      "aliment", "ushaq pulu", "usaq ucun pul", "aliment meblegi", "alimentin tutulmasi",
+      "yetkinlik yasina catmayan usaq", "usaqlarini saxlamaq vezifesi", "valideynlerin usaq"
+    ],
     expandedTerms: [
       "valideynlerin ushaqlari saxlamaq vezifesi", "alimentin meblegi", "sabit pul mebleginde",
       "mehkeme terefinden alimentin tutulmasi", "aliment odenilmesi haqqinda sazis"
@@ -159,11 +163,22 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     id: "housing_and_land",
     domain: "Mənzil & Torpaq",
     primaryLawId: "torpaq",
-    triggerPhrases: ["torpaq sahesi uzerinde", "dovlet qeydiyyati", "torpaq mulkiyyeti"],
+    triggerPhrases: ["torpaq sahesi uzerinde", "torpaq mulkiyyeti", "torpaq dovlet qeydiyyati"],
     expandedTerms: [
       "torpaq sahesi uzerinde mulkiyyet huququnun dovlet qeydiyyati", "torpaq qanunvericiliyi"
     ],
     priorityArticles: ["67", "68", "69"]
+  },
+  {
+    id: "real_estate_state_registry",
+    domain: "Daşınmaz əmlak hüququ",
+    primaryLawId: "eqanun_5456",
+    primaryDocId: "5456",
+    triggerPhrases: ["dasinmaz emlakin dovlet reyestri", "dasinmaz emlak uzerinde huquqlarin dovlet qeydiyyati", "cixaris", "reyestr qeydiyyati"],
+    expandedTerms: [
+      "dasinmaz emlakin dovlet reyestri haqqinda", "mulkiyyet huququnun dovlet qeydiyyati muddeti"
+    ],
+    priorityArticles: ["8", "9", "10", "11", "12", "15"]
   },
   {
     id: "civil_housing_lease",
@@ -179,9 +194,9 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     id: "civil_court_jurisdiction",
     domain: "Mülki proses",
     primaryLawId: "mulki_prosessual",
-    triggerPhrases: ["erazi aidiyyeti", "iddia erizesinin verilmesi zamani", "aidiyyet necə mueyyen"],
+    triggerPhrases: ["erazi aidiyyeti", "iddia erizesinin verilmesi zamani", "aidiyyeti nece mueyyen"],
     expandedTerms: [
-      "erazi aidiyyeti", "iddianin cavabdehin yasayis yerine gore verilmesi", "mehkeme aidiyyeti"
+      "erazi aidiyyeti", "iddianin cavabdehin oldugu yere gore verilmesi", "mehkeme aidiyyeti"
     ],
     priorityArticles: ["35", "36", "37"]
   },
@@ -190,14 +205,19 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     domain: "İnzibati hüquq",
     primaryLawId: "inzibati_xetalar",
     triggerPhrases: [
-      "siqaret kotuklerinin", "tullantilarin etraf muhite", "protokol hansi muddetde", 
-      "inzibati tenbeh novleri", "inzibati xeta haqqinda protokol"
+      "siqaret", "siqareti yere", "siqaret kotuklerinin", "siqaret kotuyu",
+      "tutun cekme", "tutun memulat", "tullantilarin etraf muhite",
+      "tullantisinin atilmasi", "tullantilarinin atilmasi",
+      "protokol hansi muddetde", "inzibati tenbeh novleri", "inzibati xeta haqqinda protokol"
     ],
     expandedTerms: [
-      "meiset tullantilarinin atilmasi", "etraf muhitin muhafizesi", "inzibati xeta haqqinda protokolun tertibi",
-      "inzibati tenbeh novleri"
+      "tutun memulatlari tullantilarinin etraf muhite atilmasi",
+      "tutun memulatinin istehlakina dair mehdudiyyetler",
+      "meiset tullantilarinin atilmasi",
+      "etraf muhitin muhafizesi", "inzibati xeta haqqinda protokolun tertibi",
+      "esas ve elave inzibati tenbehler", "inzibati tenbeh novleri"
     ],
-    priorityArticles: ["266", "100", "24", "22", "266-1", "212"]
+    priorityArticles: ["212", "266", "23", "24", "22", "100", "266-1"]
   },
   {
     id: "criminal_homicide",
@@ -208,6 +228,21 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
       "qesden adam oldurme", "qesden adam oldurmeye gore ceza", "cinayet mecellesi madde 120"
     ],
     priorityArticles: ["120", "121", "122"]
+  },
+  {
+    id: "criminal_fraud_and_theft",
+    domain: "Cinayət hüququ",
+    primaryLawId: "cinayet",
+    primaryDocId: "46947",
+    triggerPhrases: [
+      "deleduzluq", "aldatma ve ya etibardan", "etibardan sui-istifade", "etibardan sui istifade",
+      "ogurluq", "gizli olaraq talama", "ozgenin emlakini gizli"
+    ],
+    expandedTerms: [
+      "deleduzluq yəni etibardan sui-istifade", "ogurluq ozgenin emlakini gizli olaraq talama",
+      "ele kecirme", "cinayet mecellesi madde 178", "cinayet mecellesi madde 177"
+    ],
+    priorityArticles: ["178", "177", "179"]
   },
   {
     id: "tax_declaration_failure",
@@ -260,5 +295,154 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     ],
     priorityArticles: ["1133", "1134", "1159", "1166", "1246", "1273", "1322"],
     forbiddenPhrases: ["tikintiye vereselik", "torpaq sahesinin qeydiyyati"]
+  },
+  {
+    id: "insurance_and_unemployment",
+    domain: "İşsizlikdən sığorta",
+    primaryLawId: "emek",
+    triggerPhrases: [
+      "issizlikden sigorta", "issizlikden sigorta odenisi", "issizlik odenisi"
+    ],
+    expandedTerms: [
+      "issizlikden sigorta haqqinda", "issizlikden sigorta odenisi teyin edilmesi",
+      "sigorta odenisinin muddeti"
+    ],
+    priorityArticles: ["13", "14", "15", "16", "17"]
+  },
+  {
+    id: "traffic_speed_and_alcohol_fines",
+    domain: "Yol hərəkəti & İnzibati",
+    primaryLawId: "inzibati_xetalar",
+    triggerPhrases: [
+      "suret heddi", "radara dusmek", "icki", "serxos halda", "spirtli icki",
+      "avtomobil idare etmek", "suruculuk huququndan mehrum"
+    ],
+    expandedTerms: [
+      "yolda mueyyen edilmis hereket suretini asma", "serxos veziyyetde neqliyyat vasitesini idare etme",
+      "inzibati xetalar mecellesi 328", "inzibati xetalar mecellesi 333", "yol hereketi qaydalari"
+    ],
+    priorityArticles: ["327", "328", "333", "334"]
+  },
+  {
+    id: "customs_declaration",
+    domain: "Gömrük hüququ",
+    primaryLawId: "gomruk",
+    primaryDocId: "46957",
+    triggerPhrases: [
+      "gomruk beyannamesi", "gomruk borcu", "gomruk resmilesdirilmesi", "gomruk mecellesi", "gomruk nezareti"
+    ],
+    expandedTerms: [
+      "gomruk beyannamesinin verilmesi muddeti", "gomruk mecellesi", "mallarin beyan edilmesi"
+    ],
+    priorityArticles: ["149", "150", "151", "152", "153", "154", "155"]
+  },
+  {
+    id: "migration_residence",
+    domain: "Miqrasiya hüququ",
+    primaryLawId: "miqrasiya",
+    primaryDocId: "46959",
+    triggerPhrases: [
+      "ecnebilerin", "ecnebi", "muveqqeti yasamaq icazesi", "daimi yasamaq icazesi",
+      "is icazesi", "miqrasiya mecellesi", "viza muddeti"
+    ],
+    expandedTerms: [
+      "muveqqeti yasamaq ucun icazenin verilmesi hallari", "miqrasiya mecellesi", "ecnebilerin qeydiyyati"
+    ],
+    priorityArticles: ["45", "46", "47", "48", "52", "64"]
+  },
+  {
+    id: "labor_pensions",
+    domain: "Sosial təminat və pensiya hüququ",
+    primaryLawId: "eqanun_11566",
+    primaryDocId: "11566",
+    triggerPhrases: [
+      "emek pensiyasi", "emek pensiyalari", "yasa gore pensiya", "pensiya yasi", "pensiya staji", "sosial sigorta staji"
+    ],
+    expandedTerms: [
+      "emek pensiyalari haqqinda", "yasa gore emek pensiyasi teyin edilmesi sertleri", "sigorta staji"
+    ],
+    priorityArticles: ["7", "8", "9", "10", "11", "12"]
+  },
+  {
+    id: "state_duty_fees",
+    domain: "Maliyyə və dövlət rüsumu hüququ",
+    primaryLawId: "eqanun_2860",
+    primaryDocId: "2860",
+    triggerPhrases: [
+      "dovlet rusumu", "rusumdan azad", "mehkeme rusumu", "notariat rusumu"
+    ],
+    expandedTerms: [
+      "dovlet rusumu haqqinda", "dovlet rusumunun odenilmesinden azad olunma", "mehkemeye verilen iddia erizelerine gore dovlet rusumu"
+    ],
+    priorityArticles: ["8", "9", "10", "4"]
+  },
+  {
+    id: "enforcement_proceedings",
+    domain: "İcra hüququ",
+    primaryLawId: "eqanun_1406",
+    primaryDocId: "1406",
+    triggerPhrases: [
+      "icra senedi", "konullu icra", "icra memuru", "mecburi icra", "icra haqqinda"
+    ],
+    expandedTerms: [
+      "icra senedleri uzre icraata baslanilmasi", "konullu icra ucun muddet", "icra haqqinda"
+    ],
+    priorityArticles: ["8", "9", "10", "43", "45"]
+  },
+  {
+    id: "banking_licensing",
+    domain: "Bank hüququ",
+    primaryLawId: "eqanun_5825",
+    primaryDocId: "5825",
+    triggerPhrases: [
+      "bank lisenziyasi", "banklar haqqinda", "kredit teskilati", "bank faliyyeti"
+    ],
+    expandedTerms: [
+      "banklar haqqinda", "bank lisenziyasinin verilmesi", "nizamname kapitali"
+    ],
+    priorityArticles: ["6", "7", "8", "9", "10", "11"]
+  },
+  {
+    id: "notary_actions",
+    domain: "Notariat hüququ",
+    primaryLawId: "notariat",
+    primaryDocId: "107",
+    triggerPhrases: [
+      "notarius", "notariat", "notarial tesdiq", "notariat haqqinda"
+    ],
+    expandedTerms: [
+      "notariat haqqinda", "notariat hereketlerinin aparilmasi", "vesiyyetnamenin tesdiqi"
+    ],
+    priorityArticles: ["47", "17", "34", "35", "36", "46"]
+  },
+  {
+    id: "administrative_traffic_fines",
+    domain: "İnzibati hüquq",
+    primaryLawId: "inzibati_xetalar",
+    primaryDocId: "46960",
+    triggerPhrases: [
+      "qirmizi isiq", "qirmizida", "svetoforun", "svetafor", "yol qaydasini pozma",
+      "cerime meydancasi", "evakuator"
+    ],
+    expandedTerms: [
+      "svetoforun ve ya nizamlayicinin qadaganedici isaresi",
+      "neqliyyat vasitelerinin suruculeri terefinden yol hereketi qaydalarinin pozulmasi",
+      "dayanma ve ya durma qaydalarinin pozulmasi"
+    ],
+    priorityArticles: ["327", "346", "328", "338"]
+  },
+  {
+    id: "administrative_noise_violation",
+    domain: "İnzibati hüquq",
+    primaryLawId: "inzibati_xetalar",
+    primaryDocId: "46960",
+    triggerPhrases: [
+      "gece ses", "ses-kuy", "ses kuy", "ses sal", "yuksek ses"
+    ],
+    expandedTerms: [
+      "meiset ses-kuyune qarsi mubarize qaydalarinin pozulmasi",
+      "gece vaxti ses-kuy"
+    ],
+    priorityArticles: ["521", "522"]
   }
 ];

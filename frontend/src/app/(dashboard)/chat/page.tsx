@@ -100,33 +100,68 @@ function TTSButton({ text }: { text: string }) {
   );
 }
 
-function InlineCitation({ title }: { title: string }) {
+interface CitationSourceInfo {
+  title?: string;
+  url?: string;
+  article_number?: string;
+  verified?: boolean;
+  content?: string;
+}
+
+function deriveDocIdFromCitation(title: string, sourceUrl?: string): string | null {
+  if (sourceUrl) {
+    const urlId = sourceUrl.match(/\/(?:results|framework)\/(\d{1,7})/);
+    if (urlId) return urlId[1];
+  }
+  const explicitMatch = title.match(/(?:Akt\s*№|ID:?|results\/|framework\/)\s*(\d{1,7})/i);
+  if (explicitMatch) return explicitMatch[1];
+
+  const normTitle = title.toLowerCase();
+  if (normTitle.includes("konstitusiya")) return "897";
+  if (normTitle.includes("ailə") || normTitle.includes("aile")) return "46946";
+  if (normTitle.includes("mülki prosessual")) return "46945";
+  if (normTitle.includes("mülki")) return "46944";
+  if (normTitle.includes("cinayət prosessual")) return "46950";
+  if (normTitle.includes("cinayət")) return "46947";
+  if (normTitle.includes("əmək pensiyalar") || normTitle.includes("emek pensiyalar")) return "11566";
+  if (normTitle.includes("əmək")) return "46943";
+  if (normTitle.includes("inzibati xətalar")) return "46960";
+  if (normTitle.includes("inzibati prosessual")) return "46956";
+  if (normTitle.includes("şəhərsalma") || normTitle.includes("tikinti məcəllə")) return "46958";
+  if (normTitle.includes("mənzil")) return "46955";
+  if (normTitle.includes("daşınmaz əmlakın dövlət reyestri")) return "5456";
+  if (normTitle.includes("torpaq")) return "46942";
+  if (normTitle.includes("vergi")) return "46948";
+  if (normTitle.includes("gömrük")) return "46957";
+  if (normTitle.includes("miqrasiya")) return "46959";
+  if (normTitle.includes("seçki")) return "46953";
+  if (normTitle.includes("cəzaların icrası")) return "46951";
+  if (normTitle.includes("su məcəllə")) return "46940";
+  if (normTitle.includes("meşə")) return "46941";
+  if (normTitle.includes("ticarət gəmiçiliyi")) return "46952";
+  if (normTitle.includes("yol hərəkəti")) return "3423";
+  if (normTitle.includes("məhkəmələr və hakimlər")) return "3933";
+  if (normTitle.includes("istehlakçı")) return "9479";
+  if (normTitle.includes("dövlət rüsumu")) return "2860";
+  if (normTitle.includes("icra haqqında")) return "1406";
+  if (normTitle.includes("banklar haqqında")) return "5825";
+  return null;
+}
+
+function InlineCitation({ title, source }: { title: string; source?: CitationSourceInfo }) {
   const [isOpen, setIsOpen] = useState(false);
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(() => {
+    const id = deriveDocIdFromCitation(title, source?.url);
+    return id ? `https://www.e-qanun.ai/results/${id}` : (source?.url && source.url !== "https://www.e-qanun.ai" ? source.url : null);
+  });
 
-  // Derive canonical doc ID (1 to 60091) and URLs
-  const normTitle = title.toLowerCase();
-  let docId = "46944"; // default to Civil Code
-  const idMatch = title.match(/(?:№|Akt\s*№|ID:?)\s*(\d{1,6})/i) || title.match(/\b(60\d{3}|[1-5]\d{4}|\d{1,4})\b/);
-  
-  if (normTitle.includes("konstitusiya")) docId = "897";
-  else if (normTitle.includes("ailə") || normTitle.includes("aile")) docId = "46946";
-  else if (normTitle.includes("mülki prosessual")) docId = "46945";
-  else if (normTitle.includes("mülki")) docId = "46944";
-  else if (normTitle.includes("cinayət prosessual")) docId = "46950";
-  else if (normTitle.includes("cinayət")) docId = "46947";
-  else if (normTitle.includes("əmək")) docId = "46943";
-  else if (normTitle.includes("inzibati xətalar")) docId = "46960";
-  else if (normTitle.includes("inzibati prosessual")) docId = "46951";
-  else if (normTitle.includes("vergi")) docId = "46948";
-  else if (normTitle.includes("yol hərəkəti")) docId = "46953";
-  else if (normTitle.includes("məhkəmələr")) docId = "448";
-  else if (normTitle.includes("istehlakçı")) docId = "3289";
-  else if (idMatch) docId = idMatch[1];
-
-  const sourceUrl = `https://www.e-qanun.ai/results/${docId}`;
-  const apiUrl = `https://api.e-qanun.ai/api/v2/enlarge/documents?index=0&semantic_weight=1&document_id=${docId}`;
+  const effectiveDocId = deriveDocIdFromCitation(title, resolvedUrl || source?.url);
+  const sourceUrl = resolvedUrl || (effectiveDocId ? `https://www.e-qanun.ai/results/${effectiveDocId}` : `https://www.e-qanun.ai`);
+  const apiUrl = effectiveDocId
+    ? `https://api.e-qanun.ai/api/v2/enlarge/documents?index=0&semantic_weight=1&document_id=${effectiveDocId}`
+    : null;
 
   const toggle = async () => {
     if (!isOpen && !content) {
@@ -135,11 +170,16 @@ function InlineCitation({ title }: { title: string }) {
         const doc = await getDocumentByTitle(title);
         if (doc) {
           setContent(doc.content);
+          if (doc.sourceUrl && doc.sourceUrl.includes("/results/")) {
+            setResolvedUrl(doc.sourceUrl);
+          }
+        } else if (source?.content) {
+          setContent(source.content);
         } else {
           setContent("Bu maddənin tam mətni rəsmi qanunvericilik bazasından təsdiqlənmişdir.");
         }
       } catch (e) {
-        setContent("Məlumat yüklənərkən xəta baş verdi.");
+        setContent(source?.content || "Məlumat yüklənərkən xəta baş verdi.");
       }
       setLoading(false);
     }
@@ -168,16 +208,18 @@ function InlineCitation({ title }: { title: string }) {
             <span>e-Qanun</span>
             <ExternalLink className="h-3 w-3" />
           </a>
-          <a
-            href={apiUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-mono font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 rounded-lg transition-all"
-            title="Rəsmi e-Qanun API JSON çağırışını birbaşa aç"
-          >
-            <span>API</span>
-            <ExternalLink className="h-2.5 w-2.5" />
-          </a>
+          {apiUrl && (
+            <a
+              href={apiUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-2 py-1.5 text-xs font-mono font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 rounded-lg transition-all"
+              title="Rəsmi e-Qanun API JSON çağırışını birbaşa aç"
+            >
+              <span>API</span>
+              <ExternalLink className="h-2.5 w-2.5" />
+            </a>
+          )}
           <button 
             onClick={toggle}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 rounded-lg transition-all cursor-pointer shadow-sm"
@@ -363,6 +405,7 @@ function ChatContent() {
   const [conversationId, setConversationId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const hasProcessedQuery = useRef(false)
+  const loadedTargetIdRef = useRef<string | null | undefined>(undefined)
 
   useEffect(() => {
     const shuffled = [...ALL_SUGGESTIONS].sort(() => 0.5 - Math.random());
@@ -370,11 +413,8 @@ function ChatContent() {
   }, [])
 
   useEffect(() => {
-    // Clear out obsolete legacy or non-functional keys from browser storage
     const savedKey = localStorage.getItem('lexaz_groq_api_key')
-    if (savedKey && (savedKey.startsWith("gsk_") || !savedKey.startsWith("sk-"))) {
-      localStorage.removeItem('lexaz_groq_api_key')
-    } else if (savedKey) {
+    if (savedKey) {
       setApiKey(savedKey)
       setApiKeyInput(savedKey)
     }
@@ -394,15 +434,25 @@ function ChatContent() {
   }, [user])
 
   useEffect(() => {
+    const uid = supabaseUser?.id
     const fetchHistory = async () => {
-      if (!supabaseUser) return;
+      if (!uid) return;
       
       if (!targetId) {
-        setMessages([])
-        setConversationId(null)
+        if (loadedTargetIdRef.current !== null && loadedTargetIdRef.current !== undefined) {
+          setMessages([])
+          setConversationId(null)
+        }
+        loadedTargetIdRef.current = null
         setHasLoadedHistory(true)
         return;
       }
+
+      if (loadedTargetIdRef.current === targetId) {
+        setHasLoadedHistory(true)
+        return;
+      }
+      loadedTargetIdRef.current = targetId
 
       const supabase = createClient()
       
@@ -434,9 +484,8 @@ function ChatContent() {
       setHasLoadedHistory(true)
     }
     
-    setHasLoadedHistory(false)
     fetchHistory()
-  }, [supabaseUser, targetId])
+  }, [supabaseUser?.id, targetId])
 
   useEffect(() => {
     if (!hasLoadedHistory) return;
@@ -518,49 +567,69 @@ function ChatContent() {
     let cid = conversationId
 
     try {
-      // If no conversation exists, create one and save the user message
+      // Persist conversation/message non-fatally so transient DB errors never block answering
       if (!cid && supabaseUser) {
-        const { data: convData } = await supabase
-          .from('conversations')
-          .insert({ user_id: supabaseUser.id, type: 'chat', title: userQuery.substring(0, 50) })
-          .select('id')
-          .single()
-        
-        if (convData) {
-          cid = convData.id
-          setConversationId(cid)
+        try {
+          const { data: convData } = await supabase
+            .from('conversations')
+            .insert({ user_id: supabaseUser.id, type: 'chat', title: userQuery.substring(0, 50) })
+            .select('id')
+            .single()
+
+          if (convData) {
+            cid = convData.id
+            setConversationId(cid)
+            await supabase.from('messages').insert({
+              conversation_id: cid,
+              role: 'user',
+              content: userQuery,
+              citations: []
+            })
+            window.dispatchEvent(new Event("chatHistoryUpdated"))
+          }
+        } catch (dbErr) {
+          console.warn("Conversation create warning:", dbErr)
+        }
+      } else if (cid && supabaseUser) {
+        try {
           await supabase.from('messages').insert({
             conversation_id: cid,
             role: 'user',
             content: userQuery,
             citations: []
           })
-          
-          // Dispatch event to update sidebar in real-time
-          window.dispatchEvent(new Event("chatHistoryUpdated"))
+        } catch (dbErr) {
+          console.warn("User message insert warning:", dbErr)
         }
-      } else if (cid && supabaseUser) {
-        await supabase.from('messages').insert({
-          conversation_id: cid,
-          role: 'user',
-          content: userQuery,
-          citations: []
-        })
       }
 
       const llmHistory = currentHistory
-        .filter(m => m.id !== 1)
+        .filter(
+          (m) =>
+            m.id !== 1 &&
+            !m.isTyping &&
+            typeof m.content === 'string' &&
+            m.content.trim().length > 0 &&
+            !m.content.startsWith("Məlumatı yoxlayarkən sistem xətası") &&
+            !m.content.startsWith("Xəta baş verdi:")
+        )
         .slice(isPetitionMode ? -30 : -6)
-        .map(m => ({ role: m.role, content: m.content }));
+        .map((m) => ({ role: m.role, content: m.content }));
 
       const lowerQ = userQuery.toLowerCase().trim();
-      const isPetitionIntent = isPetitionMode || 
-        lowerQ.includes("ərizə") || 
-        lowerQ.includes("erize") || 
-        lowerQ.includes("iddia ərizəsi") || 
-        lowerQ.includes("iddia erizesi") || 
-        lowerQ.includes("şikayət ərizəsi") || 
-        lowerQ.includes("erizə");
+      const explicitPetitionRequest =
+        /(?:\b(?:erize|ərizə|sikayet|şikayət|iddia)\b[\s\S]{0,25}\b(?:yaz|hazirla|hazırla|tertib|tərtib|numune|nümunə|isteyirem|istəyirəm)\b|\b(?:yaz|hazirla|hazırla|tertib|tərtib)\b[\s\S]{0,25}\b(?:erize|ərizə)\b)/i.test(lowerQ);
+      const looksLikeStandaloneQuestion =
+        !explicitPetitionRequest &&
+        !lowerQ.includes("ərizə yaz") &&
+        /\?/.test(userQuery) &&
+        /\b(nədir|nedir|nə qədər|ne qeder|hansı|hansi|necə|nece|kim|hara|maddə|madde|cəza|ceza|cərimə|cerime|qanun|hüquq|huquq|olar|olarmı|neçədir|necedir)\b/i.test(lowerQ);
+
+      if (isPetitionMode && looksLikeStandaloneQuestion) {
+        setIsPetitionMode(false);
+      }
+      const isPetitionIntent =
+        explicitPetitionRequest || (isPetitionMode && !looksLikeStandaloneQuestion);
 
       let response;
       if (isPetitionIntent) {
@@ -578,20 +647,26 @@ function ChatContent() {
         role: "assistant",
         content: response.content,
         citations: response.citations,
+        sources: (response as any).sources || [],
         precedent: (response as any).precedent || null
       }
       
       if (cid) {
-        await supabase.from('messages').insert({
-          conversation_id: cid,
-          role: 'assistant',
-          content: response.content,
-          citations: response.citations
-        })
+        try {
+          await supabase.from('messages').insert({
+            conversation_id: cid,
+            role: 'assistant',
+            content: response.content,
+            citations: response.citations
+          })
+        } catch (dbErr) {
+          console.warn("Assistant message insert warning:", dbErr)
+        }
       }
 
       setMessages(prev => [...prev, newMsg])
     } catch (error) {
+      console.error("Chat response error:", error)
       setMessages(prev => [...prev, {
         id: Date.now().toString(),
         role: "assistant",
@@ -605,10 +680,9 @@ function ChatContent() {
 
   const handleSend = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim()) return
+    if (!input.trim() || isLoading) return
 
     const query = input
-    const lowerQuery = query.trim().toLowerCase()
     const currentHistory = [...messages]
     
     const tempUserMsg = { id: Date.now().toString(), role: "user", content: query, citations: [] }
@@ -624,6 +698,11 @@ function ChatContent() {
     if (window.confirm("Bütün söhbət tarixçəsi ekrandan silinəcək və yeni söhbətə başlanılacaq. Əminsiniz?")) {
       setMessages([])
       setConversationId(null)
+      setIsPetitionMode(false)
+      setIsLoading(false)
+      setEditingPetitionId(null)
+      hasProcessedQuery.current = false
+      loadedTargetIdRef.current = null
       
       // Clean up the URL to remove ?id= so it doesn't reload the old chat on refresh
       window.history.pushState({}, document.title, window.location.pathname);
@@ -684,6 +763,7 @@ function ChatContent() {
                       e.target.style.height = e.target.scrollHeight + 'px';
                     }}
                     onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing || e.keyCode === 229) return;
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         if (input.trim() && !isLoading) handleSend(e as unknown as React.FormEvent);
@@ -899,9 +979,12 @@ function ChatContent() {
 
                   {msg.citations && msg.citations.length > 0 && !msg.content.includes("[ƏRİZƏ]") && (
                     <div className="flex flex-col gap-2 mt-2 w-full pt-2">
-                      {msg.citations.map((cite: string, i: number) => (
-                        <InlineCitation key={i} title={cite} />
-                      ))}
+                      {msg.citations.map((cite: string, i: number) => {
+                        const matchedSource = Array.isArray(msg.sources)
+                          ? msg.sources[i] || msg.sources.find((s: CitationSourceInfo) => s?.title === cite)
+                          : undefined;
+                        return <InlineCitation key={`${msg.id}-${i}-${cite}`} title={cite} source={matchedSource} />;
+                      })}
                     </div>
                   )}
 
@@ -985,6 +1068,7 @@ function ChatContent() {
                   e.target.style.height = e.target.scrollHeight + 'px';
                 }}
                 onKeyDown={(e) => {
+                  if (e.nativeEvent.isComposing || e.keyCode === 229) return;
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
                     if (input.trim() && !isLoading) handleSend(e as unknown as React.FormEvent);
