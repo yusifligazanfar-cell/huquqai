@@ -168,8 +168,9 @@ export async function fetchRemoteShortSummary(
 export async function fetchRemoteGenerateDocument(
   systemPrompt: string,
   userPrompt: string,
-  maxTokens = 1800,
-  timeoutMs = 24000
+  maxTokens = 2800,
+  timeoutMs = 28000,
+  responseFormatJson = false
 ): Promise<string | null> {
   if (!isRemoteRagConfigured()) return null;
   const baseUrl = getRagBackendUrl().replace(/\/+$/, "");
@@ -184,7 +185,7 @@ export async function fetchRemoteGenerateDocument(
     const res = await fetch(`${baseUrl}/rag/generate-document`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ systemPrompt, userPrompt, maxTokens }),
+      body: JSON.stringify({ systemPrompt, userPrompt, maxTokens, responseFormatJson }),
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!res.ok) return null;

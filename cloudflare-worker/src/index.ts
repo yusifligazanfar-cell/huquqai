@@ -1108,11 +1108,12 @@ async function handleGenerateDocument(body: Record<string, unknown>, env: Env): 
   const userPrompt = String(body.userPrompt || body.user_prompt || "").trim();
   if (!userPrompt) return jsonResp({ error: "Empty userPrompt" }, 400);
 
-  const requestedTokens = Number(body.maxTokens || body.max_tokens || 1800);
-  const maxTokens = Math.max(400, Math.min(Number.isFinite(requestedTokens) ? requestedTokens : 1800, 2400));
+  const requestedTokens = Number(body.maxTokens || body.max_tokens || 2400);
+  const maxTokens = Math.max(400, Math.min(Number.isFinite(requestedTokens) ? requestedTokens : 2400, 3400));
+  const responseFormatJson = Boolean(body.responseFormatJson || body.response_format_json);
 
   try {
-    const aiRes = (await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+    const aiPayload: Record<string, unknown> = {
       messages: [
         {
           role: "system",
@@ -1122,14 +1123,26 @@ async function handleGenerateDocument(body: Record<string, unknown>, env: Env): 
         },
         {
           role: "user",
-          content: userPrompt.slice(0, 12000),
+          content: userPrompt.slice(0, 16000),
         },
       ],
-      temperature: 0.2,
+      temperature: 0.15,
       max_tokens: maxTokens,
-    })) as { response?: string };
+    };
+    if (responseFormatJson) {
+      aiPayload.response_format = { type: "json_object" };
+    }
+    const aiRes = (await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", aiPayload as any)) as {
+      response?: string | Record<string, unknown>;
+    };
 
-    const content = (aiRes?.response || "").trim();
+    const rawResp = aiRes?.response;
+    const content =
+      typeof rawResp === "string"
+        ? rawResp.trim()
+        : rawResp && typeof rawResp === "object"
+        ? JSON.stringify(rawResp)
+        : "";
     if (!content) {
       return jsonResp({ error: "Empty AI response", content: "", latency_ms: Date.now() - t0 }, 502);
     }

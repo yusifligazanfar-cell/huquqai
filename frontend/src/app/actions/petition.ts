@@ -5,8 +5,22 @@ import {
   DOCUMENT_TYPE_MAP,
   type LegalDocumentFormInput,
   resolveTargetCourt,
-  buildDeterministicDocumentFallback,
+  buildDeterministicStructuredDoc,
+  buildPartyBlocks,
+  checkMissingDocumentRequirements,
+  parseAttachmentsList,
 } from "@/lib/legal-documents"
+import {
+  cleanParagraphLines,
+  EDUCATIONAL_DECISION_BANNER,
+  extractStructuredJson,
+  PROFESSIONAL_REVIEW_NOTICE,
+  serializeStructuredDocToMarkdown,
+  toAzUpperCase,
+  type DocumentClauseSection,
+  type StructuredLegalDocument,
+  type VerifiedLegalSourceRef,
+} from "@/lib/legal-document-schema"
 
 import { analyzeQuery } from '@/lib/legal-rag/analyzer'
 import { hybridSearchAsync } from '@/lib/legal-rag/search'
@@ -293,30 +307,43 @@ export async function getDocumentByTitle(targetTitle: string) {
   }
 }
 
+export interface StructuredDocumentGenerationResult {
+  text: string
+  structuredDoc?: StructuredLegalDocument
+  resolvedCourt: string
+  provider: string
+  missingInfoWarnings: string[]
+  verifiedSources: VerifiedLegalSourceRef[]
+  error?: string
+}
+
 export async function generateStructuredLegalDocument(
   input: LegalDocumentFormInput,
   apiKeyParam?: string
-): Promise<{ text: string; resolvedCourt: string; provider: string; error?: string }> {
+): Promise<StructuredDocumentGenerationResult> {
   const spec = DOCUMENT_TYPE_MAP[input.docType] || DOCUMENT_TYPE_MAP.petition
   const resolvedCourt = resolveTargetCourt(input)
   const facts = (input.facts || "").trim()
   const party1 = (input.party1 || "").trim()
+  const missingInfoWarnings = checkMissingDocumentRequirements(input)
 
   if (!facts || !party1) {
     return {
       text: "",
       resolvedCourt,
       provider: "validation",
-      error: "Zəhmət olmasa tələb olunan xanaları (tərəf və faktiki hallar) doldurun.",
+      missingInfoWarnings,
+      verifiedSources: [],
+      error: "Zəhmət olmasa tələb olunan xanaları (müraciət edən tərəf və faktiki hallar) doldurun.",
     }
   }
 
   let retrievedArticles = Array.isArray(input.legalArticles) ? [...input.legalArticles] : []
-  if (retrievedArticles.length < 3) {
+  if (retrievedArticles.length < 4) {
     try {
-      const searchQuery = `${spec.shortTitle} ${input.subtype || ""} ${facts} ${input.requests || ""}`.trim()
+      const searchQuery = `${spec.ragQueryBoost} ${input.subtype || ""} ${facts} ${input.legalViolationInfo || ""} ${input.requests || ""}`.trim()
       const analysis = analyzeQuery(searchQuery)
-      const chunks = await hybridSearchAsync(analysis, 5, searchQuery, { timeoutMs: 5000 })
+      const chunks = await hybridSearchAsync(analysis, 6, searchQuery, { timeoutMs: 5500 })
       const seen = new Set(retrievedArticles.map((a) => `${a.title}::${a.articleNumber || ""}`))
       for (const ch of chunks) {
         const key = `${ch.lawName}::${ch.articleNumber || ""}`
@@ -326,66 +353,148 @@ export async function generateStructuredLegalDocument(
           title: ch.lawName,
           articleNumber: ch.articleNumber,
           content: ch.content,
+          url: ch.sourceUrl,
         })
-        if (retrievedArticles.length >= 5) break
+        if (retrievedArticles.length >= 6) break
       }
     } catch (ragErr) {
       console.warn("[petition.ts] generateStructuredLegalDocument RAG lookup skipped:", ragErr)
     }
   }
 
-  const enrichedInput: LegalDocumentFormInput = {
-    ...input,
-    legalArticles: retrievedArticles,
-  }
+  const verifiedSources: VerifiedLegalSourceRef[] = retrievedArticles.slice(0, 6).map((a) => ({
+    title: a.title,
+    articleNumber: a.articleNumber || undefined,
+    url: a.url || spec.officialTemplateReference.url || "https://www.e-qanun.ai",
+    note: a.content.replace(/\s+/g, " ").trim().slice(0, 240),
+    verified: true,
+  }))
 
   const normsContext = retrievedArticles.length
     ? retrievedArticles
         .slice(0, 5)
         .map(
           (a, idx) =>
-            `${idx + 1}. ${a.title}${a.articleNumber ? ` — Maddə ${a.articleNumber}` : ""}\n${a.content.slice(0, 750)}`
+            `${idx + 1}. ${a.title}${a.articleNumber ? ` — Maddə ${a.articleNumber}` : ""}\n${a.content.slice(0, 850)}`
         )
         .join("\n\n")
-    : "Müvafiq normativ aktlar: Azərbaycan Respublikasının Mülki Məcəlləsi və Mülki Prosessual Məcəlləsi."
+    : `Əsas normativ baza: ${spec.legalBasisSummary}.`
 
   const today = new Date().toLocaleDateString("az-AZ")
+  const baselineDoc = buildDeterministicStructuredDoc(input, resolvedCourt, verifiedSources)
+
   const systemPrompt = `${spec.systemInstruction}
 
-Vacib format tələbləri:
-1. Cavaba MÜTLƏQ sətrin ən əvvəlində [ƏRİZƏ] etiketi ilə başla (yalnız bu etiket, ondan əvvəl heç bir giriş cümləsi yazma).
-2. Sənədi tam, peşəkar rəsmi Azərbaycan dilində, Markdown başlıqları (##, ###) və siyahılarla tərtib et.
-3. Yalnız verilən faktlara və Azərbaycan Respublikasının qüvvədə olan normativ hüquqi aktlarına istinad et; mövcud olmayan qanun maddəsi uydurma.
-4. Sənədin mətnini yarıda kəsmə — imza və tarix bölməsinədək tam bitir.${
-    spec.educationalOnly
-      ? "\n5. Sənədin lap əvvəlində açıq qeyd et ki, bu mətn YALNIZ TƏHSİL MƏQSƏDİLƏ hazırlanan şablon qərar nümunəsidir."
-      : ""
-  }`
+SƏN YALNIZ ETİBARLI JSON FORMATINDA CAVAB VERMƏLİSƏN (heç bir giriş və ya sonluq söhbəti yazma).
+JSON sxemi:
+{
+  "title": "${spec.documentHeading}",
+  "subtitle": "Qısa alt başlıq (məs: Borcun tutulması haqqında)",
+  "openingLine": "Birinci şəxs və ya rəsmi müqavilə preambulası",
+  "sections": [
+    {
+      "heading": "Bölmə başlığı (məs: Faktiki hallar / Hüquqi əsaslandırma / 1. Müqavilənin predmeti)",
+      "paragraphs": ["Rəsmi hüquqi üslubda tam abzaslar..."],
+      "numberedItems": ["İstəyə bağlı nömrələnmiş bəndlər"]
+    }
+  ],
+  "requestsHeading": "${spec.requestsHeading}",
+  "requests": ["1-ci konkret tələb", "2-ci konkret tələb"]
+}
+
+QƏTİ QAYDALAR:
+1. Yalnız verilən faktlara və aşağıda göstərilən qanunvericilik normalarına istinad et; mövcud olmayan qanun maddəsi, saxta məhkəmə qərarı və ya uydurma fakt YAZMA.
+2. Emosional, danışıq və ya çat ifadələrindən istifadə etmə; rəsmi Azərbaycan hüquq üslubunda yaz.
+3. Eyni məlumatı fərqli abzaslarda təkrarlama; faktlarla hüquqi nəticəni ayrıca abzaslarda fərqləndir.
+4. Sənəddə əlavələr siyahısı YAZMA (sistem istifadəçinin real əlavələrini özü yerləşdirəcək).
+5. Başlıqlarda Markdown işarələri (** və ya ##) istifadə etmə.`
 
   const userPrompt = [
-    `Sənəd növü: ${spec.title} (${spec.documentHeading})`,
-    input.subtype ? `Alt kateqoriya / Növ: ${input.subtype}` : "",
+    `Sənəd növü: ${spec.title}`,
+    input.subtype ? `Alt kateqoriya: ${input.subtype}` : "",
     spec.requiresCourt ? `Ünvanlandığı məhkəmə / orqan: ${resolvedCourt}` : "",
+    input.caseNumber?.trim() ? `İş №: ${input.caseNumber.trim()}` : "",
+    input.disputedActInfo?.trim() ? `Mübahisələndirilən akt / qərar: ${input.disputedActInfo.trim()}` : "",
+    input.mediationInfo?.trim() ? `Mediasiya / Pretenziya qeydi: ${input.mediationInfo.trim()}` : "",
+    input.advocateInfo?.trim() ? `Vəkil / Nümayəndə: ${input.advocateInfo.trim()}` : "",
     input.referenceInfo?.trim() ? `${spec.referenceLabel}: ${input.referenceInfo.trim()}` : "",
-    `${spec.party1Label}: ${party1}`,
-    input.party2?.trim() ? `${spec.party2Label}: ${input.party2.trim()}` : "",
+    `${spec.party1RoleLabel}: ${party1}`,
+    input.party2?.trim() ? `${spec.party2RoleLabel}: ${input.party2.trim()}` : "",
     input.amount?.trim() ? `${spec.amountLabel}: ${input.amount.trim()}` : "",
-    `Faktiki hallar / Şərtlər:\n${facts}`,
+    `Faktiki hallar / Predmet:\n${facts}`,
+    input.legalViolationInfo?.trim()
+      ? `Pozulmuş maddi və prosessual normalar:\n${input.legalViolationInfo.trim()}`
+      : "",
     input.requests?.trim() ? `${spec.requestsLabel}:\n${input.requests.trim()}` : "",
     input.chatContext?.trim()
-      ? `Əvvəlki hüquqi məsləhət konteksti:\n${input.chatContext.trim().slice(0, 1200)}`
+      ? `Əvvəlki hüquqi təhlil konteksti:\n${input.chatContext.trim().slice(0, 1200)}`
       : "",
     `Tarix: ${today}`,
-    `\nİstinad edilə biləcək qanunvericilik normaları:\n${normsContext}`,
+    `\nİstinad edilə biləcək rəsmi e-qanun normaları:\n${normsContext}`,
   ]
     .filter(Boolean)
     .join("\n\n")
 
-  const normalizeDocOutput = (raw: string): string => {
-    const idx = raw.indexOf("[ƏRİZƏ]")
-    return (idx >= 0 ? raw.slice(idx) : `[ƏRİZƏ]\n${raw}`)
-      .replace(/^\[ƏRİZƏ\]\s*/i, "[ƏRİZƏ]\n")
-      .trim()
+  const mergeAiJsonToDoc = (parsed: Record<string, unknown>): StructuredLegalDocument | null => {
+    const rawSections = Array.isArray(parsed.sections) ? parsed.sections : []
+    const sections: DocumentClauseSection[] = rawSections
+      .map((s: any) => {
+        const paragraphs = Array.isArray(s?.paragraphs)
+          ? s.paragraphs.map((p: unknown) => String(p || "").trim()).filter(Boolean)
+          : typeof s?.content === "string"
+          ? cleanParagraphLines(s.content)
+          : []
+        const numberedItems = Array.isArray(s?.numberedItems)
+          ? s.numberedItems.map((it: unknown) => String(it || "").trim()).filter(Boolean)
+          : undefined
+        return {
+          heading: typeof s?.heading === "string" ? s.heading.replace(/^#+\s*/, "").trim() : undefined,
+          paragraphs,
+          ...(numberedItems && numberedItems.length > 0 ? { numberedItems } : {}),
+        }
+      })
+      .filter((s) => s.paragraphs.length > 0 || (s.numberedItems?.length ?? 0) > 0)
+
+    if (sections.length === 0) return null
+
+    const rawRequests = Array.isArray(parsed.requests)
+      ? parsed.requests.map((r: unknown) => String(r || "").trim()).filter(Boolean)
+      : baselineDoc.requests
+
+    const parties = buildPartyBlocks(input, spec)
+    const attachments = parseAttachmentsList(input.attachmentsText)
+
+    const merged: StructuredLegalDocument = {
+      ...baselineDoc,
+      title:
+        typeof parsed.title === "string" && parsed.title.trim()
+          ? toAzUpperCase(parsed.title.replace(/^#+\s*/, "").trim())
+          : baselineDoc.title,
+      subtitle:
+        typeof parsed.subtitle === "string" && parsed.subtitle.trim()
+          ? parsed.subtitle.trim()
+          : baselineDoc.subtitle,
+      disclaimerBanner: spec.educationalOnly ? EDUCATIONAL_DECISION_BANNER : undefined,
+      topRightParties: parties,
+      openingLine:
+        typeof parsed.openingLine === "string" && parsed.openingLine.trim()
+          ? parsed.openingLine.trim()
+          : baselineDoc.openingLine,
+      sections,
+      requestsHeading:
+        spec.layoutMode === "contract-bilateral"
+          ? undefined
+          : typeof parsed.requestsHeading === "string" && parsed.requestsHeading.trim()
+          ? parsed.requestsHeading.trim().toUpperCase()
+          : spec.requestsHeading,
+      requests: spec.layoutMode === "contract-bilateral" ? [] : rawRequests,
+      attachments,
+      missingInfoWarnings,
+      legalSources: verifiedSources,
+      officialTemplateReference: spec.officialTemplateReference,
+      professionalReviewNotice: PROFESSIONAL_REVIEW_NOTICE,
+    }
+    return merged
   }
 
   const passedKey = (apiKeyParam || "").trim()
@@ -395,36 +504,50 @@ Vacib format tələbləri:
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      temperature: 0.2,
-      maxTokens: 2800,
-      responseFormatJson: false,
+      temperature: 0.15,
+      maxTokens: 3200,
+      responseFormatJson: true,
       apiKeyParam: passedKey || undefined,
       timeoutMs: 14000,
     })
-    const content = (llmRes.content || "").trim()
-    if (content.length >= 180) {
+    const parsed = extractStructuredJson(llmRes.content || "")
+    const merged = parsed ? mergeAiJsonToDoc(parsed) : null
+    if (merged) {
       return {
-        text: normalizeDocOutput(content),
+        text: serializeStructuredDocToMarkdown(merged),
+        structuredDoc: merged,
         resolvedCourt,
         provider: llmRes.provider || "llm",
+        missingInfoWarnings,
+        verifiedSources,
       }
     }
   } catch (primaryErr: any) {
-    console.warn("[petition.ts] Primary LLM document generation fallback triggered:", primaryErr?.message)
+    console.warn("[petition.ts] Primary LLM structured doc generation fallback:", primaryErr?.message)
   }
 
-  const workerContent = await fetchRemoteGenerateDocument(systemPrompt, userPrompt, 1900, 24000)
-  if (workerContent && workerContent.trim().length >= 160) {
-    return {
-      text: normalizeDocOutput(workerContent),
-      resolvedCourt,
-      provider: "cloudflare-workers-ai",
+  const workerContent = await fetchRemoteGenerateDocument(systemPrompt, userPrompt, 3000, 28000, true)
+  if (workerContent) {
+    const parsed = extractStructuredJson(workerContent)
+    const merged = parsed ? mergeAiJsonToDoc(parsed) : null
+    if (merged) {
+      return {
+        text: serializeStructuredDocToMarkdown(merged),
+        structuredDoc: merged,
+        resolvedCourt,
+        provider: "cloudflare-workers-ai",
+        missingInfoWarnings,
+        verifiedSources,
+      }
     }
   }
 
   return {
-    text: buildDeterministicDocumentFallback(enrichedInput, resolvedCourt),
+    text: serializeStructuredDocToMarkdown(baselineDoc),
+    structuredDoc: baselineDoc,
     resolvedCourt,
     provider: "template-fallback",
+    missingInfoWarnings,
+    verifiedSources,
   }
 }

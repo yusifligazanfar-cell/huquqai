@@ -86,10 +86,10 @@ export default function PetitionHubPage() {
               <span>HüquqAI Sənəd Tərtibatçısı</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-950 dark:text-white tracking-tight">
-              Sənəd və Ərizə Tərtibatçısı
+              Rəsmi Hüquqi Sənəd Generatorları
             </h1>
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
-              Lazım olan hüquqi sənəd növünü seçin, məlumatları qeyd edin və Azərbaycan qanunvericiliyinə uyğun rəsmi sənəd mətnini saniyələr ərzində hazırlayın.
+              Azərbaycan Respublikasının Mülki, İnzibati, Əmək və Prosessual qanunvericiliyinə uyğun A4 formatlı rəsmi sənədlər hazırlayın — dərhal DOCX və PDF olaraq ixrac edin.
             </p>
           </div>
 

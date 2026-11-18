@@ -156,7 +156,9 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1.5">
               {items.map((item) => {
-                const isActive = pathname.startsWith(item.url)
+                const isActive =
+                  pathname.startsWith(item.url) ||
+                  (item.url === "/petition" && pathname.startsWith("/create"))
                 const showBadge = item.url === "/consultations" && pendingCount > 0
                 return (
                   <SidebarMenuItem key={item.title}>

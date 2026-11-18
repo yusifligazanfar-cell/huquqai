@@ -14,9 +14,10 @@ import { generatePetitionResponse, generateStructuredLegalDocument } from "@/app
 import { useAuth } from "@/context/AuthContext"
 import { createClient } from '@/utils/supabase/client'
 import { useSearchParams } from 'next/navigation'
-import { DOCUMENT_TYPES, DOCUMENT_TYPE_MAP, type DocumentTypeId, type LegalDocumentFormInput } from "@/lib/legal-documents"
+import { CORE_DOCUMENT_TYPES, DOCUMENT_TYPE_MAP, type DocumentTypeId, type LegalDocumentFormInput } from "@/lib/legal-documents"
 import { DocumentCreatorForm } from "@/components/documents/DocumentCreatorForm"
 import { DocumentIcon } from "@/components/documents/DocumentIcon"
+import { DocumentResultSheet } from "@/components/documents/DocumentResultSheet"
 
 // Dynamically import Markdown renderer to keep initial chat bundle small and fast
 const MessageMarkdown = dynamic(() => import('@/components/chat/MessageMarkdown'), {
@@ -214,9 +215,6 @@ function ChatContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [isDictating, setIsDictating] = useState(false)
   const [isPetitionMode, setIsPetitionMode] = useState(false)
-  const [editingPetitionId, setEditingPetitionId] = useState<string | number | null>(null)
-  const [editedContents, setEditedContents] = useState<{ [key: string]: string }>({})
-  const [copiedId, setCopiedId] = useState<string | number | null>(null)
   const [docModalOpen, setDocModalOpen] = useState(false)
   const [docModalType, setDocModalType] = useState<DocumentTypeId>("petition")
   const [docModalInitialFacts, setDocModalInitialFacts] = useState("")
@@ -228,75 +226,6 @@ function ChatContent() {
   const recognitionRef = useRef<any>(null)
   const textareaRef1 = useRef<HTMLTextAreaElement>(null)
   const textareaRef2 = useRef<HTMLTextAreaElement>(null)
-
-  const downloadPDF = (id: string | number) => {
-    const element = document.getElementById(`petition-${id}`);
-    if (!element) return;
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert("Zəhmət olmasa, pop-up pəncərələrə icazə verin.");
-      return;
-    }
-    const htmlContent = element.innerHTML;
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>LexAZ Ərizə</title>
-          <style>
-            body { font-family: "Times New Roman", Times, serif; padding: 2cm; line-height: 1.6; font-size: 14pt; color: black; background: white; }
-            .content { max-width: 21cm; margin: 0 auto; }
-            h1, h2, h3, h4 { text-align: center; font-weight: bold; margin-bottom: 15px; }
-            p { margin-bottom: 12px; }
-            @media print { @page { margin: 0; } body { padding: 2cm; } }
-          </style>
-        </head>
-        <body>
-          <div class="content">${htmlContent}</div>
-          <scr` + `ipt>
-            window.onload = function() { window.focus(); setTimeout(function() { window.print(); window.close(); }, 250); }
-          </scr` + `ipt>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-  };
-
-  const downloadWord = (id: string | number) => {
-    const element = document.getElementById(`petition-${id}`);
-    if (!element) return;
-    const htmlContent = element.innerHTML;
-    const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Export HTML To Doc</title></head><body style='font-family: \"Times New Roman\", Times, serif; font-size: 14pt; padding: 2cm;'>";
-    const footer = "</body></html>";
-    const sourceHTML = header + htmlContent + footer;
-    const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
-    const fileDownload = document.createElement("a");
-    document.body.appendChild(fileDownload);
-    fileDownload.href = source;
-    fileDownload.download = 'LexAZ-Erize.doc';
-    fileDownload.click();
-    document.body.removeChild(fileDownload);
-  };
-
-  const copyPetition = (id: string | number, text: string) => {
-    const cleanText = text.replace("[ƏRİZƏ]", "").trim();
-    navigator.clipboard.writeText(cleanText);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2500);
-  };
-
-  const toggleEditPetition = (msgId: string | number, currentContent: string) => {
-    if (editingPetitionId === msgId) {
-      const updatedText = editedContents[msgId] !== undefined ? editedContents[msgId] : currentContent;
-      setMessages(prev => prev.map(m => m.id === msgId ? { ...m, content: updatedText.startsWith("[ƏRİZƏ]") ? updatedText : `[ƏRİZƏ]\n${updatedText}` } : m));
-      setEditingPetitionId(null);
-    } else {
-      if (editedContents[msgId] === undefined) {
-        setEditedContents(prev => ({ ...prev, [msgId]: currentContent.replace("[ƏRİZƏ]", "").trim() }));
-      }
-      setEditingPetitionId(msgId);
-    }
-  };
 
   const toggleDictation = useCallback(() => {
     if (isDictating && recognitionRef.current) {
@@ -511,7 +440,20 @@ function ChatContent() {
       setMessages((prev) => [
         ...prev,
         { id: userMsgId, role: "user", content: userSummary },
-        { id: assistantMsgId, role: "assistant", content: res.text, isTyping: false, citations: [] },
+        {
+          id: assistantMsgId,
+          role: "assistant",
+          content: res.text,
+          structuredDoc: res.structuredDoc,
+          docType: formInput.docType,
+          docTitle: spec.title,
+          docSlug: spec.slug,
+          resolvedCourt: res.resolvedCourt,
+          provider: res.provider,
+          educationalOnly: spec.educationalOnly,
+          isTyping: false,
+          citations: [],
+        },
       ])
       setIsPetitionMode(false)
       setDocModalOpen(false)
@@ -592,7 +534,7 @@ function ChatContent() {
 
       const lowerQ = userQuery.toLowerCase().trim();
       const explicitPetitionRequest =
-        /(?:\b(?:erize|ərizə|sikayet|şikayət|iddia|muqavile|müqavilə|vesatet|vəsatət|etiraz|apellyasiya|kassasiya|qerar|qərar)\b[\s\S]{0,30}\b(?:yaz|hazirla|hazırla|tertib|tərtib|numune|nümunə|isteyirem|istəyirəm|formalasdir|formalaşdır|generasiya)\b|\b(?:yaz|hazirla|hazırla|tertib|tərtib)\b[\s\S]{0,25}\b(?:erize|ərizə|muqavile|müqavilə|vesatet|vəsatət|etiraz)\b)/i.test(lowerQ);
+        /(?:\b(?:erize|ərizə|sikayet|şikayət|iddia|muqavile|müqavilə|vesatet|vəsatət|etiraz|apellyasiya|kassasiya|qerar|qərar|etibarname|etibarnamə|pretenziya|rey|rəy|sazis|saziş|sorgu|sorğu|cixis|çıxış|nitq)\b[\s\S]{0,30}\b(?:yaz|hazirla|hazırla|tertib|tərtib|numune|nümunə|isteyirem|istəyirəm|formalasdir|formalaşdır|generasiya)\b|\b(?:yaz|hazirla|hazırla|tertib|tərtib)\b[\s\S]{0,25}\b(?:erize|ərizə|muqavile|müqavilə|vesatet|vəsatət|etiraz|etibarname|etibarnamə|pretenziya)\b)/i.test(lowerQ);
       const looksLikeStandaloneQuestion =
         !explicitPetitionRequest &&
         !lowerQ.includes("ərizə yaz") &&
@@ -607,7 +549,17 @@ function ChatContent() {
 
       const detectDocTypeFromQuery = (q: string): DocumentTypeId => {
         const patterns: [RegExp, DocumentTypeId][] = [
-          [/\b(?:müqavilə|muqavile|saziş|sazis)\b/i, "contract"],
+          [/\b(?:etibarnamə|etibarname)\b/i, "power-of-attorney"],
+          [/\b(?:pretenziya)\b/i, "pretension"],
+          [/\b(?:barışıq|barisiq|saziş|sazis)\b/i, "settlement"],
+          [/\b(?:icra məmur|icra memur)\b/i, "enforcement-complaint"],
+          [/\b(?:inzibati iddia)\b/i, "admin-claim"],
+          [/\b(?:konstitusiya şikayət|konstitusiya sikayet)\b/i, "constitutional-complaint"],
+          [/\b(?:vəkil sorğu|vekil sorgu)\b/i, "attorney-inquiry"],
+          [/\b(?:məhkəmə çıxış|mehkeme cixis|nitq)\b/i, "court-speech"],
+          [/\b(?:hüquqi rəy|huquqi rey)\b/i, "legal-opinion"],
+          [/\b(?:məzuniyyət|mezuniyyet|işdən azad|isden azad|əmək|emek)\b/i, "labor-document"],
+          [/\b(?:müqavilə|muqavile)\b/i, "contract"],
           [/\b(?:apellyasiya)\b/i, "appeal"],
           [/\b(?:kassasiya|ali məhkəmə|ali mehkeme)\b/i, "cassation"],
           [/\b(?:vəsatət|vesatet)\b/i, "motion"],
@@ -702,7 +654,6 @@ function ChatContent() {
       setConversationId(null)
       setIsPetitionMode(false)
       setIsLoading(false)
-      setEditingPetitionId(null)
       hasProcessedQuery.current = false
       loadedTargetIdRef.current = null
       
@@ -854,108 +805,25 @@ function ChatContent() {
 
                 <div className={`flex flex-col gap-2 min-w-0 ${msg.role === "user" ? "max-w-[88%] sm:max-w-[75%] items-end" : "w-full sm:w-auto sm:max-w-[82%] md:max-w-[78%] items-start"}`}>
                     {msg.role === "assistant" && msg.content.includes("[ƏRİZƏ]") ? (
-                      <div className="flex flex-col gap-3 w-full">
-                        {/* Petition Toolbar */}
-                        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-white/10 rounded-xl shadow-sm">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary">
-                              <Scale className="h-3.5 w-3.5" />
-                              Hüquqi Ərizə Sənədi
-                            </span>
-                            {editingPetitionId === msg.id && (
-                              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium animate-pulse">
-                                ● Redaktə rejimi aktivdir
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <Button
-                              onClick={() => toggleEditPetition(msg.id, msg.content)}
-                              variant={editingPetitionId === msg.id ? "default" : "outline"}
-                              size="sm"
-                              className={`h-8 gap-1.5 text-xs font-semibold ${
-                                editingPetitionId === msg.id
-                                  ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                  : "border-slate-300 dark:border-white/20 hover:bg-slate-200 dark:hover:bg-slate-700"
-                              }`}
-                            >
-                              {editingPetitionId === msg.id ? (
-                                <>
-                                  <Check className="h-3.5 w-3.5" />
-                                  Yadda saxla
-                                </>
-                              ) : (
-                                <>
-                                  <Edit3 className="h-3.5 w-3.5 text-primary" />
-                                  Düzəliş et (Edit)
-                                </>
-                              )}
-                            </Button>
-
-                            <Button
-                              onClick={() => copyPetition(msg.id, editedContents[msg.id] ?? msg.content)}
-                              variant="outline"
-                              size="sm"
-                              className="h-8 gap-1.5 text-xs border-slate-300 dark:border-white/20 hover:bg-slate-200 dark:hover:bg-slate-700"
-                            >
-                              {copiedId === msg.id ? (
-                                <>
-                                  <Check className="h-3.5 w-3.5 text-emerald-600" />
-                                  Kopyalandı
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="h-3.5 w-3.5" />
-                                  Kopyala
-                                </>
-                              )}
-                            </Button>
-
-                            <Button 
-                              onClick={() => downloadPDF(msg.id)}
-                              className="h-8 gap-1.5 text-xs bg-green-600 hover:bg-green-700 text-white shadow-sm"
-                              size="sm"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                              PDF
-                            </Button>
-                            <Button 
-                              onClick={() => downloadWord(msg.id)}
-                              className="h-8 gap-1.5 text-xs bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
-                              size="sm"
-                            >
-                              <FileText className="h-3.5 w-3.5" />
-                              Word
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Petition Body (Editable Textarea vs Rendered Sheet) */}
-                        {editingPetitionId === msg.id ? (
-                          <div className="relative w-full">
-                            <textarea
-                              value={editedContents[msg.id] ?? msg.content.replace("[ƏRİZƏ]", "").trim()}
-                              onChange={(e) => {
-                                const val = e.target.value;
-                                setEditedContents(prev => ({ ...prev, [msg.id]: val }));
-                              }}
-                              rows={20}
-                              className="w-full p-6 text-sm md:text-base font-serif leading-relaxed bg-white text-slate-900 border-2 border-primary/40 rounded-xl shadow-lg focus:outline-none focus:ring-2 focus:ring-primary min-h-[450px]"
-                              placeholder="Ərizə mətnində istədiyiniz düzəlişi edin..."
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                              * Düzəlişləri bitirdikdən sonra yuxarıdakı <strong>"Yadda saxla"</strong> düyməsinə klikləyin.
-                            </p>
-                          </div>
-                        ) : (
-                          <div
-                            id={`petition-${msg.id}`}
-                            className="bg-white text-black rounded-xl w-full max-w-[21cm] min-h-[15cm] shadow-[0_10px_40px_rgba(0,0,0,0.12)] prose prose-sm max-w-none prose-headings:font-extrabold prose-headings:text-black prose-strong:text-black font-serif p-4 sm:p-8 md:p-12 border border-slate-300 dark:border-slate-700 focus:outline-none overflow-x-auto"
-                          >
-                            <MessageMarkdown content={editedContents[msg.id] ?? msg.content.replace("[ƏRİZƏ]", "").trim()} paper />
-                          </div>
-                        )}
+                      <div className="w-full max-w-4xl">
+                        <DocumentResultSheet
+                          title={msg.docTitle || "Rəsmi Hüquqi Sənəd"}
+                          slug={msg.docSlug || "huquqi-sened"}
+                          content={msg.content}
+                          structuredDoc={msg.structuredDoc}
+                          resolvedCourt={msg.resolvedCourt}
+                          provider={msg.provider}
+                          educationalOnly={msg.educationalOnly}
+                          onContentChange={(nextText, nextDoc) =>
+                            setMessages((prev) =>
+                              prev.map((m) =>
+                                m.id === msg.id
+                                  ? { ...m, content: nextText, ...(nextDoc ? { structuredDoc: nextDoc } : {}) }
+                                  : m
+                              )
+                            )
+                          }
+                        />
                       </div>
                     ) : (
                       <div
@@ -1015,12 +883,12 @@ function ChatContent() {
                           disabled={isLoading}
                           className="inline-flex items-center justify-center min-h-11 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white shadow-sm transition-colors whitespace-nowrap self-start sm:self-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                         >
-                          Sənəd hazırla
+                          Bütün 19 sənəd növü
                         </button>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-                        {DOCUMENT_TYPES.map((docTypeItem) => (
+                        {CORE_DOCUMENT_TYPES.map((docTypeItem) => (
                           <button
                             key={docTypeItem.id}
                             type="button"
