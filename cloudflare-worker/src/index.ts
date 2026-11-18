@@ -1081,6 +1081,10 @@ export default {
       const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
       return handleSummarizeShort(body, env);
     }
+    if (path === "/rag/generate-document" && request.method === "POST") {
+      const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+      return handleGenerateDocument(body, env);
+    }
     if (path === "/rag/document-by-title" && request.method === "GET") {
       return handleDocumentByTitle(
         url.searchParams.get("title") || "",
@@ -1097,3 +1101,43 @@ export default {
     return jsonResp({ detail: "Not found" }, 404);
   },
 };
+
+async function handleGenerateDocument(body: Record<string, unknown>, env: Env): Promise<Response> {
+  const t0 = Date.now();
+  const systemPrompt = String(body.systemPrompt || body.system_prompt || "").trim();
+  const userPrompt = String(body.userPrompt || body.user_prompt || "").trim();
+  if (!userPrompt) return jsonResp({ error: "Empty userPrompt" }, 400);
+
+  const requestedTokens = Number(body.maxTokens || body.max_tokens || 1800);
+  const maxTokens = Math.max(400, Math.min(Number.isFinite(requestedTokens) ? requestedTokens : 1800, 2400));
+
+  try {
+    const aiRes = (await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+      messages: [
+        {
+          role: "system",
+          content:
+            systemPrompt ||
+            "Sən Azərbaycan Respublikasının qanunvericiliyinə uyğun rəsmi hüquqi sənədlər hazırlayan peşəkar hüquqşünas assistantsan. Sənədi tam, rəsmi və hüquqi baxımdan səlis Azərbaycan dilində yaz.",
+        },
+        {
+          role: "user",
+          content: userPrompt.slice(0, 12000),
+        },
+      ],
+      temperature: 0.2,
+      max_tokens: maxTokens,
+    })) as { response?: string };
+
+    const content = (aiRes?.response || "").trim();
+    if (!content) {
+      return jsonResp({ error: "Empty AI response", content: "", latency_ms: Date.now() - t0 }, 502);
+    }
+    return jsonResp({ content, latency_ms: Date.now() - t0 });
+  } catch (err) {
+    return jsonResp(
+      { error: err instanceof Error ? err.message : "AI generation failed", latency_ms: Date.now() - t0 },
+      500
+    );
+  }
+}

@@ -10,10 +10,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog"
 import { generateLegalResponse, getDocumentByTitle } from "@/app/actions/chat"
-import { generatePetitionResponse } from "@/app/actions/petition"
+import { generatePetitionResponse, generateStructuredLegalDocument } from "@/app/actions/petition"
 import { useAuth } from "@/context/AuthContext"
 import { createClient } from '@/utils/supabase/client'
 import { useSearchParams } from 'next/navigation'
+import { DOCUMENT_TYPES, DOCUMENT_TYPE_MAP, type DocumentTypeId, type LegalDocumentFormInput } from "@/lib/legal-documents"
+import { DocumentCreatorForm } from "@/components/documents/DocumentCreatorForm"
+import { DocumentIcon } from "@/components/documents/DocumentIcon"
 
 // Dynamically import Markdown renderer to keep initial chat bundle small and fast
 const MessageMarkdown = dynamic(() => import('@/components/chat/MessageMarkdown'), {
@@ -214,6 +217,14 @@ function ChatContent() {
   const [editingPetitionId, setEditingPetitionId] = useState<string | number | null>(null)
   const [editedContents, setEditedContents] = useState<{ [key: string]: string }>({})
   const [copiedId, setCopiedId] = useState<string | number | null>(null)
+  const [docModalOpen, setDocModalOpen] = useState(false)
+  const [docModalType, setDocModalType] = useState<DocumentTypeId>("petition")
+  const [docModalInitialFacts, setDocModalInitialFacts] = useState("")
+  const [docModalContext, setDocModalContext] = useState("")
+  const [docModalSources, setDocModalSources] = useState<{ title: string; articleNumber?: string; content: string }[]>([])
+  const [docModalSessionKey, setDocModalSessionKey] = useState(0)
+  const [isGeneratingModalDoc, setIsGeneratingModalDoc] = useState(false)
+  const [docModalError, setDocModalError] = useState("")
   const recognitionRef = useRef<any>(null)
   const textareaRef1 = useRef<HTMLTextAreaElement>(null)
   const textareaRef2 = useRef<HTMLTextAreaElement>(null)
@@ -449,42 +460,80 @@ function ChatContent() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages, isLoading]);
 
-  const triggerPetitionGeneration = async (topic: string) => {
-    if (!topic.trim() || isLoading) return;
-    setIsLoading(true);
-    hasProcessedQuery.current = true;
-    const userMsgId = Date.now();
-    const newUserMsg = { id: userMsgId, role: "user", content: "Bu məsələ ilə bağlı ərizə yazın." };
-    setMessages(prev => [...prev, newUserMsg]);
+  const openDocModal = (type: DocumentTypeId, assistantMsg?: any) => {
+    const idx = assistantMsg ? messages.findIndex((m) => m.id === assistantMsg.id) : messages.length - 1
+    let lastUserPrompt = ""
+    for (let i = (idx >= 0 ? idx : messages.length - 1); i >= 0; i--) {
+      if (
+        messages[i]?.role === "user" &&
+        messages[i]?.content &&
+        !messages[i].content.startsWith("Bu məsələ ilə bağlı")
+      ) {
+        lastUserPrompt = messages[i].content
+        break
+      }
+    }
+    const sources = Array.isArray(assistantMsg?.sources)
+      ? assistantMsg.sources
+          .filter((s: any) => s && (s.title || s.content))
+          .map((s: any) => ({
+            title: String(s.title || ""),
+            articleNumber: s.articleNumber ? String(s.articleNumber) : undefined,
+            content: String(s.content || ""),
+          }))
+      : []
 
-    const assistantMsgId = Date.now() + 1;
-    setMessages(prev => [
-      ...prev,
-      { id: assistantMsgId, role: "assistant", content: "Ərizə forması hazırlanır...", isTyping: true, citations: [] }
-    ]);
+    setDocModalType(type)
+    setDocModalInitialFacts(lastUserPrompt)
+    setDocModalContext(typeof assistantMsg?.content === "string" ? assistantMsg.content : "")
+    setDocModalSources(sources)
+    setDocModalError("")
+    setDocModalSessionKey((k) => k + 1)
+    setDocModalOpen(true)
+  }
+
+  const handleGenerateModalDocument = async (formInput: LegalDocumentFormInput) => {
+    setIsGeneratingModalDoc(true)
+    setDocModalError("")
+    const spec = DOCUMENT_TYPE_MAP[formInput.docType] || DOCUMENT_TYPE_MAP.petition
 
     try {
-      setIsPetitionMode(true);
-      const hist = messages.map(m => ({ role: m.role, content: m.content }));
-      hist.push({ role: "user", content: "Bu məsələ ilə bağlı ərizə yazın." });
-      const response = await generatePetitionResponse("Bu məsələ ilə bağlı rəsmi ərizə forması hazırlayın.", apiKey, hist, false);
-      let content = response.content || "Ərizə hazırlana bilmədi.";
-      
-      if (content.includes("[ƏRİZƏ]")) {
-        setIsPetitionMode(false);
+      const res = await generateStructuredLegalDocument(formInput, apiKey)
+      if (res.error) {
+        setDocModalError(res.error)
+        return
       }
-      
-      setMessages(prev => prev.map(m => 
-        m.id === assistantMsgId ? { ...m, content, isTyping: false } : m
-      ));
-    } catch (error: any) {
-      setMessages(prev => prev.map(m => 
-        m.id === assistantMsgId ? { ...m, content: "Üzr istəyirik, xəta baş verdi. Zəhmət olmasa bir az sonra yenidən cəhd edin və ya API açarınızı yoxlayın.", isTyping: false } : m
-      ));
+
+      const userSummary = `${spec.title} hazırlayın (${formInput.party1})`
+      const userMsgId = Date.now()
+      const assistantMsgId = Date.now() + 1
+
+      setMessages((prev) => [
+        ...prev,
+        { id: userMsgId, role: "user", content: userSummary },
+        { id: assistantMsgId, role: "assistant", content: res.text, isTyping: false, citations: [] },
+      ])
+      setIsPetitionMode(false)
+      setDocModalOpen(false)
+
+      if (supabaseUser && conversationId) {
+        try {
+          const supabase = createClient()
+          await supabase.from("messages").insert([
+            { conversation_id: conversationId, role: "user", content: userSummary },
+            { conversation_id: conversationId, role: "assistant", content: res.text },
+          ])
+        } catch (dbErr) {
+          console.warn("Chat modal document DB save skipped:", dbErr)
+        }
+      }
+    } catch (err) {
+      console.error("Chat modal document error:", err)
+      setDocModalError("Sənəd hazırlanarkən gözlənilməz xəta baş verdi. Zəhmət olmasa yenidən cəhd edin.")
     } finally {
-      setIsLoading(false);
+      setIsGeneratingModalDoc(false)
     }
-  };
+  }
 
   const triggerAIResponse = async (userQuery: string, currentHistory: any[]) => {
     setIsLoading(true)
@@ -543,7 +592,7 @@ function ChatContent() {
 
       const lowerQ = userQuery.toLowerCase().trim();
       const explicitPetitionRequest =
-        /(?:\b(?:erize|ərizə|sikayet|şikayət|iddia)\b[\s\S]{0,25}\b(?:yaz|hazirla|hazırla|tertib|tərtib|numune|nümunə|isteyirem|istəyirəm)\b|\b(?:yaz|hazirla|hazırla|tertib|tərtib)\b[\s\S]{0,25}\b(?:erize|ərizə)\b)/i.test(lowerQ);
+        /(?:\b(?:erize|ərizə|sikayet|şikayət|iddia|muqavile|müqavilə|vesatet|vəsatət|etiraz|apellyasiya|kassasiya|qerar|qərar)\b[\s\S]{0,30}\b(?:yaz|hazirla|hazırla|tertib|tərtib|numune|nümunə|isteyirem|istəyirəm|formalasdir|formalaşdır|generasiya)\b|\b(?:yaz|hazirla|hazırla|tertib|tərtib)\b[\s\S]{0,25}\b(?:erize|ərizə|muqavile|müqavilə|vesatet|vəsatət|etiraz)\b)/i.test(lowerQ);
       const looksLikeStandaloneQuestion =
         !explicitPetitionRequest &&
         !lowerQ.includes("ərizə yaz") &&
@@ -556,8 +605,36 @@ function ChatContent() {
       const isPetitionIntent =
         explicitPetitionRequest || (isPetitionMode && !looksLikeStandaloneQuestion);
 
+      const detectDocTypeFromQuery = (q: string): DocumentTypeId => {
+        const patterns: [RegExp, DocumentTypeId][] = [
+          [/\b(?:müqavilə|muqavile|saziş|sazis)\b/i, "contract"],
+          [/\b(?:apellyasiya)\b/i, "appeal"],
+          [/\b(?:kassasiya|ali məhkəmə|ali mehkeme)\b/i, "cassation"],
+          [/\b(?:vəsatət|vesatet)\b/i, "motion"],
+          [/\b(?:etiraz)\b/i, "objection"],
+          [/\b(?:qərar|qerar)\b/i, "qarar"],
+        ];
+        return patterns.find(([rx]) => rx.test(q))?.[1] || "petition";
+      };
+
+      const isBareDocCommand =
+        !isPetitionMode &&
+        explicitPetitionRequest &&
+        userQuery.trim().split(/\s+/).length <= 10 &&
+        !/\d{2,}/.test(userQuery);
+
       let response;
-      if (isPetitionIntent) {
+      if (isBareDocCommand) {
+        const prevAssistant = [...messages]
+          .reverse()
+          .find((m) => m.role === "assistant" && m.content && !m.content.includes("[ƏRİZƏ]"));
+        openDocModal(detectDocTypeFromQuery(lowerQ), prevAssistant);
+        response = {
+          content:
+            "Sənəd hazırlama forması açıldı. İstədiyiniz sənəd növünü seçib məlumatları qeyd edin — təsdiq etdiyiniz anda tam sənəd hazırlanacaq.",
+          citations: [],
+        };
+      } else if (isPetitionIntent) {
         setIsPetitionMode(true);
         response = await generatePetitionResponse(userQuery, apiKey, llmHistory, false);
         if (response.content?.includes("[ƏRİZƏ]")) {
@@ -922,19 +999,51 @@ function ChatContent() {
                   )}
 
                   {msg.role === "assistant" && !msg.isTyping && msg.content && !isPetitionMode && !msg.content.includes("[ƏRİZƏ]") && (
-                    <div className="mt-3 p-4 rounded-xl border border-primary/20 bg-primary/5 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between w-full shadow-sm">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-primary dark:text-primary">Bu məsələ ilə bağlı ərizə yazmaq istəyirsiniz?</span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400 mt-1">Süni zəka sizə xüsusi hüquqi ərizə forması hazırlayacaq.</span>
+                    <div className="mt-3 p-4 rounded-xl border border-indigo-200/80 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/30 flex flex-col gap-3 w-full shadow-sm">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-extrabold text-slate-950 dark:text-white">
+                            Bu məsələ ilə bağlı ərizə və ya sənəd hazırlamaq istəyirsiniz?
+                          </span>
+                          <span className="text-xs text-slate-600 dark:text-slate-300 mt-0.5">
+                            Lazım olan sənəd növünü seçin, məlumatları qeyd edin — dərhal tam sənəd formalaşdırılsın.
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openDocModal("petition", msg)}
+                          disabled={isLoading}
+                          className="inline-flex items-center justify-center min-h-11 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white shadow-sm transition-colors whitespace-nowrap self-start sm:self-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                        >
+                          Sənəd hazırla
+                        </button>
                       </div>
-                      <Button 
-                        onClick={() => triggerPetitionGeneration(msg.content)}
-                        className="bg-primary hover:bg-orange-600 text-white shadow-md transition-all whitespace-nowrap self-end sm:self-auto"
-                        size="sm"
-                        disabled={isLoading}
-                      >
-                        Bəli, ərizə yaz
-                      </Button>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {DOCUMENT_TYPES.map((docTypeItem) => (
+                          <button
+                            key={docTypeItem.id}
+                            type="button"
+                            onClick={() => openDocModal(docTypeItem.id, msg)}
+                            disabled={isLoading}
+                            className="flex items-start gap-2.5 min-h-12 p-2.5 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/40 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                          >
+                            <span
+                              className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border shrink-0 mt-0.5 ${docTypeItem.accentClass}`}
+                            >
+                              <DocumentIcon name={docTypeItem.iconName} className="w-4 h-4" />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-xs font-extrabold text-slate-950 dark:text-white leading-snug">
+                                {docTypeItem.title}
+                              </span>
+                              <span className="block text-[11px] text-slate-600 dark:text-slate-400 line-clamp-2 leading-tight mt-0.5">
+                                {docTypeItem.description}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1023,6 +1132,29 @@ function ChatContent() {
           </p>
         </div>
       )}
+
+      <Dialog open={docModalOpen} onOpenChange={setDocModalOpen}>
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[90dvh] overflow-y-auto p-4 sm:p-6">
+          <DialogHeader className="sr-only">
+            <DialogTitle>{DOCUMENT_TYPE_MAP[docModalType]?.title || "Sənəd Tərtibatçısı"}</DialogTitle>
+            <DialogDescription>
+              Məlumatları qeyd edin və rəsmi hüquqi sənəd hazırlayın.
+            </DialogDescription>
+          </DialogHeader>
+          <DocumentCreatorForm
+            key={`${docModalType}-${docModalSessionKey}`}
+            docType={docModalType}
+            onDocTypeChange={setDocModalType}
+            allowDocTypeSwitch
+            initialFacts={docModalInitialFacts}
+            chatContext={docModalContext}
+            legalArticles={docModalSources}
+            isSubmitting={isGeneratingModalDoc}
+            onGenerate={handleGenerateModalDocument}
+            submitError={docModalError}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -1,5 +1,13 @@
 "use server"
 
+import { fetchRemoteGenerateDocument } from "@/lib/legal-rag/remote_backend"
+import {
+  DOCUMENT_TYPE_MAP,
+  type LegalDocumentFormInput,
+  resolveTargetCourt,
+  buildDeterministicDocumentFallback,
+} from "@/lib/legal-documents"
+
 import { analyzeQuery } from '@/lib/legal-rag/analyzer'
 import { hybridSearchAsync } from '@/lib/legal-rag/search'
 import { generateLlmCompletion } from '@/lib/llm/client'
@@ -193,18 +201,30 @@ ${query}`
 
     let rawAiContent = ""
     try {
-      const llmRes = await generateLlmCompletion({
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...formattedHistory,
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.2,
-        maxTokens: 3500,
-        responseFormatJson: false,
-        apiKeyParam: passedKey || undefined,
-      })
-      rawAiContent = (llmRes.content || "").trim()
+      try {
+        const llmRes = await generateLlmCompletion({
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...formattedHistory,
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.2,
+          maxTokens: 3500,
+          responseFormatJson: false,
+          apiKeyParam: passedKey || undefined,
+          timeoutMs: 15000,
+        })
+        rawAiContent = (llmRes.content || "").trim()
+      } catch (primaryErr: any) {
+        const remoteDoc = await fetchRemoteGenerateDocument(systemPrompt, userPrompt, 1900, 24000)
+        if (remoteDoc) {
+          rawAiContent = remoteDoc.trim().startsWith("[ƏRİZƏ]")
+            ? remoteDoc.trim()
+            : `[ƏRİZƏ]\n${remoteDoc.trim()}`
+        } else {
+          throw primaryErr
+        }
+      }
     } catch (llmErr: any) {
       console.error("[petition.ts] LLM synthesis failed:", llmErr?.message)
       const refs = retrievedChunks.slice(0, 4)
@@ -270,5 +290,141 @@ export async function getDocumentByTitle(targetTitle: string) {
   } catch (error) {
     console.error("getDocumentByTitle error:", error)
     return null
+  }
+}
+
+export async function generateStructuredLegalDocument(
+  input: LegalDocumentFormInput,
+  apiKeyParam?: string
+): Promise<{ text: string; resolvedCourt: string; provider: string; error?: string }> {
+  const spec = DOCUMENT_TYPE_MAP[input.docType] || DOCUMENT_TYPE_MAP.petition
+  const resolvedCourt = resolveTargetCourt(input)
+  const facts = (input.facts || "").trim()
+  const party1 = (input.party1 || "").trim()
+
+  if (!facts || !party1) {
+    return {
+      text: "",
+      resolvedCourt,
+      provider: "validation",
+      error: "Zəhmət olmasa tələb olunan xanaları (tərəf və faktiki hallar) doldurun.",
+    }
+  }
+
+  let retrievedArticles = Array.isArray(input.legalArticles) ? [...input.legalArticles] : []
+  if (retrievedArticles.length < 3) {
+    try {
+      const searchQuery = `${spec.shortTitle} ${input.subtype || ""} ${facts} ${input.requests || ""}`.trim()
+      const analysis = analyzeQuery(searchQuery)
+      const chunks = await hybridSearchAsync(analysis, 5, searchQuery, { timeoutMs: 5000 })
+      const seen = new Set(retrievedArticles.map((a) => `${a.title}::${a.articleNumber || ""}`))
+      for (const ch of chunks) {
+        const key = `${ch.lawName}::${ch.articleNumber || ""}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        retrievedArticles.push({
+          title: ch.lawName,
+          articleNumber: ch.articleNumber,
+          content: ch.content,
+        })
+        if (retrievedArticles.length >= 5) break
+      }
+    } catch (ragErr) {
+      console.warn("[petition.ts] generateStructuredLegalDocument RAG lookup skipped:", ragErr)
+    }
+  }
+
+  const enrichedInput: LegalDocumentFormInput = {
+    ...input,
+    legalArticles: retrievedArticles,
+  }
+
+  const normsContext = retrievedArticles.length
+    ? retrievedArticles
+        .slice(0, 5)
+        .map(
+          (a, idx) =>
+            `${idx + 1}. ${a.title}${a.articleNumber ? ` — Maddə ${a.articleNumber}` : ""}\n${a.content.slice(0, 750)}`
+        )
+        .join("\n\n")
+    : "Müvafiq normativ aktlar: Azərbaycan Respublikasının Mülki Məcəlləsi və Mülki Prosessual Məcəlləsi."
+
+  const today = new Date().toLocaleDateString("az-AZ")
+  const systemPrompt = `${spec.systemInstruction}
+
+Vacib format tələbləri:
+1. Cavaba MÜTLƏQ sətrin ən əvvəlində [ƏRİZƏ] etiketi ilə başla (yalnız bu etiket, ondan əvvəl heç bir giriş cümləsi yazma).
+2. Sənədi tam, peşəkar rəsmi Azərbaycan dilində, Markdown başlıqları (##, ###) və siyahılarla tərtib et.
+3. Yalnız verilən faktlara və Azərbaycan Respublikasının qüvvədə olan normativ hüquqi aktlarına istinad et; mövcud olmayan qanun maddəsi uydurma.
+4. Sənədin mətnini yarıda kəsmə — imza və tarix bölməsinədək tam bitir.${
+    spec.educationalOnly
+      ? "\n5. Sənədin lap əvvəlində açıq qeyd et ki, bu mətn YALNIZ TƏHSİL MƏQSƏDİLƏ hazırlanan şablon qərar nümunəsidir."
+      : ""
+  }`
+
+  const userPrompt = [
+    `Sənəd növü: ${spec.title} (${spec.documentHeading})`,
+    input.subtype ? `Alt kateqoriya / Növ: ${input.subtype}` : "",
+    spec.requiresCourt ? `Ünvanlandığı məhkəmə / orqan: ${resolvedCourt}` : "",
+    input.referenceInfo?.trim() ? `${spec.referenceLabel}: ${input.referenceInfo.trim()}` : "",
+    `${spec.party1Label}: ${party1}`,
+    input.party2?.trim() ? `${spec.party2Label}: ${input.party2.trim()}` : "",
+    input.amount?.trim() ? `${spec.amountLabel}: ${input.amount.trim()}` : "",
+    `Faktiki hallar / Şərtlər:\n${facts}`,
+    input.requests?.trim() ? `${spec.requestsLabel}:\n${input.requests.trim()}` : "",
+    input.chatContext?.trim()
+      ? `Əvvəlki hüquqi məsləhət konteksti:\n${input.chatContext.trim().slice(0, 1200)}`
+      : "",
+    `Tarix: ${today}`,
+    `\nİstinad edilə biləcək qanunvericilik normaları:\n${normsContext}`,
+  ]
+    .filter(Boolean)
+    .join("\n\n")
+
+  const normalizeDocOutput = (raw: string): string => {
+    const idx = raw.indexOf("[ƏRİZƏ]")
+    return (idx >= 0 ? raw.slice(idx) : `[ƏRİZƏ]\n${raw}`)
+      .replace(/^\[ƏRİZƏ\]\s*/i, "[ƏRİZƏ]\n")
+      .trim()
+  }
+
+  const passedKey = (apiKeyParam || "").trim()
+  try {
+    const llmRes = await generateLlmCompletion({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      temperature: 0.2,
+      maxTokens: 2800,
+      responseFormatJson: false,
+      apiKeyParam: passedKey || undefined,
+      timeoutMs: 14000,
+    })
+    const content = (llmRes.content || "").trim()
+    if (content.length >= 180) {
+      return {
+        text: normalizeDocOutput(content),
+        resolvedCourt,
+        provider: llmRes.provider || "llm",
+      }
+    }
+  } catch (primaryErr: any) {
+    console.warn("[petition.ts] Primary LLM document generation fallback triggered:", primaryErr?.message)
+  }
+
+  const workerContent = await fetchRemoteGenerateDocument(systemPrompt, userPrompt, 1900, 24000)
+  if (workerContent && workerContent.trim().length >= 160) {
+    return {
+      text: normalizeDocOutput(workerContent),
+      resolvedCourt,
+      provider: "cloudflare-workers-ai",
+    }
+  }
+
+  return {
+    text: buildDeterministicDocumentFallback(enrichedInput, resolvedCourt),
+    resolvedCourt,
+    provider: "template-fallback",
   }
 }

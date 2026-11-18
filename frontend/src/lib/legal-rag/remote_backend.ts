@@ -164,3 +164,34 @@ export async function fetchRemoteShortSummary(
     ? res.summary.trim()
     : null;
 }
+
+export async function fetchRemoteGenerateDocument(
+  systemPrompt: string,
+  userPrompt: string,
+  maxTokens = 1800,
+  timeoutMs = 24000
+): Promise<string | null> {
+  if (!isRemoteRagConfigured()) return null;
+  const baseUrl = getRagBackendUrl().replace(/\/+$/, "");
+  if (!baseUrl) return null;
+  const secret = (process.env.LEXAZ_RAG_BACKEND_SECRET || "").trim();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(secret ? { Authorization: `Bearer ${secret}`, "x-rag-secret": secret } : {}),
+  };
+
+  try {
+    const res = await fetch(`${baseUrl}/rag/generate-document`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ systemPrompt, userPrompt, maxTokens }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { content?: string };
+    return typeof data?.content === "string" && data.content.trim() ? data.content.trim() : null;
+  } catch (err) {
+    console.warn("[remote_backend] /rag/generate-document failed:", err);
+    return null;
+  }
+}
