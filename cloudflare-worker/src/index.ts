@@ -999,7 +999,7 @@ TƏLƏBLƏR:
     };
     const res = await aiRunner.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 360,
+      max_tokens: 720,
       temperature: 0.1,
     });
     let text = String(
@@ -1008,10 +1008,24 @@ TƏLƏBLƏR:
       .replace(/^#{1,3}\s*Qısa cavab\s*/i, "")
       .trim();
 
+    // Never truncate inside decimal article numbers like "740.5"; drop incomplete trailing bullet if output hit token cap
     if (text && !/[.!?]$/.test(text)) {
-      const lastPeriod = Math.max(text.lastIndexOf(". "), text.lastIndexOf(".\n"), text.lastIndexOf("."));
-      if (lastPeriod > text.length * 0.45) {
-        text = text.slice(0, lastPeriod + 1).trim();
+      const lines = text.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+      while (lines.length > 1 && !/[.!?]$/.test(lines[lines.length - 1])) {
+        lines.pop();
+      }
+      if (lines.length > 0 && /[.!?]$/.test(lines[lines.length - 1])) {
+        text = lines.join("\n").trim();
+      } else {
+        const sentenceEndRe = /[.!?](?=\s+[^\d\s]|$)/g;
+        let lastSentenceEnd = -1;
+        let m: RegExpExecArray | null;
+        while ((m = sentenceEndRe.exec(text)) !== null) {
+          lastSentenceEnd = m.index + 1;
+        }
+        if (lastSentenceEnd > text.length * 0.4) {
+          text = text.slice(0, lastSentenceEnd).trim();
+        }
       }
     }
 

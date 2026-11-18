@@ -710,6 +710,7 @@ ${query}`;
         ],
         temperature: 0.1,
         maxTokens: 3200,
+        timeoutMs: 24000,
         responseFormatJson: true,
         apiKeyParam: passedKey || undefined,
       });
