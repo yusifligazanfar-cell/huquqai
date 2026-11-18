@@ -353,19 +353,19 @@ export function validateLegalResponse(
     .replace(/\n{1,}#{1,3}\s*Mənbələr[\s\S]*$/gi, "")
     .trim();
 
-  // Guarantee "## Qısa cavab" is ALWAYS a single continuous, uninterrupted paragraph
+  // Keep "## Qısa cavab" compact & complete (1-2 lead sentences + tight "-" bullets with no blank gaps or trailing semicolons)
   answer = answer.replace(
     /(##\s*Qısa cavab\s*\n)([\s\S]*?)(?=\n##\s+|$)/i,
     (_m: string, heading: string, body: string) => {
-      const merged = body
+      const cleanedLines = body
         .split(/\n+/)
-        .map((line) => line.trim().replace(/^[-*•]\s+/, ""))
+        .map((line) => line.trim())
         .filter(Boolean)
-        .map((line) => (/^[.!?]$/.test(line) || /[.!?:…]$/.test(line) ? line : `${line}.`))
-        .join(" ")
-        .replace(/\s+/g, " ")
-        .trim();
-      return `${heading}${merged}\n`;
+        .map((line) => {
+          const normalizedEnd = line.replace(/[;,:]+$/, "");
+          return /[.!?…]$/.test(normalizedEnd) ? normalizedEnd : `${normalizedEnd}.`;
+        });
+      return `${heading}${cleanedLines.join("\n")}\n`;
     }
   );
 

@@ -145,3 +145,22 @@ export async function fetchRemoteDocumentByTitle(
     timeoutMs,
   });
 }
+
+export async function fetchRemoteShortSummary(
+  query: string,
+  excerpts: Array<{ law: string; article: string; text: string }>,
+  timeoutMs: number = 11000
+): Promise<string | null> {
+  if (!query?.trim() || excerpts.length === 0) return null;
+  const res = await fetchRagBackend<{ summary?: string | null }>(
+    "/rag/summarize-short",
+    {
+      method: "POST",
+      timeoutMs,
+      body: { query: query.trim(), excerpts: excerpts.slice(0, 5) },
+    }
+  );
+  return typeof res?.summary === "string" && res.summary.trim().length > 0
+    ? res.summary.trim()
+    : null;
+}

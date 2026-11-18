@@ -957,6 +957,77 @@ async function handleRerank(body: Record<string, unknown>, env: Env): Promise<Re
   return jsonResp({ scores: out, latency_ms: Date.now() - t0 });
 }
 
+async function handleSummarizeShort(
+  body: Record<string, unknown>,
+  env: Env
+): Promise<Response> {
+  const t0 = Date.now();
+  const query = String(body.query || "").trim();
+  const rawExcerpts = Array.isArray(body.excerpts) ? body.excerpts : [];
+  if (!query || rawExcerpts.length === 0) {
+    return jsonResp({ summary: null, latency_ms: 0 });
+  }
+
+  const contextLines = rawExcerpts
+    .slice(0, 5)
+    .map((item: Record<string, unknown>, i: number) => {
+      const law = String(item.law || "").trim();
+      const article = String(item.article || "").trim();
+      const text = String(item.text || "").replace(/\s+/g, " ").trim().slice(0, 420);
+      return `${i + 1}) ${law}${article ? ` — Maddə ${article}` : ""}: ${text}`;
+    })
+    .join("\n");
+
+  const prompt = `Sən Azərbaycan hüquq məsləhətçisisən. Yalnız aşağıdakı rəsmi maddələrə əsaslanaraq istifadəçinin sualına sadə, aydın və saf Azərbaycan dilində (heç bir ingilis sözü yazmadan) qısa cavab hazırla.
+
+Sual: ${query}
+
+Maddələr:
+${contextLines}
+
+TƏLƏBLƏR:
+1. Əvvəlcə 1-2 sadə, aydın yekun cümlə yaz (istifadəçinin dərhal anlayacağı praktik nəticə).
+2. Dərhal ardınca (boş sətir qoymadan) 3-4 qısa "-" bəndi yaz: hər bənd tək, tam cümlə olsun, konkret Qanun/Məcəllə və Maddə nömrəsini, əsas məbləğ/müddət/şərti və ya praktik addım/sübutları göstərsin.
+3. Heç bir başlıq ("Qısa cavab"), nömrəli siyahı və ya əlavə izah yazma. Hər cümlə nöqtə ilə tam bitsin.`;
+
+  try {
+    const aiRunner = env.AI as unknown as {
+      run(
+        model: string,
+        input: Record<string, unknown>
+      ): Promise<{ response?: string; choices?: Array<{ message?: { content?: string } }> }>;
+    };
+    const res = await aiRunner.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 360,
+      temperature: 0.1,
+    });
+    let text = String(
+      res?.response || res?.choices?.[0]?.message?.content || ""
+    )
+      .replace(/^#{1,3}\s*Qısa cavab\s*/i, "")
+      .trim();
+
+    if (text && !/[.!?]$/.test(text)) {
+      const lastPeriod = Math.max(text.lastIndexOf(". "), text.lastIndexOf(".\n"), text.lastIndexOf("."));
+      if (lastPeriod > text.length * 0.45) {
+        text = text.slice(0, lastPeriod + 1).trim();
+      }
+    }
+
+    return jsonResp({
+      summary: text.length >= 40 ? text : null,
+      latency_ms: Date.now() - t0,
+    });
+  } catch (err) {
+    return jsonResp({
+      summary: null,
+      error: String(err),
+      latency_ms: Date.now() - t0,
+    });
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -991,6 +1062,10 @@ export default {
     if (path === "/rag/rerank" && request.method === "POST") {
       const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
       return handleRerank(body, env);
+    }
+    if (path === "/rag/summarize-short" && request.method === "POST") {
+      const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+      return handleSummarizeShort(body, env);
     }
     if (path === "/rag/document-by-title" && request.method === "GET") {
       return handleDocumentByTitle(

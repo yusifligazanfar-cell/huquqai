@@ -14,6 +14,7 @@ import {
   isSqliteCorpusAvailable,
   fetchRemoteDocumentById,
   fetchRemoteDocumentByTitle,
+  fetchRemoteShortSummary,
   isRemoteRagConfigured,
 } from '@/lib/legal-rag'
 import { findCandidateLawsByQuery } from '@/lib/legal-rag/registry'
@@ -360,7 +361,7 @@ function extractScoredClauses(
   return results.sort((a, b) => b.score - a.score || a.chunkIdx - b.chunkIdx);
 }
 
-function buildStatutoryFallbackResponse(
+async function buildStatutoryFallbackResponse(
   query: string,
   retrievedChunks: StructuredChunk[],
   queryAnalysis: QueryAnalysis,
@@ -370,19 +371,18 @@ function buildStatutoryFallbackResponse(
   const stems = buildSearchStems(query, queryAnalysis, extraTerms);
   const scoredClauses = extractScoredClauses(topChunks, stems, queryAnalysis);
 
-  // Pick top 3 distinct articles across Hüquqi əsaslar for a single cohesive Qısa cavab paragraph
   const summaryClauses: ScoredClause[] = [];
   const usedClauseKeys = new Set<string>();
   const topScore = scoredClauses[0]?.score ?? 0;
   for (const cl of scoredClauses) {
-    if (summaryClauses.length > 0 && cl.score < topScore * 0.45) break;
+    if (summaryClauses.length > 0 && cl.score < topScore * 0.4) break;
     const key = cl.clauseNum
       ? `${cl.chunk.lawId}:${cl.clauseNum}`
       : `${cl.chunk.lawId}:${normalizeAz(cl.body).slice(0, 48)}`;
     if (usedClauseKeys.has(key)) continue;
     usedClauseKeys.add(key);
     summaryClauses.push(cl);
-    if (summaryClauses.length >= 3) break;
+    if (summaryClauses.length >= 5) break;
   }
 
   const formatLawTitle = (name: string) => {
@@ -391,43 +391,42 @@ function buildStatutoryFallbackResponse(
     return clean;
   };
 
-  const lcStartIfCommonWord = (text: string) => {
-    const firstWord = text.split(/\s+/)[0] || '';
-    if (!firstWord || /^\p{Lu}{2,}$/u.test(firstWord) || /^Azərbaycan/i.test(firstWord) || /^Nazirlər/i.test(firstWord)) {
-      return text;
+  let shortAnswerBody = '';
+
+  // Primary free edge AI synthesis for Qısa cavab when Vercel primary LLM is unavailable (e.g. huquqai.az fallback)
+  if (summaryClauses.length > 0 && isRemoteRagConfigured()) {
+    const aiExcerpts = summaryClauses.map((cl) => ({
+      law: formatLawTitle(cl.chunk.lawName),
+      article: cl.clauseNum || cl.chunk.articleNumber || '',
+      text: cl.body,
+    }));
+    const aiShort = await fetchRemoteShortSummary(query, aiExcerpts, 11000);
+    if (aiShort) {
+      shortAnswerBody = aiShort;
     }
-    return text.charAt(0).toLocaleLowerCase('az-AZ') + text.slice(1);
-  };
+  }
 
-  const shortAnswerBody =
-    summaryClauses.length > 0
-      ? summaryClauses
-          .map((cl, idx) => {
-            const label = cl.clauseNum ? `Maddə ${cl.clauseNum}` : (cl.chunk.articleTitle || 'müvafiq norma');
-            let cleanBody = cl.body
-              .replace(/^(?:Maddə\s+)?\d+(?:-\d+)?(?:\.\d+)*(?:-\d+)?\.?\s+/i, '')
-              .trim() || cl.body;
-            const inlinePointStart = cleanBody.match(/^[^.?!]{4,120}?\s+(1\.\s+\p{Lu}[\s\S]+)$/u);
-            if (inlinePointStart) {
-              cleanBody = inlinePointStart[1].replace(/^1\.\s+/, '').trim();
-            }
-            // Strip mid-paragraph sub-number labels like "2. " or "3. " so the continuous summary reads as smooth prose
-            cleanBody = cleanBody.replace(/\s+\d+(?:\.\d+)*\.\s+(?=\p{Lu})/gu, ' ');
-            const formatted = finishFullSentences(cleanBody, 480, 980);
-            const lawTitle = formatLawTitle(cl.chunk.lawName);
-            const sameAsPrev = idx > 0 && summaryClauses[idx - 1].chunk.lawId === cl.chunk.lawId;
-
-            if (idx === 0) {
-              return `**${lawTitle} (${label})** əsasında ${lcStartIfCommonWord(formatted)}`;
-            }
-            if (sameAsPrev) {
-              const lead = idx === 1 ? 'Bundan əlavə' : 'Həmçinin';
-              return `${lead}, **${label}** üzrə ${lcStartIfCommonWord(formatted)}`;
-            }
-            return `Eyni zamanda, **${lawTitle} (${label})** qaydasına əsasən ${lcStartIfCommonWord(formatted)}`;
-          })
-          .join(' ')
-      : 'Sorğunuz üzrə rəsmi qanunvericilik bazasında birbaşa uyğun maddə tapılmadı. Zəhmət olmasa sualınızı daha dəqiq açar sözlərlə ifadə edin.';
+  // Deterministic clean fallback if edge AI summary was unavailable or offline
+  if (!shortAnswerBody) {
+    if (summaryClauses.length > 0) {
+      const lead = `Sualınızla bağlı tətbiq olunan normativ qaydalara əsasən hüquq və öhdəlikləriniz aşağıdakı kimi müəyyən edilir. Konkret müddət, məbləğ və sübut tələbləri qanunun müvafiq maddələri ilə tənzimlənir.`;
+      const bullets = summaryClauses.slice(0, 3).map((cl) => {
+        const label = cl.clauseNum ? `Maddə ${cl.clauseNum}` : (cl.chunk.articleTitle || 'Normativ müddəa');
+        let cleanBody = cl.body
+          .replace(/^(?:Maddə\s+)?\d+(?:-\d+)?(?:\.\d+)*(?:-\d+)?\.?\s+/i, '')
+          .trim() || cl.body;
+        const inlinePointStart = cleanBody.match(/^[^.?!]{4,120}?\s+(1\.\s+\p{Lu}[\s\S]+)$/u);
+        if (inlinePointStart) {
+          cleanBody = inlinePointStart[1].replace(/^1\.\s+/, '').trim();
+        }
+        return `- ${formatLawTitle(cl.chunk.lawName)} (${label}): ${finishFullSentences(cleanBody, 240, 420)}`;
+      });
+      shortAnswerBody = `${lead}\n${bullets.join('\n')}`;
+    } else {
+      shortAnswerBody =
+        'Sorğunuz üzrə rəsmi qanunvericilik bazasında birbaşa uyğun maddə tapılmadı. Zəhmət olmasa sualınızı daha dəqiq açar sözlərlə ifadə edin.';
+    }
+  }
 
   // Build Hüquqi əsaslar using complete sentences around the best matching sub-clauses (no duplicate URL lists inside body)
   const sectionsMd = topChunks
@@ -658,9 +657,10 @@ Azərbaycan Respublikasının qanunvericiliyinə dair istifadəçi suallarını 
 13. RAG-DA MƏLUMAT YOXDURSA, AÇIQ BİLDİR:
    * "Bu məsələ üzrə təqdim olunan mənbələrdə kifayət qədər hüquqi əsas tapılmadı." de, özündən norma uydurma!
 14. "QISA CAVAB" BÖLMƏSİNƏ DAİR MƏCBURİ TƏLƏB:
-   * "## Qısa cavab" bölməsini MÜTLƏQ TƏK, ARALIQSIZ, BÜTÖV BİR MƏTN (yalnız bir vahid axıcı abzas: içində heç bir bullet point "-", nömrəli siyahı "1.", "2.", başlıq və ya boş sətirlərlə bölünməmiş vahid yekun mətn!) şəklində yaz!
-   * Bu tək aralıqsız mətndə "Hüquqi əsaslar" bölməsindəki BÜTÜN maddələri sintez edib birləşdirərək yekun nəticəni ver: istifadəçi maddə-maddə aşağı baxmağa ehtiyac duymadan yalnız "Qısa cavab"-ı oxumaqla sualının tam, aydın və praktiki cavabını tapsın; yalnız ayrı-ayrı maddələrin detallı mətninə baxmaq istəyərsə aşağıdakı "Hüquqi əsaslar" bölməsinə nəzər salsın.
-   * Sadə vətəndaşın anlayacağı aydın dildə yaz, lakin cümlələrin daxilində tətbiq olunan bütün əsas Qanun/Məcəllə adlarını və Maddə/bənd nömrələrini, dəqiq məbləğləri, müddətləri (gün/ay/il), şərtləri, istisnaları, tələb olunan sənədləri və müraciət edilməli qurumu ardıcıl şəkildə əhatə et.
+   * "## Qısa cavab" bölməsini saf Azərbaycan dilində (heç bir ingilis sözü, məsələn "(orals)" kimi sözlər işlətmədən!) və vətəndaşın dərhal başa düşəcəyi aydın üslubda BELƏ YAZ:
+     - Əvvəlcə 1–2 sadə, aydın yekun cümlə (suala birbaşa praktiki cavab və əsas hüquqi nəticə).
+     - Dərhal ardınca (boş sətir qoymadan) 3–4 qısa "-" bəndi: hər bənd tək, tam və aydın cümlə olmalıdır (konkret Qanun/Məcəllə və Maddə nömrəsi, dəqiq məbləğ/müddət/şərt və praktiki addım/sübutlar).
+     - İstifadəçi yalnız "Qısa cavab"-ı oxumaqla sualının cavabını tam tapmalı, yalnız detallı qanun mətninə baxmaq istədikdə aşağıdakı "Hüquqi əsaslar" bölməsinə keçməlidir.
    * CÜMLƏLƏRİ HEÇ VAXT YARIMÇIQ SAXLAMA: Hər bir cümlə tam fikri bitirməli və nöqtə ilə tamamlanmalıdır!
 15. ƏRİZƏ VƏ YA İDDİA ƏRİZƏSİ TƏLƏB EDİLDİKDƏ:
    * Əgər istifadəçi "ərizə yaz", "mənə ərizə hazırla" deyirsə, heç vaxt dərhal boş mötərizəli ([Ad, soyad], [ünvan], [tarix]) şablon yazma!
@@ -672,7 +672,7 @@ Azərbaycan Respublikasının qanunvericiliyinə dair istifadəçi suallarını 
 Aşağıdakı standart JSON strukturunda cavab ver ("cavab" mətnində ayrıca "## Mənbələr", URL siyahısı və ya "## Məhkəmə təcrübəsi" bölməsi YAZMA, çünki rəsmi mənbələr ayrıca kartlar kimi göstərilir):
 
 {
-  "cavab": "## Hüquqi sual\n[sualların hüquqi forması]\n\n## Qısa cavab\n[TƏK, ARALIQSIZ, BÜTÖV YEKUN ABZAS (siyahısız və boş sətirsiz): Bütün Hüquqi əsaslar maddələrini ümumiləşdirən, sadə dildə tam cavab — qanun və maddə nömrələri, dəqiq məbləğlər, müddətlər, şərtlər, istisnalar və addım-addım praktiki həll bir vahid mətn kimi]\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[dəqiq və tam izah]\n\n### 2. [Normativ akt] — Maddə [Y]\n[dəqiq və tam izah]\n\n## Praktik izah\n[istifadəçinin vəziyyətinə və faktlara tətbiq]\n\n## Vacib məqamlar\n[müddətlər / istisnalar / zəruri şərtlər / prosedurlar]",
+  "cavab": "## Hüquqi sual\n[sualların hüquqi forması]\n\n## Qısa cavab\n[1–2 sadə, aydın yekun cümlə — vətəndaşa birbaşa cavab və əsas məsələ.]\n- [Qanun/Məcəllənin adı] [Maddə nömrəsi]-ə əsasən, [konkret qayda sadə dildə].\n- [Qanun/Məcəllənin adı] [Maddə nömrəsi]-ə görə, [dəqiq məbləğ / müddət / şərt].\n- [Praktiki sübutlar, sənədlər və müraciət ediləcək orqan/həll yolu].\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[dəqiq və tam izah]\n\n### 2. [Normativ akt] — Maddə [Y]\n[dəqiq və tam izah]\n\n## Praktik izah\n[istifadəçinin vəziyyətinə və faktlara tətbiq]\n\n## Vacib məqamlar\n[müddətlər / istisnalar / zəruri şərtlər / prosedurlar]",
   "maddeler": [
     "Azərbaycan Respublikasının [Qanunun Adı] - Maddə [X]"
   ],
@@ -709,7 +709,7 @@ ${query}`;
           { role: "user", content: userPrompt },
         ],
         temperature: 0.1,
-        maxTokens: 4096,
+        maxTokens: 3200,
         responseFormatJson: true,
         apiKeyParam: passedKey || undefined,
       });
@@ -729,8 +729,8 @@ ${query}`;
       }
     } catch (llmErr: any) {
       usedLlmFallback = true;
-      console.error("[chat.ts] LLM synthesis failed, falling back to statutory extracts:", llmErr?.message);
-      parsedJson = buildStatutoryFallbackResponse(
+      console.error("[chat.ts] LLM synthesis failed, falling back to edge AI / statutory extracts:", llmErr?.message);
+      parsedJson = await buildStatutoryFallbackResponse(
         query,
         retrievedChunks,
         queryAnalysis,
