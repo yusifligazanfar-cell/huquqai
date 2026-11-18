@@ -19,7 +19,6 @@ import {
 import { findCandidateLawsByQuery } from '@/lib/legal-rag/registry'
 import type { QueryAnalysis, StructuredChunk } from '@/lib/legal-rag'
 import { generateLlmCompletion } from '@/lib/llm/client'
-import { findRelevantCourtAct, CourtAct } from '@/lib/court-precedents'
 import { eqanunClient } from '@/lib/services/e_qanun_client'
 
 async function expandColloquialLegalQuery(
@@ -160,14 +159,48 @@ function cleanClauseNoise(text: string): string {
     .trim();
 }
 
-function trimCleanly(text: string, maxLen: number): string {
-  if (text.length <= maxLen) return text;
-  const slice = text.slice(0, maxLen);
-  const lastStop = Math.max(slice.lastIndexOf('. '), slice.lastIndexOf('; '));
-  if (lastStop > maxLen * 0.55) {
-    return slice.slice(0, lastStop + 1).trim();
+function finishFullSentences(text: string, preferredMaxLen: number, hardMaxLen = 1750): string {
+  const clean = text.replace(/\s+/g, ' ').trim();
+  if (!clean) return '';
+
+  // Keep full text up to preferredMaxLen (or up to hardMaxLen if a single statutory clause runs long)
+  if (clean.length <= hardMaxLen) {
+    if (clean.length <= preferredMaxLen) {
+      return /[.!?…]$/.test(clean) ? clean : `${clean.replace(/[;,:]+$/, '')}.`;
+    }
+    // Check if there is a real sentence boundary after preferredMaxLen * 0.72 up to hardMaxLen
+    const afterTarget = clean.slice(0, hardMaxLen);
+    const re = /[.!?](?=\s+[A-ZƏÖÜĞIÇŞ0-9"“]|$)/g;
+    let bestCut = -1;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(afterTarget)) !== null) {
+      if (m.index + 1 >= preferredMaxLen * 0.72) {
+        bestCut = m.index + 1;
+        if (bestCut >= preferredMaxLen) break;
+      } else {
+        bestCut = m.index + 1;
+      }
+    }
+    if (bestCut > 0) {
+      return clean.slice(0, bestCut).trim();
+    }
+    return /[.!?]$/.test(clean) ? clean : `${clean.replace(/[;,:]+$/, '')}.`;
   }
-  return `${slice.trim()}...`;
+
+  // Over hardMaxLen: stop cleanly at the last true sentence boundary (never mid-clause or at `;`)
+  const window = clean.slice(0, hardMaxLen);
+  const re = /[.!?](?=\s+[A-ZƏÖÜĞIÇŞ0-9"“]|$)/g;
+  let lastSentenceEnd = -1;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(window)) !== null) {
+    lastSentenceEnd = m.index + 1;
+  }
+  if (lastSentenceEnd >= 120) {
+    return window.slice(0, lastSentenceEnd).trim();
+  }
+  const lastSpace = window.lastIndexOf(' ');
+  const fallbackCut = lastSpace > 120 ? window.slice(0, lastSpace) : window;
+  return `${fallbackCut.replace(/[;,:.\s]+$/, '')}.`;
 }
 
 function buildSearchStems(
@@ -235,28 +268,40 @@ function extractScoredClauses(
     const candidates = segments.length > 0 ? segments : [rawText];
 
     for (const seg of candidates) {
+      let cleanSeg = seg;
+      // If a sliding-window chunk stitched "Maddə X. Title <lowercase fragment>... . Real sentence", jump to first complete sub-clause/sentence
+      const headerSplice = cleanSeg.match(/^Maddə\s+\d+(?:-\d+)?(?:\.\d+)*\.\s+[^.?!]*?\b(?:[a-zəöüğıçş]{2,}(?:\s+[a-zəöüğıçş]{2,}){0,6})/i);
+      if (headerSplice) {
+        const firstRealBoundary = cleanSeg.search(/\.\s+(?:\d+\.\s+)?[A-ZƏÖÜĞIÇŞ]/);
+        const lowercaseContinuation = /^Maddə\s+\d+[^\.]*\.\s+(?:[A-ZƏÖÜĞIÇŞ][^\.]{3,90}?)\s+(?:və ya|yaxud|də|da|ilə|üzrə|görə|əsasən|nəzərdə|haqqında|[a-zəöüğıçş]{1,4}\s+[a-zəöüğıçş]{2,})\b/;
+        if (firstRealBoundary > 15 && lowercaseContinuation.test(cleanSeg)) {
+          cleanSeg = cleanSeg.slice(firstRealBoundary + 1).trim();
+        }
+      }
+
       // Skip broken truncated fragment stubs like "nə cəlb edilməsi..." or corrupted overlap fragments
       if (
-        (/^[a-zəöüğıçş]{1,3}\s+/i.test(seg) && !/^(bu|hər|bütün|əgər|yalnız)\s/i.test(seg)) ||
-        /\d+\.\d+\s+[a-zəöüğıçş]{1,4}\s+[a-zəöüğıçş]+/.test(seg.slice(0, 120))
+        cleanSeg.length < 24 ||
+        (/^[a-zəöüğıçş]{1,3}\s+/i.test(cleanSeg) && !/^(bu|hər|bütün|əgər|yalnız)\s/i.test(cleanSeg)) ||
+        /\d+\.\d+\s+[a-zəöüğıçş]{1,4}\s+[a-zəöüğıçş]+/.test(cleanSeg.slice(0, 120))
       ) {
         continue;
       }
 
-      const subNumMatch = seg.match(/^(?:Maddə\s+)?(\d{1,3}(?:-\d+)?(?:\.\d{1,2})+(?:-\d+)?)(?=\.|\s)/i);
-      const artNumMatch = seg.match(/^Maddə\s+(\d{1,4}(?:-\d+)?)(?=\.|\s)/i);
+      const subNumMatch = cleanSeg.match(/^(?:Maddə\s+)?(\d{1,3}(?:-\d+)?(?:\.\d{1,2})+(?:-\d+)?)(?=\.|\s)/i);
+      const artNumMatch = cleanSeg.match(/^Maddə\s+(\d{1,4}(?:-\d+)?)(?=\.|\s)/i);
       const clauseNum = subNumMatch?.[1] || artNumMatch?.[1] || ch.articleNumber || '';
 
       // Skip bare article title headers without operative rule text (e.g. "Maddə 212. Tütün məmulatının istehlakına dair məhdudiyyətlərə riayət edilməməsi")
-      if (!subNumMatch && seg.length < 130 && !wantsSpecificRule.test(seg)) {
+      if (!subNumMatch && cleanSeg.length < 130 && !wantsSpecificRule.test(cleanSeg)) {
         continue;
       }
 
-      const fp = normalizeAz(seg).slice(0, 72);
+      const fp = normalizeAz(cleanSeg).slice(0, 72);
       if (seenFingerprints.has(fp)) continue;
       seenFingerprints.add(fp);
 
-      const normSeg = normalizeAz(seg);
+      const normSeg = normalizeAz(cleanSeg);
       let score = Math.max(0, 8 - chunkIdx * 2);
 
       let specificMatches = 0;
@@ -273,7 +318,7 @@ function extractScoredClauses(
       }
 
       // Bonus for concrete statutory specifics (amounts, deadlines, penalties, duties) when topic matches
-      if (specificMatches > 0 && wantsSpecificRule.test(seg)) {
+      if (specificMatches > 0 && wantsSpecificRule.test(cleanSeg)) {
         score += 6;
       }
       if (queryAnalysis.targetArticleNum && clauseNum.startsWith(queryAnalysis.targetArticleNum)) {
@@ -285,7 +330,7 @@ function extractScoredClauses(
 
       results.push({
         clauseNum,
-        body: seg,
+        body: cleanSeg,
         score,
         chunkIdx,
         chunk: ch,
@@ -333,18 +378,31 @@ function buildStatutoryFallbackResponse(
     if (summaryClauses.length >= 3) break;
   }
 
-  const shortAnswerBody =
+  const shortAnswerIntro =
     summaryClauses.length > 0
-      ? summaryClauses
-          .map((cl) => {
-            const label = cl.clauseNum ? `Maddə ${cl.clauseNum}` : (cl.chunk.articleTitle || 'Normativ müddəa');
-            const cleanBody = cl.body.replace(/^(?:Maddə\s+)?\d+(?:-\d+)?(?:\.\d+)*(?:-\d+)?\.?\s+/i, '').trim() || cl.body;
-            return `**${cl.chunk.lawName} — ${label}:** ${trimCleanly(cleanBody, 520)}`;
-          })
-          .join('\n\n')
+      ? `Sualınıza əsasən Azərbaycan Respublikasının qüvvədə olan qanunvericiliyinə uyğun tətbiq edilən konkret normalar və praktiki nəticə belədir:`
       : 'Sorğunuz üzrə rəsmi qanunvericilik bazasında birbaşa uyğun maddə tapılmadı. Zəhmət olmasa sualınızı daha dəqiq açar sözlərlə ifadə edin.';
 
-  // Build Hüquqi əsaslar using the best matching sub-clauses inside each chunk (never cutting off mid-article before key clauses)
+  const shortAnswerBody =
+    summaryClauses.length > 0
+      ? `${shortAnswerIntro}\n\n${summaryClauses
+          .map((cl) => {
+            const label = cl.clauseNum ? `Maddə ${cl.clauseNum}` : (cl.chunk.articleTitle || 'Normativ müddəa');
+            let cleanBody = cl.body
+              .replace(/^(?:Maddə\s+)?\d+(?:-\d+)?(?:\.\d+)*(?:-\d+)?\.?\s+/i, '')
+              .trim() || cl.body;
+            // Remove inline article title prefix right before point "1. Capital..." so bullet reads cleanly from sentence 1
+            const inlinePointStart = cleanBody.match(/^[^.?!]{4,120}?\s+(1\.\s+[A-ZƏÖÜĞIÇŞ][\s\S]+)$/);
+            if (inlinePointStart) {
+              cleanBody = inlinePointStart[1].replace(/^1\.\s+/, '').trim();
+            }
+            const formatted = finishFullSentences(cleanBody, 1100, 1750);
+            return `- **${cl.chunk.lawName} — ${label}:** ${formatted}`;
+          })
+          .join('\n\n')}`
+      : shortAnswerIntro;
+
+  // Build Hüquqi əsaslar using complete sentences around the best matching sub-clauses (no duplicate URL lists inside body)
   const sectionsMd = topChunks
     .map((ch, idx) => {
       const chunkClauses = scoredClauses.filter((c) => c.chunk === ch);
@@ -354,16 +412,17 @@ function buildStatutoryFallbackResponse(
 
       const excerptText =
         chunkClauses.length > 0
-          ? trimCleanly(
+          ? finishFullSentences(
               chunkClauses
                 .slice(0, 3)
                 .map((c) => c.body)
                 .join(' '),
-              1200
+              1250,
+              1800
             )
-          : trimCleanly(cleanClauseNoise(ch.content), 1100);
+          : finishFullSentences(cleanClauseNoise(ch.content), 1150, 1700);
 
-      return `### ${idx + 1}. ${ch.lawName} — ${artLabel}\n${excerptText}\n- Mənbə: ${ch.sourceUrl}`;
+      return `### ${idx + 1}. ${ch.lawName} — ${artLabel}\n${excerptText}`;
     })
     .join('\n\n');
 
@@ -377,17 +436,7 @@ function buildStatutoryFallbackResponse(
     };
   });
 
-  const sourcesMd =
-    enrichedChunks.length > 0
-      ? enrichedChunks
-          .map(
-            (c) =>
-              `- ${c.lawName}${c.articleNumber ? ` — Maddə ${c.articleNumber}` : ''} (${c.sourceUrl})`
-          )
-          .join('\n')
-      : '- https://www.e-qanun.ai';
-
-  const cavab = `## Hüquqi sual\n${query}\n\n## Qısa cavab\n${shortAnswerBody}\n\n## Hüquqi əsaslar\n\n${sectionsMd || 'Müvafiq normativ akt tapılmadı.'}\n\n## Mənbələr\n${sourcesMd}`;
+  const cavab = `## Hüquqi sual\n${query}\n\n## Qısa cavab\n${shortAnswerBody}\n\n## Hüquqi əsaslar\n\n${sectionsMd || 'Müvafiq normativ akt tapılmadı.'}`;
 
   return {
     cavab,
@@ -408,7 +457,13 @@ function recoverPartialJsonResponse(cleanedContent: string, rawContent: string, 
     // Handle truncated streaming/token output where closing quote of "cavab" is missing
     const openCavabMatch = cleanedContent.match(/"cavab"\s*:\s*"([\s\S]+)$/);
     if (openCavabMatch) {
-      cavab = openCavabMatch[1].replace(/["}\]]+\s*$/, '').replace(/\\n/g, '\n').replace(/\\"/g, '"');
+      cavab = openCavabMatch[1].replace(/["}\]]+\s*$/, '').replace(/\\n/g, '\n').replace(/\\"/g, '"').trim();
+      if (cavab && !/[.!?]$/.test(cavab)) {
+        const lastPeriod = Math.max(cavab.lastIndexOf('. '), cavab.lastIndexOf('.\n'));
+        if (lastPeriod > cavab.length * 0.4) {
+          cavab = cavab.slice(0, lastPeriod + 1).trim();
+        }
+      }
     }
   }
 
@@ -576,9 +631,10 @@ Azərbaycan Respublikasının qanunvericiliyinə dair istifadəçi suallarını 
 13. RAG-DA MƏLUMAT YOXDURSA, AÇIQ BİLDİR:
    * "Bu məsələ üzrə təqdim olunan mənbələrdə kifayət qədər hüquqi əsas tapılmadı." de, özündən norma uydurma!
 14. "QISA CAVAB" BÖLMƏSİNƏ DAİR MƏCBURİ TƏLƏB:
-   * İstifadəçi aşağıdakı bölmələrə keçmədən belə YALNIZ "## Qısa cavab" hissəsini oxuyaraq sualına tam, dəqiq və praktiki cavab tapmalıdır!
-   * "Qısa cavab"-da heç vaxt maddəsiz ümumi cümlə yazma — mütləq tətbiq olunan **Qanunun/Məcəllənin adını və konkret Maddə/bənd nömrəsini** (məs: "Azərbaycan Respublikasının İnzibati Xətalar Məcəlləsinin 212.4-cü maddəsinə əsasən...") birbaşa qeyd et.
-   * Mənbə maddələrdə olan bütün əsas detalları — dəqiq cərimə/rüsum/ödəniş məbləği, qanuni müddətlər (gün/ay/il), əsas şərtlər, təkrar və ya istisna hallar və müraciət edilməli orqanı — 3–6 aydın cümlədə cəmləşdir!
+   * İstifadəçi aşağıdakı bölmələrə keçmədən belə YALNIZ "## Qısa cavab" hissəsini oxuyaraq sualına tam, aydın və ətraflı cavab tapmalıdır!
+   * Hüquqşünas olmayan sadə vətəndaşın da rahat başa düşəcəyi aydın, anlaşılan dildə yaz (quru qanun mətnini olduğu kimi kopyalama), lakin hər hüquqi nəticəni mütləq tətbiq olunan **Qanunun/Məcəllənin adına və konkret Maddə/bənd nömrəsinə** bağla (məs: "İstehlakçıların hüquqlarının müdafiəsi haqqında Qanunun 7-ci və 15-ci maddələrinə əsasən...").
+   * Sualın bütün əsas praktiki detallarını — vətəndaşın konkret hüququ və ya öhdəliyi, cərimə/rüsum/ödəniş məbləği, qanuni müddətlər (məs. 14 gün, 1 il), əsas şərtlər/istisnalar, hansı sənədlərin lazım olduğu və hansı quruma/məhkəməyə müraciət edilməli olduğu — 5–8 dolğun və tam cümlə ilə izah et.
+   * CÜMLƏLƏRİ HEÇ VAXT YARIMÇIQ SAXLAMA: Hər bir cümlə tam fikri bitirməli və nöqtə ilə tamamlanmalıdır!
 15. ƏRİZƏ VƏ YA İDDİA ƏRİZƏSİ TƏLƏB EDİLDİKDƏ:
    * Əgər istifadəçi "ərizə yaz", "mənə ərizə hazırla" deyirsə, heç vaxt dərhal boş mötərizəli ([Ad, soyad], [ünvan], [tarix]) şablon yazma!
    * MƏLUMATLARI EYNİ ANDA TOPLU HALDA DEYİL, TƏK-TƏK (BİR-BİR) ADDIMLA SORUŞ:
@@ -586,10 +642,10 @@ Azərbaycan Respublikasının qanunvericiliyinə dair istifadəçi suallarını 
      - Digər sualları növbəti addımlara saxla!
 
 # MÜTLƏQ STANDART CAVAB FORMATI (JSON):
-Aşağıdakı standart JSON strukturunda cavab ver:
+Aşağıdakı standart JSON strukturunda cavab ver ("cavab" mətnində ayrıca "## Mənbələr", URL siyahısı və ya "## Məhkəmə təcrübəsi" bölməsi YAZMA, çünki rəsmi mənbələr ayrıca kartlar kimi göstərilir):
 
 {
-  "cavab": "## Hüquqi sual\n[sualların hüquqi forması]\n\n## Qısa cavab\n[3–6 konkret cümlə: tətbiq olunan Qanun adı və Maddə/bənd nömrələri göstərilməklə sualın maddələrə əsaslanan birbaşa, detallı cavabı — dəqiq məbləğ, müddət, şərt, təkrar/istisna halı və müraciət qaydası daxil olmaqla]\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[dəqiq və evidence-based izah]\n\n### 2. [Normativ akt] — Maddə [Y]\n[dəqiq və evidence-based izah]\n\n## Praktik izah\n[istifadəçinin vəziyyətinə və faktlara tətbiq]\n\n## Vacib məqamlar\n[müddətlər / istisnalar / zəruri şərtlər / prosedurlar]\n\n## Məhkəmə təcrübəsi\n[Yalnız kontekstdə relevant məhkəmə presedenti olduqda]\n\n## Mənbələr\n- Azərbaycan Respublikasının [Qanunun tam adı] — Maddə [X]\n- [Rəsmi e-Qanun və API istinadı]",
+  "cavab": "## Hüquqi sual\n[sualların hüquqi forması]\n\n## Qısa cavab\n[5–8 tam, aydın və sadə dildə yazılmış cümlə: konkret Qanun adı və Maddə/bənd nömrələri göstərilməklə istifadəçiyə hansı hüquq və ya cəzanın tətbiq olunduğu, dəqiq məbləğ, müddətlər, şərtlər, istisnalar və addım-addım praktiki həll yolu tam şəkildə]\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[dəqiq və tam izah]\n\n### 2. [Normativ akt] — Maddə [Y]\n[dəqiq və tam izah]\n\n## Praktik izah\n[istifadəçinin vəziyyətinə və faktlara tətbiq]\n\n## Vacib məqamlar\n[müddətlər / istisnalar / zəruri şərtlər / prosedurlar]",
   "maddeler": [
     "Azərbaycan Respublikasının [Qanunun Adı] - Maddə [X]"
   ],
@@ -658,9 +714,6 @@ ${query}`;
     // 6. VALIDATE & ENFORCE TWO-PASS HALLUCINATION GUARD
     const validated = validateLegalResponse(parsedJson, retrievedChunks);
 
-    // 7. MATCH RELEVANT REAL COURT PRECEDENT FROM 150 COURT ACTS
-    const precedent = findRelevantCourtAct(query, validated.answer);
-
     return {
       content: validated.answer,
       citations: validated.citations,
@@ -669,7 +722,7 @@ ${query}`;
       confidence: usedLlmFallback ? Math.min(validated.confidence, 0.75) : validated.confidence,
       citation_valid: validated.citation_valid,
       needs_review: usedLlmFallback ? true : validated.needs_review,
-      precedent: precedent
+      precedent: null
     }
 
   } catch (error: any) {

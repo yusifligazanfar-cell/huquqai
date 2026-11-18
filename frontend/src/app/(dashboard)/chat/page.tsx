@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import { useState, useRef, useEffect, Suspense, useCallback } from "react"
-import { Send, Paperclip, Scale, Bot, Loader2, FileText, Settings, Key, AlertCircle, CheckCircle2, Cpu, Globe, Zap, ChevronDown, PlusCircle, Mic, MicOff, Volume2, Square, Gavel, Landmark, ExternalLink, Download, Edit3, Check, Copy } from "lucide-react"
+import { Send, Paperclip, Scale, Bot, Loader2, FileText, Settings, Key, AlertCircle, CheckCircle2, Cpu, Globe, Zap, ChevronDown, PlusCircle, Mic, MicOff, Volume2, Square, Landmark, Download, Edit3, Check, Copy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -108,60 +108,10 @@ interface CitationSourceInfo {
   content?: string;
 }
 
-function deriveDocIdFromCitation(title: string, sourceUrl?: string): string | null {
-  if (sourceUrl) {
-    const urlId = sourceUrl.match(/\/(?:results|framework)\/(\d{1,7})/);
-    if (urlId) return urlId[1];
-  }
-  const explicitMatch = title.match(/(?:Akt\s*№|ID:?|results\/|framework\/)\s*(\d{1,7})/i);
-  if (explicitMatch) return explicitMatch[1];
-
-  const normTitle = title.toLowerCase();
-  if (normTitle.includes("konstitusiya")) return "897";
-  if (normTitle.includes("ailə") || normTitle.includes("aile")) return "46946";
-  if (normTitle.includes("mülki prosessual")) return "46945";
-  if (normTitle.includes("mülki")) return "46944";
-  if (normTitle.includes("cinayət prosessual")) return "46950";
-  if (normTitle.includes("cinayət")) return "46947";
-  if (normTitle.includes("əmək pensiyalar") || normTitle.includes("emek pensiyalar")) return "11566";
-  if (normTitle.includes("əmək")) return "46943";
-  if (normTitle.includes("inzibati xətalar")) return "46960";
-  if (normTitle.includes("inzibati prosessual")) return "46956";
-  if (normTitle.includes("şəhərsalma") || normTitle.includes("tikinti məcəllə")) return "46958";
-  if (normTitle.includes("mənzil")) return "46955";
-  if (normTitle.includes("daşınmaz əmlakın dövlət reyestri")) return "5456";
-  if (normTitle.includes("torpaq")) return "46942";
-  if (normTitle.includes("vergi")) return "46948";
-  if (normTitle.includes("gömrük")) return "46957";
-  if (normTitle.includes("miqrasiya")) return "46959";
-  if (normTitle.includes("seçki")) return "46953";
-  if (normTitle.includes("cəzaların icrası")) return "46951";
-  if (normTitle.includes("su məcəllə")) return "46940";
-  if (normTitle.includes("meşə")) return "46941";
-  if (normTitle.includes("ticarət gəmiçiliyi")) return "46952";
-  if (normTitle.includes("yol hərəkəti")) return "3423";
-  if (normTitle.includes("məhkəmələr və hakimlər")) return "3933";
-  if (normTitle.includes("istehlakçı")) return "9479";
-  if (normTitle.includes("dövlət rüsumu")) return "2860";
-  if (normTitle.includes("icra haqqında")) return "1406";
-  if (normTitle.includes("banklar haqqında")) return "5825";
-  return null;
-}
-
 function InlineCitation({ title, source }: { title: string; source?: CitationSourceInfo }) {
   const [isOpen, setIsOpen] = useState(false);
   const [content, setContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [resolvedUrl, setResolvedUrl] = useState<string | null>(() => {
-    const id = deriveDocIdFromCitation(title, source?.url);
-    return id ? `https://www.e-qanun.ai/results/${id}` : (source?.url && source.url !== "https://www.e-qanun.ai" ? source.url : null);
-  });
-
-  const effectiveDocId = deriveDocIdFromCitation(title, resolvedUrl || source?.url);
-  const sourceUrl = resolvedUrl || (effectiveDocId ? `https://www.e-qanun.ai/results/${effectiveDocId}` : `https://www.e-qanun.ai`);
-  const apiUrl = effectiveDocId
-    ? `https://api.e-qanun.ai/api/v2/enlarge/documents?index=0&semantic_weight=1&document_id=${effectiveDocId}`
-    : null;
 
   const toggle = async () => {
     if (!isOpen && !content) {
@@ -170,9 +120,6 @@ function InlineCitation({ title, source }: { title: string; source?: CitationSou
         const doc = await getDocumentByTitle(title);
         if (doc) {
           setContent(doc.content);
-          if (doc.sourceUrl && doc.sourceUrl.includes("/results/")) {
-            setResolvedUrl(doc.sourceUrl);
-          }
         } else if (source?.content) {
           setContent(source.content);
         } else {
@@ -198,28 +145,6 @@ function InlineCitation({ title, source }: { title: string; source?: CitationSou
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-          <a
-            href={sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 min-h-9 sm:min-h-8 px-2.5 py-1.5 text-xs font-semibold text-neutral-700 hover:text-emerald-600 dark:text-neutral-300 dark:hover:text-emerald-400 bg-neutral-100 dark:bg-neutral-800/80 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border border-neutral-200 dark:border-neutral-700/60 rounded-lg transition-all"
-            title="Rəsmi e-Qanun bazasında aç"
-          >
-            <span>e-Qanun</span>
-            <ExternalLink className="h-3 w-3" />
-          </a>
-          {apiUrl && (
-            <a
-              href={apiUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 min-h-9 sm:min-h-8 px-2.5 py-1.5 text-xs font-mono font-semibold text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 border border-indigo-200 dark:border-indigo-800/60 rounded-lg transition-all"
-              title="Rəsmi e-Qanun API JSON çağırışını birbaşa aç"
-            >
-              <span>API</span>
-              <ExternalLink className="h-2.5 w-2.5" />
-            </a>
-          )}
           <button
             onClick={toggle}
             className="inline-flex items-center gap-1.5 min-h-9 sm:min-h-8 px-3 py-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 rounded-lg transition-all cursor-pointer shadow-sm"
@@ -648,7 +573,7 @@ function ChatContent() {
         content: response.content,
         citations: response.citations,
         sources: (response as any).sources || [],
-        precedent: (response as any).precedent || null
+        precedent: null
       }
       
       if (cid) {
@@ -971,7 +896,12 @@ function ChatContent() {
                               <Bot className="h-3.5 w-3.5 text-primary shrink-0" />
                               <span>LexAZ AI</span>
                             </div>
-                            <MessageMarkdown content={msg.content} />
+                            <MessageMarkdown
+                              content={msg.content
+                                .replace(/\n{1,}#{1,3}\s*Məhkəmə təcrübəsi[\s\S]*?(?=\n#{1,3}\s|\s*$)/gi, "")
+                                .replace(/\n{1,}#{1,3}\s*Mənbələr[\s\S]*$/gi, "")
+                                .trim()}
+                            />
                             <div className="flex justify-end mt-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
                               <TTSButton text={msg.content} />
                             </div>
@@ -988,27 +918,6 @@ function ChatContent() {
                           : undefined;
                         return <InlineCitation key={`${msg.id}-${i}-${cite}`} title={cite} source={matchedSource} />;
                       })}
-                    </div>
-                  )}
-
-                  {/* Real Court Precedent Match from 150 Court Acts */}
-                  {msg.role === "assistant" && msg.precedent && (
-                    <div className="mt-3 p-4 rounded-2xl border border-emerald-500/30 bg-emerald-50/80 dark:bg-emerald-950/20 backdrop-blur-md w-full shadow-sm">
-                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-2">
-                        <Gavel className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        <span>Oxşar Məhkəmə Təcrübəsi (Rəsmi Məhkəmə Aktı)</span>
-                      </div>
-                      <div className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed space-y-1.5">
-                        <div>
-                          Bu mövzu ilə bağlı <strong className="text-emerald-800 dark:text-emerald-300">{msg.precedent.court}</strong> tərəfindən hakim <strong className="text-slate-900 dark:text-white">{msg.precedent.judge}</strong> sədrliyi ilə (<span className="font-mono text-xs">{msg.precedent.caseNo}</span> saylı iş) məhkəmə işi baxılmışdır.
-                        </div>
-                        <div className="pt-1 flex flex-wrap items-center gap-2">
-                          <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">Qəbul edilmiş yekun qərar:</span>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-600/15 text-emerald-800 dark:text-emerald-300 border border-emerald-500/30">
-                            {msg.precedent.result}
-                          </span>
-                        </div>
-                      </div>
                     </div>
                   )}
 

@@ -346,6 +346,13 @@ export function validateLegalResponse(
   answer = answer.replace(/Maddə\s*1268\b/gi, "Maddə 126.8");
   answer = answer.replace(/1268-ci maddə/gi, "126.8-ci maddə");
 
+  // Strip duplicate "## Mənbələr" and unwanted "## Məhkəmə təcrübəsi" sections from markdown
+  // (Verified sources are already rendered once below the answer bubble)
+  answer = answer
+    .replace(/\n{1,}#{1,3}\s*Məhkəmə təcrübəsi[\s\S]*?(?=\n#{1,3}\s|\s*$)/gi, "")
+    .replace(/\n{1,}#{1,3}\s*Mənbələr[\s\S]*$/gi, "")
+    .trim();
+
   const citationValid = verifiedSources.some(s => s.verified);
   const confidence = citationValid ? 0.99 : 0.85;
   const citations = Array.from(new Set(validArticleTitles));
