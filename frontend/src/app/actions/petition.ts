@@ -1,6 +1,6 @@
 "use server"
 
-import { fetchRemoteGenerateDocument } from "@/lib/legal-rag/remote_backend"
+import { fetchRemoteGenerateDocument, isRemoteRagConfigured } from "@/lib/legal-rag/remote_backend"
 import {
   DOCUMENT_TYPE_MAP,
   type LegalDocumentFormInput,
@@ -343,7 +343,7 @@ export async function generateStructuredLegalDocument(
     try {
       const searchQuery = `${spec.ragQueryBoost} ${input.subtype || ""} ${facts} ${input.legalViolationInfo || ""} ${input.requests || ""}`.trim()
       const analysis = analyzeQuery(searchQuery)
-      const chunks = await hybridSearchAsync(analysis, 6, searchQuery, { timeoutMs: 5500 })
+      const chunks = await hybridSearchAsync(analysis, 5, searchQuery, { timeoutMs: 3500 })
       const seen = new Set(retrievedArticles.map((a) => `${a.title}::${a.articleNumber || ""}`))
       for (const ch of chunks) {
         const key = `${ch.lawName}::${ch.articleNumber || ""}`
@@ -485,7 +485,7 @@ QƏTİ QAYDALAR:
         spec.layoutMode === "contract-bilateral"
           ? undefined
           : typeof parsed.requestsHeading === "string" && parsed.requestsHeading.trim()
-          ? parsed.requestsHeading.trim().toUpperCase()
+          ? toAzUpperCase(parsed.requestsHeading.trim())
           : spec.requestsHeading,
       requests: spec.layoutMode === "contract-bilateral" ? [] : rawRequests,
       attachments,
@@ -497,57 +497,60 @@ QƏTİ QAYDALAR:
     return merged
   }
 
-  const passedKey = (apiKeyParam || "").trim()
-  try {
-    const llmRes = await generateLlmCompletion({
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      temperature: 0.15,
-      maxTokens: 3200,
-      responseFormatJson: true,
-      apiKeyParam: passedKey || undefined,
-      timeoutMs: 14000,
-    })
-    const parsed = extractStructuredJson(llmRes.content || "")
-    const merged = parsed ? mergeAiJsonToDoc(parsed) : null
-    if (merged) {
-      return {
-        text: serializeStructuredDocToMarkdown(merged),
-        structuredDoc: merged,
-        resolvedCourt,
-        provider: llmRes.provider || "llm",
-        missingInfoWarnings,
-        verifiedSources,
-      }
-    }
-  } catch (primaryErr: any) {
-    console.warn("[petition.ts] Primary LLM structured doc generation fallback:", primaryErr?.message)
-  }
-
-  const workerContent = await fetchRemoteGenerateDocument(systemPrompt, userPrompt, 3000, 28000, true)
-  if (workerContent) {
-    const parsed = extractStructuredJson(workerContent)
-    const merged = parsed ? mergeAiJsonToDoc(parsed) : null
-    if (merged) {
-      return {
-        text: serializeStructuredDocToMarkdown(merged),
-        structuredDoc: merged,
-        resolvedCourt,
-        provider: "cloudflare-workers-ai",
-        missingInfoWarnings,
-        verifiedSources,
-      }
-    }
-  }
-
-  return {
-    text: serializeStructuredDocToMarkdown(baselineDoc),
-    structuredDoc: baselineDoc,
+  const buildResult = (doc: StructuredLegalDocument, providerName: string) => ({
+    text: serializeStructuredDocToMarkdown(doc),
+    structuredDoc: doc,
     resolvedCourt,
-    provider: "template-fallback",
+    provider: providerName,
     missingInfoWarnings,
     verifiedSources,
+  })
+
+  const tryPrimaryLlm = async (timeoutMs: number) => {
+    try {
+      const llmRes = await generateLlmCompletion({
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.15,
+        maxTokens: 2600,
+        responseFormatJson: true,
+        apiKeyParam: passedKey || undefined,
+        timeoutMs,
+      })
+      const parsed = extractStructuredJson(llmRes.content || "")
+      const merged = parsed ? mergeAiJsonToDoc(parsed) : null
+      return merged ? buildResult(merged, llmRes.provider || "llm") : null
+    } catch (err: any) {
+      console.warn("[petition.ts] Primary LLM structured doc fallback:", err?.message)
+      return null
+    }
   }
+
+  const tryWorkerLlm = async () => {
+    const workerContent = await fetchRemoteGenerateDocument(systemPrompt, userPrompt, 2400, 18000, false)
+    if (!workerContent) return null
+    const parsed = extractStructuredJson(workerContent)
+    const merged = parsed ? mergeAiJsonToDoc(parsed) : null
+    return merged ? buildResult(merged, "cloudflare-workers-ai") : null
+  }
+
+  const passedKey = (apiKeyParam || "").trim()
+  if (passedKey) {
+    const primary = await tryPrimaryLlm(12000)
+    if (primary) return primary
+    const worker = await tryWorkerLlm()
+    if (worker) return worker
+  } else if (isRemoteRagConfigured()) {
+    const worker = await tryWorkerLlm()
+    if (worker) return worker
+    const primary = await tryPrimaryLlm(7500)
+    if (primary) return primary
+  } else {
+    const primary = await tryPrimaryLlm(10000)
+    if (primary) return primary
+  }
+
+  return buildResult(baselineDoc, "template-fallback")
 }
