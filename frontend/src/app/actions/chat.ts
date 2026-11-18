@@ -170,7 +170,7 @@ function finishFullSentences(text: string, preferredMaxLen: number, hardMaxLen =
     }
     // Check if there is a real sentence boundary after preferredMaxLen * 0.72 up to hardMaxLen
     const afterTarget = clean.slice(0, hardMaxLen);
-    const re = /[.!?](?=\s+[A-ZƏÖÜĞIÇŞ0-9"“]|$)/g;
+    const re = /[.!?](?=\s+[\p{Lu}0-9"“]|$)/gu;
     let bestCut = -1;
     let m: RegExpExecArray | null;
     while ((m = re.exec(afterTarget)) !== null) {
@@ -189,7 +189,7 @@ function finishFullSentences(text: string, preferredMaxLen: number, hardMaxLen =
 
   // Over hardMaxLen: stop cleanly at the last true sentence boundary (never mid-clause or at `;`)
   const window = clean.slice(0, hardMaxLen);
-  const re = /[.!?](?=\s+[A-ZƏÖÜĞIÇŞ0-9"“]|$)/g;
+  const re = /[.!?](?=\s+[\p{Lu}0-9"“]|$)/gu;
   let lastSentenceEnd = -1;
   let m: RegExpExecArray | null;
   while ((m = re.exec(window)) !== null) {
@@ -269,21 +269,26 @@ function extractScoredClauses(
 
     for (const seg of candidates) {
       let cleanSeg = seg;
-      // If a sliding-window chunk stitched "Maddə X. Title <lowercase fragment>... . Real sentence", jump to first complete sub-clause/sentence
-      const headerSplice = cleanSeg.match(/^Maddə\s+\d+(?:-\d+)?(?:\.\d+)*\.\s+[^.?!]*?\b(?:[a-zəöüğıçş]{2,}(?:\s+[a-zəöüğıçş]{2,}){0,6})/i);
-      if (headerSplice) {
-        const firstRealBoundary = cleanSeg.search(/\.\s+(?:\d+\.\s+)?[A-ZƏÖÜĞIÇŞ]/);
-        const lowercaseContinuation = /^Maddə\s+\d+[^\.]*\.\s+(?:[A-ZƏÖÜĞIÇŞ][^\.]{3,90}?)\s+(?:və ya|yaxud|də|da|ilə|üzrə|görə|əsasən|nəzərdə|haqqında|[a-zəöüğıçş]{1,4}\s+[a-zəöüğıçş]{2,})\b/;
-        if (firstRealBoundary > 15 && lowercaseContinuation.test(cleanSeg)) {
-          cleanSeg = cleanSeg.slice(firstRealBoundary + 1).trim();
+      // Drop sliding-window splice fragments like "Maddə 6. Title də başqa hal..."
+      const spliceMatch = cleanSeg.match(/^Maddə\s+\d+(?:-\d+)?(?:\.\d+)*\.\s+([\s\S]+)$/);
+      if (spliceMatch) {
+        const afterArticleDot = spliceMatch[1];
+        const hasLowercaseSplice = /^[^\p{Ll}.?!]*\p{Lu}[^.?!]{2,80}?\s+(?:və ya|yaxud|də|da|ilə|üzrə|görə|əsasən|nəzərdə|haqqında|\p{Ll}{1,4}\s+\p{Ll}{2,})\b/u.test(afterArticleDot);
+        if (hasLowercaseSplice) {
+          const nextSentenceIdx = afterArticleDot.search(/\.\s+(?:\d+\.\s+)?\p{Lu}/u);
+          if (nextSentenceIdx > 0) {
+            cleanSeg = afterArticleDot.slice(nextSentenceIdx + 1).trim();
+          } else {
+            continue;
+          }
         }
       }
 
       // Skip broken truncated fragment stubs like "nə cəlb edilməsi..." or corrupted overlap fragments
       if (
         cleanSeg.length < 24 ||
-        (/^[a-zəöüğıçş]{1,3}\s+/i.test(cleanSeg) && !/^(bu|hər|bütün|əgər|yalnız)\s/i.test(cleanSeg)) ||
-        /\d+\.\d+\s+[a-zəöüğıçş]{1,4}\s+[a-zəöüğıçş]+/.test(cleanSeg.slice(0, 120))
+        (/^\p{Ll}{1,3}\s+/u.test(cleanSeg) && !/^(bu|hər|bütün|əgər|yalnız)\s/i.test(cleanSeg)) ||
+        /\d+\.\d+\s+\p{Ll}{1,4}\s+\p{Ll}+/u.test(cleanSeg.slice(0, 120))
       ) {
         continue;
       }
@@ -365,42 +370,64 @@ function buildStatutoryFallbackResponse(
   const stems = buildSearchStems(query, queryAnalysis, extraTerms);
   const scoredClauses = extractScoredClauses(topChunks, stems, queryAnalysis);
 
-  // Pick top distinct high-relevance clauses for Qısa cavab so user immediately sees exact rules & amounts
+  // Pick top 3 distinct articles across Hüquqi əsaslar for a single cohesive Qısa cavab paragraph
   const summaryClauses: ScoredClause[] = [];
   const usedClauseKeys = new Set<string>();
   const topScore = scoredClauses[0]?.score ?? 0;
   for (const cl of scoredClauses) {
-    if (summaryClauses.length > 0 && cl.score < topScore * 0.55) break;
-    const key = `${cl.chunk.lawId}:${cl.clauseNum}:${normalizeAz(cl.body).slice(0, 40)}`;
+    if (summaryClauses.length > 0 && cl.score < topScore * 0.45) break;
+    const key = cl.clauseNum
+      ? `${cl.chunk.lawId}:${cl.clauseNum}`
+      : `${cl.chunk.lawId}:${normalizeAz(cl.body).slice(0, 48)}`;
     if (usedClauseKeys.has(key)) continue;
     usedClauseKeys.add(key);
     summaryClauses.push(cl);
     if (summaryClauses.length >= 3) break;
   }
 
-  const shortAnswerIntro =
-    summaryClauses.length > 0
-      ? `Sualınıza əsasən Azərbaycan Respublikasının qüvvədə olan qanunvericiliyinə uyğun tətbiq edilən konkret normalar və praktiki nəticə belədir:`
-      : 'Sorğunuz üzrə rəsmi qanunvericilik bazasında birbaşa uyğun maddə tapılmadı. Zəhmət olmasa sualınızı daha dəqiq açar sözlərlə ifadə edin.';
+  const formatLawTitle = (name: string) => {
+    const clean = name.trim();
+    if (/haqqında$/i.test(clean) && !/qanun/i.test(clean)) return `${clean} Qanun`;
+    return clean;
+  };
+
+  const lcStartIfCommonWord = (text: string) => {
+    const firstWord = text.split(/\s+/)[0] || '';
+    if (!firstWord || /^\p{Lu}{2,}$/u.test(firstWord) || /^Azərbaycan/i.test(firstWord) || /^Nazirlər/i.test(firstWord)) {
+      return text;
+    }
+    return text.charAt(0).toLocaleLowerCase('az-AZ') + text.slice(1);
+  };
 
   const shortAnswerBody =
     summaryClauses.length > 0
-      ? `${shortAnswerIntro}\n\n${summaryClauses
-          .map((cl) => {
-            const label = cl.clauseNum ? `Maddə ${cl.clauseNum}` : (cl.chunk.articleTitle || 'Normativ müddəa');
+      ? summaryClauses
+          .map((cl, idx) => {
+            const label = cl.clauseNum ? `Maddə ${cl.clauseNum}` : (cl.chunk.articleTitle || 'müvafiq norma');
             let cleanBody = cl.body
               .replace(/^(?:Maddə\s+)?\d+(?:-\d+)?(?:\.\d+)*(?:-\d+)?\.?\s+/i, '')
               .trim() || cl.body;
-            // Remove inline article title prefix right before point "1. Capital..." so bullet reads cleanly from sentence 1
-            const inlinePointStart = cleanBody.match(/^[^.?!]{4,120}?\s+(1\.\s+[A-ZƏÖÜĞIÇŞ][\s\S]+)$/);
+            const inlinePointStart = cleanBody.match(/^[^.?!]{4,120}?\s+(1\.\s+\p{Lu}[\s\S]+)$/u);
             if (inlinePointStart) {
               cleanBody = inlinePointStart[1].replace(/^1\.\s+/, '').trim();
             }
-            const formatted = finishFullSentences(cleanBody, 1100, 1750);
-            return `- **${cl.chunk.lawName} — ${label}:** ${formatted}`;
+            // Strip mid-paragraph sub-number labels like "2. " or "3. " so the continuous summary reads as smooth prose
+            cleanBody = cleanBody.replace(/\s+\d+(?:\.\d+)*\.\s+(?=\p{Lu})/gu, ' ');
+            const formatted = finishFullSentences(cleanBody, 480, 980);
+            const lawTitle = formatLawTitle(cl.chunk.lawName);
+            const sameAsPrev = idx > 0 && summaryClauses[idx - 1].chunk.lawId === cl.chunk.lawId;
+
+            if (idx === 0) {
+              return `**${lawTitle} (${label})** əsasında ${lcStartIfCommonWord(formatted)}`;
+            }
+            if (sameAsPrev) {
+              const lead = idx === 1 ? 'Bundan əlavə' : 'Həmçinin';
+              return `${lead}, **${label}** üzrə ${lcStartIfCommonWord(formatted)}`;
+            }
+            return `Eyni zamanda, **${lawTitle} (${label})** qaydasına əsasən ${lcStartIfCommonWord(formatted)}`;
           })
-          .join('\n\n')}`
-      : shortAnswerIntro;
+          .join(' ')
+      : 'Sorğunuz üzrə rəsmi qanunvericilik bazasında birbaşa uyğun maddə tapılmadı. Zəhmət olmasa sualınızı daha dəqiq açar sözlərlə ifadə edin.';
 
   // Build Hüquqi əsaslar using complete sentences around the best matching sub-clauses (no duplicate URL lists inside body)
   const sectionsMd = topChunks
@@ -631,9 +658,9 @@ Azərbaycan Respublikasının qanunvericiliyinə dair istifadəçi suallarını 
 13. RAG-DA MƏLUMAT YOXDURSA, AÇIQ BİLDİR:
    * "Bu məsələ üzrə təqdim olunan mənbələrdə kifayət qədər hüquqi əsas tapılmadı." de, özündən norma uydurma!
 14. "QISA CAVAB" BÖLMƏSİNƏ DAİR MƏCBURİ TƏLƏB:
-   * İstifadəçi aşağıdakı bölmələrə keçmədən belə YALNIZ "## Qısa cavab" hissəsini oxuyaraq sualına tam, aydın və ətraflı cavab tapmalıdır!
-   * Hüquqşünas olmayan sadə vətəndaşın da rahat başa düşəcəyi aydın, anlaşılan dildə yaz (quru qanun mətnini olduğu kimi kopyalama), lakin hər hüquqi nəticəni mütləq tətbiq olunan **Qanunun/Məcəllənin adına və konkret Maddə/bənd nömrəsinə** bağla (məs: "İstehlakçıların hüquqlarının müdafiəsi haqqında Qanunun 7-ci və 15-ci maddələrinə əsasən...").
-   * Sualın bütün əsas praktiki detallarını — vətəndaşın konkret hüququ və ya öhdəliyi, cərimə/rüsum/ödəniş məbləği, qanuni müddətlər (məs. 14 gün, 1 il), əsas şərtlər/istisnalar, hansı sənədlərin lazım olduğu və hansı quruma/məhkəməyə müraciət edilməli olduğu — 5–8 dolğun və tam cümlə ilə izah et.
+   * "## Qısa cavab" bölməsini MÜTLƏQ TƏK, ARALIQSIZ, BÜTÖV BİR MƏTN (yalnız bir vahid axıcı abzas: içində heç bir bullet point "-", nömrəli siyahı "1.", "2.", başlıq və ya boş sətirlərlə bölünməmiş vahid yekun mətn!) şəklində yaz!
+   * Bu tək aralıqsız mətndə "Hüquqi əsaslar" bölməsindəki BÜTÜN maddələri sintez edib birləşdirərək yekun nəticəni ver: istifadəçi maddə-maddə aşağı baxmağa ehtiyac duymadan yalnız "Qısa cavab"-ı oxumaqla sualının tam, aydın və praktiki cavabını tapsın; yalnız ayrı-ayrı maddələrin detallı mətninə baxmaq istəyərsə aşağıdakı "Hüquqi əsaslar" bölməsinə nəzər salsın.
+   * Sadə vətəndaşın anlayacağı aydın dildə yaz, lakin cümlələrin daxilində tətbiq olunan bütün əsas Qanun/Məcəllə adlarını və Maddə/bənd nömrələrini, dəqiq məbləğləri, müddətləri (gün/ay/il), şərtləri, istisnaları, tələb olunan sənədləri və müraciət edilməli qurumu ardıcıl şəkildə əhatə et.
    * CÜMLƏLƏRİ HEÇ VAXT YARIMÇIQ SAXLAMA: Hər bir cümlə tam fikri bitirməli və nöqtə ilə tamamlanmalıdır!
 15. ƏRİZƏ VƏ YA İDDİA ƏRİZƏSİ TƏLƏB EDİLDİKDƏ:
    * Əgər istifadəçi "ərizə yaz", "mənə ərizə hazırla" deyirsə, heç vaxt dərhal boş mötərizəli ([Ad, soyad], [ünvan], [tarix]) şablon yazma!
@@ -645,7 +672,7 @@ Azərbaycan Respublikasının qanunvericiliyinə dair istifadəçi suallarını 
 Aşağıdakı standart JSON strukturunda cavab ver ("cavab" mətnində ayrıca "## Mənbələr", URL siyahısı və ya "## Məhkəmə təcrübəsi" bölməsi YAZMA, çünki rəsmi mənbələr ayrıca kartlar kimi göstərilir):
 
 {
-  "cavab": "## Hüquqi sual\n[sualların hüquqi forması]\n\n## Qısa cavab\n[5–8 tam, aydın və sadə dildə yazılmış cümlə: konkret Qanun adı və Maddə/bənd nömrələri göstərilməklə istifadəçiyə hansı hüquq və ya cəzanın tətbiq olunduğu, dəqiq məbləğ, müddətlər, şərtlər, istisnalar və addım-addım praktiki həll yolu tam şəkildə]\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[dəqiq və tam izah]\n\n### 2. [Normativ akt] — Maddə [Y]\n[dəqiq və tam izah]\n\n## Praktik izah\n[istifadəçinin vəziyyətinə və faktlara tətbiq]\n\n## Vacib məqamlar\n[müddətlər / istisnalar / zəruri şərtlər / prosedurlar]",
+  "cavab": "## Hüquqi sual\n[sualların hüquqi forması]\n\n## Qısa cavab\n[TƏK, ARALIQSIZ, BÜTÖV YEKUN ABZAS (siyahısız və boş sətirsiz): Bütün Hüquqi əsaslar maddələrini ümumiləşdirən, sadə dildə tam cavab — qanun və maddə nömrələri, dəqiq məbləğlər, müddətlər, şərtlər, istisnalar və addım-addım praktiki həll bir vahid mətn kimi]\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[dəqiq və tam izah]\n\n### 2. [Normativ akt] — Maddə [Y]\n[dəqiq və tam izah]\n\n## Praktik izah\n[istifadəçinin vəziyyətinə və faktlara tətbiq]\n\n## Vacib məqamlar\n[müddətlər / istisnalar / zəruri şərtlər / prosedurlar]",
   "maddeler": [
     "Azərbaycan Respublikasının [Qanunun Adı] - Maddə [X]"
   ],

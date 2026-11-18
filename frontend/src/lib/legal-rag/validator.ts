@@ -353,6 +353,22 @@ export function validateLegalResponse(
     .replace(/\n{1,}#{1,3}\s*Mənbələr[\s\S]*$/gi, "")
     .trim();
 
+  // Guarantee "## Qısa cavab" is ALWAYS a single continuous, uninterrupted paragraph
+  answer = answer.replace(
+    /(##\s*Qısa cavab\s*\n)([\s\S]*?)(?=\n##\s+|$)/i,
+    (_m: string, heading: string, body: string) => {
+      const merged = body
+        .split(/\n+/)
+        .map((line) => line.trim().replace(/^[-*•]\s+/, ""))
+        .filter(Boolean)
+        .map((line) => (/^[.!?]$/.test(line) || /[.!?:…]$/.test(line) ? line : `${line}.`))
+        .join(" ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return `${heading}${merged}\n`;
+    }
+  );
+
   const citationValid = verifiedSources.some(s => s.verified);
   const confidence = citationValid ? 0.99 : 0.85;
   const citations = Array.from(new Set(validArticleTitles));
