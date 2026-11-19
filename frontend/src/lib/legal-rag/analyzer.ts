@@ -23,6 +23,10 @@ export function normalizeAz(text: string): string {
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
+    .replace(/sh/g, 's')
+    .replace(/ch/g, 'c')
+    .replace(/gh/g, 'g')
+    .replace(/w/g, 's')
     .trim();
 }
 

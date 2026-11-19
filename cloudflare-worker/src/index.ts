@@ -129,7 +129,14 @@ function normalizeAzSearch(text: string): string {
     const ch = text[i];
     out += AZ_CHAR_MAP[ch] ?? ch;
   }
-  return out.toLowerCase().replace(/\s+/g, " ").trim();
+  return out
+    .toLowerCase()
+    .replace(/sh/g, "s")
+    .replace(/ch/g, "c")
+    .replace(/gh/g, "g")
+    .replace(/w/g, "s")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function fnv1a32(text: string): number {
@@ -229,6 +236,16 @@ const STATUTORY_STEM_SYNONYMS: Record<string, string[]> = {
   heyvan: ["heyvanlar", "rehmsiz", "telef"],
   oldur: ["telef", "mehv"],
   bilmeden: ["ehtiyatsizliq"],
+  miras: ["verese", "vesiyyet"],
+  verese: ["miras", "vesiyyet"],
+  borc: ["kredit", "ohdelik", "faiz"],
+  kredit: ["borc", "bank", "faiz"],
+  qonsu: ["mulkiyyet", "meiset", "ses"],
+  telesik: ["tecili"],
+  qaytar: ["deyisdir", "geri"],
+  zemanet: ["qusur", "temir", "istehlakci"],
+  qov: ["xitam", "cixar"],
+  cixar: ["xitam", "legv"],
 };
 
 function isAskingAboutRepealedLaw(queryNorm: string): boolean {
