@@ -277,13 +277,15 @@ export async function fetchRemoteQueryRewrite(
   history: Array<{ role: string; content: string }>,
   timeoutMs = 4500
 ): Promise<RemoteQueryRewriteResult | null> {
-  if (!query?.trim() || !history || history.length === 0 || !isRemoteRagConfigured()) return null;
+  const hasHistory = Boolean(history && history.length > 0);
+  const isLongKazus = (query?.trim().length ?? 0) > 220;
+  if (!query?.trim() || (!hasHistory && !isLongKazus) || !isRemoteRagConfigured()) return null;
   const res = await fetchRagBackend<RemoteQueryRewriteResult>("/rag/rewrite-query", {
     method: "POST",
     timeoutMs,
     body: {
       query: query.trim(),
-      history: history.slice(-6),
+      history: hasHistory ? history.slice(-6) : [],
     },
   });
   if (!res || typeof res.standalone_query !== "string") return null;

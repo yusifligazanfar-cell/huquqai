@@ -533,13 +533,33 @@ function ChatContent() {
         .map((m) => ({ role: m.role, content: m.content }));
 
       const lowerQ = userQuery.toLowerCase().trim();
+      const wordCount = lowerQ.split(/\s+/).filter(Boolean).length;
+      // Azerbaijani-safe word boundary (JS \b treats ə, ı, ö, ü, ğ, ş, ç as non-word characters, which previously caused "yaz" to match "yazışmalarını" and "hazırla" to match "hazırlandığı"!)
+      const azStart = "(?:^|[\\s.,;:!?()\"«»'])";
+      const azEnd = "(?=$|[\\s.,;:!?()\"«»'])";
+      const docNounPat = "(?:ərizə|erize|iddia\\s+ərizəsi|iddia\\s+erizesi|şikayət\\s+ərizəsi|sikayet\\s+erizesi|müqavilə|muqavile|vəsatət|vesatet|etiraz\\s+ərizəsi|apellyasiya\\s+şikayəti|kassasiya\\s+şikayəti|etibarnamə|etibarname|pretenziya)";
+      const cmdVerbPat = "(?:yaz|yazın|yazaq|hazırla|hazirla|hazırlayın|hazirlayin|tərtib\\s+et|tertib\\s+et|tərtib\\s+edin|formalasdir|formalaşdır)";
+      const directDocCommandRe = new RegExp(
+        `(?:${azStart}${docNounPat}[\\s\\S]{0,24}${azStart}${cmdVerbPat}${azEnd}|${azStart}${cmdVerbPat}[\\s\\S]{0,20}${azStart}${docNounPat}${azEnd})`,
+        "i"
+      );
+
+      const hasLegalQuestionSignal =
+        /\?/.test(userQuery) ||
+        /(?:^|\n)\s*suallar?\s*:/i.test(userQuery) ||
+        /(?:hansı hallarda|cinayət tərkibi|hüquqi tövsif|necə bölünür|nə qədərdir|cəriməsi nə|olarmı|bilərmi|məsuliyyət daşıyır|təsir göstərir|hüquqi qiymət)/i.test(lowerQ);
+
+      // Only treat as an explicit document-drafting request when it is NOT a legal analysis question / kazus
+      // (or when a short <= 22-word message directly commands drafting a document)
+      const tailSlice = lowerQ.slice(-90);
       const explicitPetitionRequest =
-        /(?:\b(?:erize|ərizə|sikayet|şikayət|iddia|muqavile|müqavilə|vesatet|vəsatət|etiraz|apellyasiya|kassasiya|qerar|qərar|etibarname|etibarnamə|pretenziya|rey|rəy|sazis|saziş|sorgu|sorğu|cixis|çıxış|nitq)\b[\s\S]{0,30}\b(?:yaz|hazirla|hazırla|tertib|tərtib|numune|nümunə|isteyirem|istəyirəm|formalasdir|formalaşdır|generasiya)\b|\b(?:yaz|hazirla|hazırla|tertib|tərtib)\b[\s\S]{0,25}\b(?:erize|ərizə|muqavile|müqavilə|vesatet|vəsatət|etiraz|etibarname|etibarnamə|pretenziya)\b)/i.test(lowerQ);
+        !hasLegalQuestionSignal &&
+        wordCount <= 28 &&
+        directDocCommandRe.test(tailSlice);
+
       const looksLikeStandaloneQuestion =
-        !explicitPetitionRequest &&
-        !lowerQ.includes("ərizə yaz") &&
-        /\?/.test(userQuery) &&
-        /\b(nədir|nedir|nə qədər|ne qeder|hansı|hansi|necə|nece|kim|hara|maddə|madde|cəza|ceza|cərimə|cerime|qanun|hüquq|huquq|olar|olarmı|neçədir|necedir)\b/i.test(lowerQ);
+        hasLegalQuestionSignal ||
+        wordCount > 35;
 
       if (isPetitionMode && looksLikeStandaloneQuestion) {
         setIsPetitionMode(false);

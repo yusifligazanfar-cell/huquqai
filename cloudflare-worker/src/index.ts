@@ -52,6 +52,9 @@ const AZ_STOP_WORDS = new Set([
   "mecelle", "mecellesi", "mecellesinin", "mecellesinde", "mecelleden",
   "azerbaycan", "respublikasi", "respublikasinin",
   "ci", "cu", "ncı", "nci", "ncu", "ncü",
+  "tesevvur", "edin", "sentyabr", "ayinda", "baki", "seherinde", "fealiyyet", "gosteren",
+  "adli", "sirket", "sirketin", "sirkete", "melum", "bildirir", "ehtimal", "bundan",
+  "elave", "hemin", "diger", "eslinde", "zamani", "gorerek", "suallar", "sual",
 ]);
 
 const GENERIC_META = new Set([
@@ -324,12 +327,23 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
     .filter(Boolean);
 
   const queryNorm = normalizeAzSearch(query);
-  const rawTokens = tokenizeAzForFts(query);
+  // For long multi-paragraph case studies ("kazus"), prioritize tokens from the trailing question ("Suallar:") + high-signal legal terms from body
+  let orderedQueryForTokens = query;
+  if (query.length > 220) {
+    const qSplit = query.split(/(?:^|\n)\s*suallar?\s*:/i);
+    if (qSplit.length > 1) {
+      orderedQueryForTokens = `${qSplit[qSplit.length - 1]}\n${qSplit[0]}`;
+    } else {
+      orderedQueryForTokens = `${query.slice(-380)}\n${query.slice(0, 500)}`;
+    }
+  }
+  const rawTokens = tokenizeAzForFts(orderedQueryForTokens);
   const extractedArts = extractArticleNumbersAz(query);
   const explicitArts = Array.from(new Set([...rawExplicitArts, ...extractedArts]));
   const conceptPriorityArts = priorityArts.filter((a) => !explicitArts.includes(a));
   const lookupArts = [...explicitArts, ...conceptPriorityArts].slice(0, 8);
 
+  const rawStemCap = query.length > 220 ? 14 : 8;
   const rawStems = Array.from(
     new Set(
       rawTokens
@@ -337,7 +351,7 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
         .map(stemAzToken)
         .filter((s) => s.length >= 3)
     )
-  ).slice(0, 7);
+  ).slice(0, rawStemCap);
 
   const expStems: string[] = [];
   for (const eq of expandedQueries) {
@@ -907,7 +921,9 @@ async function handleSemantic(body: Record<string, unknown>, env: Env): Promise<
 
   let qVec: number[] | undefined;
   try {
-    const embRes = (await env.AI.run("@cf/baai/bge-m3", { text: [query.slice(0, 1000)] })) as {
+    const semanticInput =
+      query.length > 900 ? `${query.slice(-550)}\n${query.slice(0, 450)}` : query.slice(0, 1000);
+    const embRes = (await env.AI.run("@cf/baai/bge-m3", { text: [semanticInput] })) as {
       data?: number[][];
     };
     qVec = embRes?.data?.[0];
@@ -1714,7 +1730,8 @@ async function handleRewriteQuery(body: Record<string, unknown>, env: Env): Prom
   const t0 = Date.now();
   const query = String(body.query || "").trim();
   const rawHistory = Array.isArray(body.history) ? body.history : [];
-  if (!query || rawHistory.length === 0) {
+  const isLongKazus = query.length > 220;
+  if (!query || (rawHistory.length === 0 && !isLongKazus)) {
     return jsonResp({
       is_follow_up: false,
       standalone_query: query,
@@ -1740,7 +1757,7 @@ async function handleRewriteQuery(body: Record<string, unknown>, env: Env): Prom
     .filter(Boolean)
     .join("\n");
 
-  if (!compactHist) {
+  if (!compactHist && !isLongKazus) {
     return jsonResp({
       is_follow_up: false,
       standalone_query: query,
@@ -1750,15 +1767,23 @@ async function handleRewriteQuery(body: Record<string, unknown>, env: Env): Prom
     });
   }
 
-  const sysPrompt = `Sən Azərbaycan qanunvericiliyi üzrə dialoq kontekstini təhlil edən axtarış sorğusu çeviricisisən.
-Tapşırıq: Əvvəlki dialoq tarixçəsini və istifadəçinin YENİ mesajını oxu.
-- Əgər yeni mesaj əvvəlki mövzunun/işin davamıdırsa (məs., boşanmadan sonra "bəs kreditlə alınan ev?", "uşaqlar varsa pay dəyişir?", "iddia müddəti neçə ildir?", "notariat mütləqdir?", "bəs təkrar etsə?", "hara şikayət edim?", "bəs borclar?"), "is_follow_up": true yaz və "standalone_query"-də əvvəlki mövzunun əsas hüquqi kontekstini yeni sualla birləşdirərək tam müstəqil axtarış sorğusu yarat.
-- Əgər yeni mesaj tamamilə fərqli yeni hüquqi mövzudursa (məs., boşanmadan sonra "qırmızı işıqdan keçməyin cəriməsi nə qədərdir?"), "is_follow_up": false yaz və "standalone_query" kimi yalnız yeni sualı saxla.
-- Qanun ID-ləri üçün yalnız bunlar ola bilər: aile, mulki, emek, inzibati_xetalar, yol_hereketi, cinayet, cinayet_prosessual, mulki_prosessual, vergi, menzil, torpaq, istehlakci, gomruk, miqrasiya, konstitusiya.
+  const sysPrompt = `Sən Azərbaycan qanunvericiliyi üzrə hüquqi kazus və dialoq təhlilçisisən.
+Tapşırıq:
+1. Əgər istifadəçinin mesajı UZUN HÜQUQİ KAZUSDURSA (hekayə/situasiya + sonda sual):
+   - "is_follow_up": true yaz.
+   - "standalone_query": Kazusdakı konkret hüquqi sualı və əsas hüquqi əməlləri (məs., "MMC direktoru tərəfindən qulluq mövqeyindən istifadə etməklə külli miqdarda vəsaitin mənimsənilməsi və ya israf edilməsi saxta müqavilə vəzifə səlahiyyətlərindən sui-istifadə vəzifə saxtakarlığı Cinayət Məcəlləsi Maddə 179 308 313") 15-30 sözdən ibarət rəsmi qanunvericilik axtarış sorğusuna çevir (hekayədəki "təsəvvür edin, sentyabr ayında, Bakı şəhərində" kimi lüzumsuz sözləri AT!).
+   - "same_case_laws": Suala uyğun məcəllələri seç (məs., ["cinayet", "cinayet_prosessual", "mulki"]).
+   - "topic_summary": Kazusun sonunda soruşulan sualın 1 cümləlik aydın xülasəsini yaz.
+2. Əgər yeni mesaj əvvəlki dialoqun davamıdırsa (məs., "bəs kreditlə alınan ev?", "bəs borclar?", "iddia müddəti neçə ildir?", "2-ci sual: bəs WhatsApp yazışmaları sübut ola bilərmi?"):
+   - "is_follow_up": true yaz və "standalone_query"-də əvvəlki mövzunun əsas hüquqi kontekstini yeni sualla birləşdirərək tam müstəqil axtarış sorğusu yarat.
+3. Əgər qısa müstəqil yeni mövzudursa: "is_follow_up": false yaz.
+- Qanun ID-ləri yalnız bunlar ola bilər: aile, mulki, emek, inzibati_xetalar, yol_hereketi, cinayet, cinayet_prosessual, mulki_prosessual, vergi, menzil, torpaq, istehlakci, gomruk, miqrasiya, konstitusiya.
 YALNIZ ETİBARLI JSON QAYTAR:
 {"is_follow_up": true/false, "standalone_query": "...", "same_case_laws": ["..."], "topic_summary": "..."}`;
 
-  const userPrompt = `ƏVVƏLKİ DİALOQ:\n${compactHist}\n\nYENİ İSTİFADƏÇİ MESAJI:\n${query}`;
+  const userPrompt = compactHist
+    ? `ƏVVƏLKİ DİALOQ:\n${compactHist}\n\nYENİ İSTİFADƏÇİ MESAJI:\n${query.slice(0, 3500)}`
+    : `HÜQUQİ KAZUS VƏ SUAL:\n${query.slice(0, 3500)}`;
 
   const raw = await callCerebrasEdge(
     env,

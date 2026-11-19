@@ -491,5 +491,41 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
       "gece vaxti ses-kuy"
     ],
     priorityArticles: ["521", "522"]
+  },
+  {
+    id: "criminal_embezzlement_and_official_crimes",
+    domain: "Cinayət hüququ",
+    primaryLawId: "cinayet",
+    primaryDocId: "46947",
+    triggerPhrases: [
+      "menimseme", "menimsemekde", "menimseyib", "israf etme", "cinayet terkibinin elametleri",
+      "cinayet terkibi", "emelin huquqi tovsifi", "huquqi tovsif", "saxta xidmet muqavile",
+      "vezife selahiyyetlerinden sui-istifade", "vezife saxtakarligi", "qulluq movqeyinden istifade"
+    ],
+    expandedTerms: [
+      "menimseme ve ya israf etme teqsirkara etibar edilmis ozge emlakini talama",
+      "qulluq movqeyinden istifade etmekle kulli miqdarda",
+      "vezife selahiyyetlerinden sui-istifade vezife saxtakarligi",
+      "resmi senedleri saxtalasdirma",
+      "cinayet mecellesi madde 179", "cinayet mecellesi madde 308", "cinayet mecellesi madde 313"
+    ],
+    priorityArticles: ["179", "177", "308", "313", "320", "178"]
+  },
+  {
+    id: "criminal_procedure_search_and_evidence",
+    domain: "Cinayət-prosessual hüquq",
+    primaryLawId: "cinayet_prosessual",
+    primaryDocId: "46950",
+    triggerPhrases: [
+      "sexsi axtaris", "mehkeme qerari olmadan", "whatsapp yazismalari", "sexsi yazismalarin",
+      "subut kimi istifade oluna bilmez", "subutlarin mumkunluyu", "vekilinin istiraki olmadan ifade"
+    ],
+    expandedTerms: [
+      "subutlarin mumkunluyu qanunsuz elde edilmis subutlar",
+      "mehkeme qerari esasinda aparilan istintaq hereketleri",
+      "sexsi axtaris ve goturme", "sahidin huquqlari vekil",
+      "cinayet prosessual mecellesi madde 125", "cinayet prosessual mecellesi madde 177"
+    ],
+    priorityArticles: ["125", "177", "242", "95", "85"]
   }
 ];

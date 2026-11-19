@@ -195,6 +195,10 @@ function sanitizeStatutoryExcerpt(text: string): string {
     .replace(/\bgörəyüz\b/gi, 'görə yüz')
     .replace(/\bgündənüçay\b/gi, 'gündən üç ay')
     .replace(
+      /(\d+(?:\.\d+)+)\.\s*\[QÜVVƏDƏN DÜŞÜB\s*\/\s*LƏĞV EDİLİB\]\s*(?=[a-zəöüğışç])/gi,
+      '($1-cü bənd ləğv edilib) — '
+    )
+    .replace(
       /(?:\s+\d+(?:\.\d+)*(?:-\d+)?\.)?\s*\n?Maddə\s+\d+(?:-\d+)?\.[^\n]*?\b\d+(?:\.\d+)*(?:-\d+)?\n(?![0-9]+\.)[^\n]*(?:\n(?!\d+(?:\.\d+)*(?:-\d+)?\.\s)[a-zəöüğışç\d][^\n]*)?(?=\s+\d+(?:\.\d+)*(?:-\d+)?\.)/gi,
       '\n'
     )
@@ -604,18 +608,27 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       }
     }
 
-    // 0. MULTI-TURN CONVERSATIONAL QUERY CONTEXTUALIZER (seamlessly carries case context across follow-ups!)
+    // 0. MULTI-TURN CONVERSATIONAL & LONG-KAZUS QUERY CONTEXTUALIZER (seamlessly carries case context & distills long case studies!)
     let effectiveSearchQuery = query;
     let activeCaseContext = "";
     let rewrittenLaws: string[] = [];
-    if (history && history.length > 0 && isRemoteRagConfigured()) {
-      const rewrite = await fetchRemoteQueryRewrite(query, history, 4200);
+    const shouldDistillOrContextualize =
+      ((history && history.length > 0) || query.length > 220) && isRemoteRagConfigured();
+    if (shouldDistillOrContextualize) {
+      const rewrite = await fetchRemoteQueryRewrite(query, history, 4800);
       if (rewrite?.is_follow_up && rewrite.standalone_query && rewrite.standalone_query.length >= 6) {
         effectiveSearchQuery = rewrite.standalone_query;
         activeCaseContext = rewrite.topic_summary || rewrite.standalone_query;
         rewrittenLaws = rewrite.same_case_laws || [];
       }
     }
+
+    // For long multi-paragraph case studies ("kazus"), extract the clean trailing question for "## Hüquqi sual"
+    const suallarMatch = query.match(/(?:^|\n)\s*suallar?\s*:\s*([\s\S]+)$/i);
+    const displayQuestion =
+      query.length > 240
+        ? (suallarMatch?.[1]?.replace(/\s+/g, " ").trim() || activeCaseContext || `${query.slice(0, 220).trim()}...`)
+        : query;
 
     // 1. QUERY ANALYSIS (uses contextualized standalone query so follow-ups retrieve exact statutes!)
     const queryAnalysis = analyzeQuery(effectiveSearchQuery, history);
@@ -709,15 +722,27 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       .map((c) => ({ law: c.lawId, article: c.articleNumber }))
       .slice(0, 8);
     const qNorm = queryAnalysis.normalizedQuery;
+    const rawQNorm = normalizeAz(query);
+    const combinedQNorm = `${qNorm} ${rawQNorm}`;
     const isFamilyOrLaborDispute =
       (topLawIds.includes("aile") || topLawIds.includes("emek")) &&
       /(bosan|bolun|emlak|aliment|esassiz|qanunsuz|sikayet|mubahis|mehkem|cixaril|berpa|valideyn|usaq)/i.test(qNorm);
     const isDivorcePropertyQuery =
       topLawIds.includes("aile") && /(emlak|mulkiyyet|bolun|bosan)/i.test(qNorm);
+    const isCriminalEmbezzlementOrOfficialKazus =
+      (topLawIds.includes("cinayet") || rewrittenLaws.includes("cinayet") || /(menimse|israf|cinayet terkib|huquqi tovsif|saxta xidmet muqavile|vezife selahiyyet)/i.test(combinedQNorm)) &&
+      /(menimse|israf|cinayet terkib|huquqi tovsif|saxta|vezife|direktor|hesab-faktura)/i.test(combinedQNorm);
     const hasMediationChunk = retrievedChunks.slice(0, 8).some((c) => c.documentId === "41828" || c.lawName.toLowerCase().includes("mediasiya"));
     const hasAile34 = retrievedChunks.slice(0, 8).some((c) => c.lawId === "aile" && (c.articleNumber === "34" || c.articleNumber.startsWith("34.")));
+    const hasCmArt = (art: string) =>
+      retrievedChunks.slice(0, 6).some((c) => c.lawId === "cinayet" && (c.articleNumber === art || c.articleNumber.startsWith(`${art}.`)));
 
-    const fetchCompanionArticle = async (docId: string, artNum: string, lawId: string): Promise<StructuredChunk | null> => {
+    const fetchCompanionArticle = async (
+      docId: string,
+      artNum: string,
+      lawId: string,
+      preserveNoteTail = false
+    ): Promise<StructuredChunk | null> => {
       try {
         const doc = isSqliteCorpusAvailable()
           ? getSqliteDocumentById(docId, artNum)
@@ -725,16 +750,20 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
           ? await fetchRemoteDocumentById(docId, artNum, 4500)
           : null;
         if (!doc?.content) return null;
+        const body =
+          preserveNoteTail && doc.content.length > 2200
+            ? `${doc.content.slice(0, 1100)}\n...\n${doc.content.slice(-1600)}`
+            : doc.content.slice(0, 3200);
         return {
           sourceId: `companion_${docId}_art_${artNum}`,
           lawId,
           lawName: doc.title,
           articleNumber: artNum,
           articleTitle: `${doc.title} — Maddə ${artNum}`,
-          content: doc.content.slice(0, 3200),
+          content: body,
           sourceFile: `eqanun_doc_${docId}`,
           sourceUrl: doc.sourceUrl || `https://www.e-qanun.ai/results/${docId}`,
-          score: 820,
+          score: 940,
           documentId: docId,
         };
       } catch {
@@ -742,13 +771,13 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       }
     };
 
-    const [judicialChunks, mediationChunk, aile34Chunk] = await Promise.all([
+    const [judicialChunks, mediationChunk, aile34Chunk, cm179Chunk, cm177NoteChunk, cm308Chunk, cm313Chunk] = await Promise.all([
       isRemoteRagConfigured()
         ? fetchRemoteJudicialSearch(
             {
               query: effectiveSearchQuery,
               expandedQueries: [...(queryAnalysis.keywords || []), ...llmExpandedTerms],
-              matchedLaws: topLawIds,
+              matchedLaws: isCriminalEmbezzlementOrOfficialKazus ? Array.from(new Set(["cinayet", ...topLawIds])) : topLawIds,
               matchedArticles: topArtNums,
               matchedPairs: topPairs,
               limit: 2,
@@ -762,9 +791,25 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       isDivorcePropertyQuery && !hasAile34
         ? fetchCompanionArticle("46946", "34", "aile")
         : Promise.resolve(null),
+      isCriminalEmbezzlementOrOfficialKazus && !hasCmArt("179")
+        ? fetchCompanionArticle("46947", "179", "cinayet")
+        : Promise.resolve(null),
+      isCriminalEmbezzlementOrOfficialKazus && !hasCmArt("177")
+        ? fetchCompanionArticle("46947", "177", "cinayet", true)
+        : Promise.resolve(null),
+      isCriminalEmbezzlementOrOfficialKazus && !hasCmArt("308")
+        ? fetchCompanionArticle("46947", "308", "cinayet", true)
+        : Promise.resolve(null),
+      isCriminalEmbezzlementOrOfficialKazus && !hasCmArt("313")
+        ? fetchCompanionArticle("46947", "313", "cinayet")
+        : Promise.resolve(null),
     ]);
 
+    const cmCompanionChunks = [cm179Chunk, cm177NoteChunk, cm308Chunk, cm313Chunk].filter(
+      (c): c is StructuredChunk => Boolean(c)
+    );
     const supplementalChunks: StructuredChunk[] = [
+      ...cmCompanionChunks,
       ...(aile34Chunk ? [aile34Chunk] : []),
       ...(mediationChunk ? [mediationChunk] : []),
       ...judicialChunks,
@@ -772,17 +817,18 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     const allRetrievedChunks = [...retrievedChunks, ...supplementalChunks];
 
     // 3. COMPOSE STRICT GROUND-TRUTH CONTEXT FOR LLM (Core statutory articles + companion procedural norm + binding Supreme/Constitutional Court rulings)
-    const primaryScore = retrievedChunks[0]?.score ?? 0;
+    const primaryScore = Math.max(retrievedChunks[0]?.score ?? 0, cmCompanionChunks[0]?.score ?? 0);
     const relevantRetrieved =
       primaryScore >= 500
         ? retrievedChunks.filter((c, idx) => idx < 3 || (c.score ?? 0) >= primaryScore * 0.62)
         : retrievedChunks;
     const baseStatutory = selectDiverseContextChunks(
       relevantRetrieved.length >= 3 ? relevantRetrieved : retrievedChunks,
-      aile34Chunk ? 5 : 6,
+      cmCompanionChunks.length > 0 ? Math.max(3, 6 - cmCompanionChunks.length) : aile34Chunk ? 5 : 6,
       lawMatch.confidence === "explicit"
     );
     const contextChunks: StructuredChunk[] = [
+      ...cmCompanionChunks,
       ...baseStatutory,
       ...(aile34Chunk ? [aile34Chunk] : []),
       ...(mediationChunk ? [mediationChunk] : []),
@@ -821,9 +867,12 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     const contextText = contextChunks
       .map((c, i) => {
         const isJud = c.lawId.startsWith("judicial_");
+        const isCompanion = c.sourceId.startsWith("companion_");
         const cleanBody = isJud
           ? sanitizeStatutoryExcerpt(c.content).slice(0, 3800)
-          : extractFocusedExcerpt(c.content, i < 4 ? 2300 : 1400);
+          : isCompanion
+          ? sanitizeStatutoryExcerpt(c.content).slice(0, 2800)
+          : extractFocusedExcerpt(c.content, i < 4 ? 2300 : 1500);
         return `[MƏNBƏ ${i + 1}: ${c.articleTitle}] (Rəsmi URL: ${c.sourceUrl})\n${cleanBody}`;
       })
       .join("\n\n---\n\n")
@@ -878,7 +927,9 @@ YALNIZ ETİBARLI JSON OBYEKTİ QAYTAR (əlavə izah olmadan):
     const userPrompt = `KONTEX (Qanunvericilik Mətnləri):
 ${contextText}
 ${caseBanner}
-ÇOXTURLU SÖHBƏT QAYDASI: Əgər aşağıdakı İSTİFADƏÇİNİN YENİ SORĞUSU yeni hüquqi mövzudursa, əvvəlki suallardakı köhnə maddə və məcəllələri UNUT və YALNIZ bu [KONTEX] mənbələrinə əsaslan. Əvvəlki mövzuya davam sualıdırsa, dialoq davamlılığını qoru və konkret normanı [KONTEX] mətnindən çıxar.
+ÇOXTURLU SÖHBƏT VƏ KAZUS QAYDASI:
+- Əgər istifadəçi uzun hüquqi kazus (situasiya + sual) təqdim edibsə, "## Hüquqi sual" başlığı altında yalnız əsas sualı ("${displayQuestion}") yaz, kazusdakı BÜTÜN faktları (məbləği, qulluq mövqeyini, saxta müqavilə/hesab-fakturaları, müdafiə arqumentlərini və s.) [KONTEX] maddələrinə (xüsusən Qeyd hissələrindəki məbləğ hədlərinə və vəzifəli şəxs anlayışına) əsasən dərindən təhlil et.
+- Əgər yeni hüquqi mövzudursa, əvvəlki suallardakı köhnə maddə və məcəllələri UNUT və YALNIZ bu [KONTEX] mənbələrinə əsaslan.
 
 İSTİFADƏÇİNİN SORĞUSU: 
 ${query}`;
@@ -1088,7 +1139,7 @@ ${query}`;
             },
             {
               role: "user",
-              content: `Yuxarıdakı qaralama cavabında müstəqil hüquqi audit bu nöqsanları aşkar etdi:\n${issueBullets}\n\nTƏLƏB:\n1. "## Hüquqi sual" başlığının altında YALNIZ istifadəçinin əsl sualını olduğu kimi saxla: "${query}" (əsla bu təlimatı sual kimi yazma!).\n2. Qeyd olunan nöqsanları [MƏNBƏ 1..N] mətninə tam uyğun düzəlt, "insufficient_sources": false saxla və tam, kəsilməmiş JSON qaytar.`,
+              content: `Yuxarıdakı qaralama cavabında müstəqil hüquqi audit bu nöqsanları aşkar etdi:\n${issueBullets}\n\nTƏLƏB:\n1. "## Hüquqi sual" başlığının altında YALNIZ istifadəçinin əsl sualını olduğu kimi saxla: "${displayQuestion}" (əsla bu təlimatı sual kimi yazma!).\n2. Qeyd olunan nöqsanları [MƏNBƏ 1..N] mətninə tam uyğun düzəlt, "insufficient_sources": false saxla və tam, kəsilməmiş JSON qaytar.`,
             },
           ],
           4500
@@ -1096,7 +1147,7 @@ ${query}`;
         const correctedJson = parseRawLlmJson(correctiveRaw);
         if (correctedJson?.insufficient_sources === true && !hasStrongStatutoryGrounding) {
           return buildInsufficientSourceResponse(
-            query,
+            displayQuestion,
             typeof correctedJson.missing_reason === "string" ? correctedJson.missing_reason : undefined
           );
         }
@@ -1104,7 +1155,7 @@ ${query}`;
           // Ensure "## Hüquqi sual" always displays the user's real question, never the audit instruction
           correctedJson.cavab = correctedJson.cavab.replace(
             /^(\s*##\s*Hüquqi sual\s*\n)[^\n]+/i,
-            `$1${query}`
+            `$1${displayQuestion}`
           );
           const revalidated = validateLegalResponse(correctedJson, allRetrievedChunks, contextChunks);
           if (
