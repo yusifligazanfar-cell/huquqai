@@ -261,6 +261,36 @@ export async function handleAppDb(request: Request, env: AppDbEnv): Promise<Resp
       return json({ success: true });
     }
 
+    if (path === "/app/auth/change-password" && request.method === "POST") {
+      const body = (await request.json().catch(() => ({}))) as {
+        userId?: string;
+        currentPassword?: string;
+        newPassword?: string;
+      };
+      const userId = String(body.userId || "").trim();
+      const currentPassword = String(body.currentPassword || "");
+      const newPassword = String(body.newPassword || "");
+      if (!userId || !newPassword) {
+        return json({ error: "İstifadəçi və yeni şifrə tələb olunur." }, 400);
+      }
+      const row = await db.prepare("SELECT * FROM profiles WHERE id = ?").bind(userId).first<Record<string, any>>();
+      if (!row) return json({ error: "İstifadəçi tapılmadı." }, 404);
+
+      if (row.password_hash) {
+        if (!currentPassword) {
+          return json({ error: "Cari şifrənizi daxil edin." }, 400);
+        }
+        const valid = await verifyPassword(currentPassword, String(row.password_hash));
+        if (!valid) {
+          return json({ error: "Cari şifrə yanlışdır." }, 401);
+        }
+      }
+
+      const passwordHash = await hashPassword(newPassword);
+      await db.prepare("UPDATE profiles SET password_hash = ?, email_verified = 1 WHERE id = ?").bind(passwordHash, row.id).run();
+      return json({ success: true });
+    }
+
     if (path === "/app/auth/user" && request.method === "GET") {
       const id = url.searchParams.get("id") || "";
       const email = (url.searchParams.get("email") || "").trim().toLowerCase();

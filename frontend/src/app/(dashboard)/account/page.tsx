@@ -21,6 +21,10 @@ import {
   Scale,
   Briefcase,
   Loader2,
+  Lock,
+  Eye,
+  EyeOff,
+  Circle,
 } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "next-themes"
@@ -50,6 +54,11 @@ export default function AccountPage() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const [resetMessage, setResetMessage] = useState<{ text: string; type: "success" | "error" } | null>(null)
   const [sendingReset, setSendingReset] = useState(false)
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmNewPassword, setConfirmNewPassword] = useState("")
+  const [showPasswords, setShowPasswords] = useState(false)
+  const [changingPassword, setChangingPassword] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -126,6 +135,51 @@ export default function AccountPage() {
     setIsUpdating(false)
     setSaveMessage("Məlumatlarınız uğurla yadda saxlanıldı.")
     setTimeout(() => setSaveMessage(null), 4000)
+  }
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setResetMessage(null)
+
+    const isStrong =
+      newPassword.length >= 8 &&
+      /[A-Z]/.test(newPassword) &&
+      /[0-9]/.test(newPassword) &&
+      /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(newPassword)
+
+    if (!isStrong) {
+      setResetMessage({
+        text: "Yeni şifrə minimum 8 simvol, 1 böyük hərf, 1 rəqəm və 1 özəl simvol içərməlidir.",
+        type: "error",
+      })
+      return
+    }
+    if (newPassword !== confirmNewPassword) {
+      setResetMessage({ text: "Yeni şifrələr uyğun gəlmir.", type: "error" })
+      return
+    }
+
+    setChangingPassword(true)
+    try {
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.ok) {
+        setResetMessage({ text: data.error || "Şifrə yenilənə bilmədi.", type: "error" })
+      } else {
+        setCurrentPassword("")
+        setNewPassword("")
+        setConfirmNewPassword("")
+        setResetMessage({ text: "Şifrəniz uğurla yeniləndi!", type: "success" })
+      }
+    } catch {
+      setResetMessage({ text: "Şəbəkə xətası baş verdi.", type: "error" })
+    } finally {
+      setChangingPassword(false)
+    }
   }
 
   const handleSendPasswordReset = async () => {
@@ -515,37 +569,136 @@ export default function AccountPage() {
                   {activeTab === "lawyer_profile" && <LawyerProfileTab />}
 
                   {activeTab === "security" && (
-                    <div className="p-6 sm:p-10">
-                      <div className="max-w-lg mx-auto text-center space-y-4">
-                        <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-2xl flex items-center justify-center mx-auto">
-                          <Key className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                    <>
+                      <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-5 px-6 sm:px-8 pt-6">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl">
+                            <Key className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <div>
+                            <CardTitle className="text-xl sm:text-2xl font-bold">Şifrə və Təhlükəsizlik</CardTitle>
+                            <CardDescription className="text-sm mt-0.5">
+                              Şifrənizi buradan birbaşa dəyişə və ya e-poçtunuza sıfırlama linki göndərə bilərsiniz.
+                            </CardDescription>
+                          </div>
                         </div>
-                        <h3 className="text-xl sm:text-2xl font-bold text-foreground">Şifrə və Təhlükəsizlik</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Hesab şifrənizi yeniləmək üçün e-poçt ünvanınıza (<strong>{email}</strong>) təhlükəsiz yeniləmə linki göndərə bilərsiniz.
-                        </p>
+                      </CardHeader>
+
+                      <CardContent className="p-6 sm:p-8 space-y-6">
                         {resetMessage && (
                           <div
-                            className={`p-3 rounded-xl text-xs sm:text-sm font-medium border ${
+                            className={`p-3.5 rounded-2xl text-xs sm:text-sm font-medium border ${
                               resetMessage.type === "error"
-                                ? "bg-red-50 dark:bg-red-950/30 border-red-200 text-red-600"
-                                : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 text-emerald-700 dark:text-emerald-300"
+                                ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400"
+                                : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300"
                             }`}
                           >
                             {resetMessage.text}
                           </div>
                         )}
-                        <Button
-                          type="button"
-                          onClick={handleSendPasswordReset}
-                          disabled={sendingReset}
-                          className="h-11 px-6 rounded-xl font-bold"
-                        >
-                          {sendingReset && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                          Şifrə Yeniləmə Linki Göndər
-                        </Button>
-                      </div>
-                    </div>
+
+                        <form onSubmit={handleChangePassword} className="space-y-4 max-w-lg">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                              Cari Şifrə <span className="text-slate-400 font-normal">(Google ilə daxil olmusunuzsa boş buraxın)</span>
+                            </label>
+                            <div className="relative">
+                              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                              <Input
+                                type={showPasswords ? "text" : "password"}
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                placeholder="Cari şifrəniz"
+                                className="pl-10 pr-10 h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPasswords((p) => !p)}
+                                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400"
+                              >
+                                {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                Yeni Şifrə
+                              </label>
+                              <Input
+                                type={showPasswords ? "text" : "password"}
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                placeholder="Yeni şifrə"
+                                minLength={8}
+                                required
+                                className="h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                              />
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                Yeni Şifrəni Təsdiqlə
+                              </label>
+                              <Input
+                                type={showPasswords ? "text" : "password"}
+                                value={confirmNewPassword}
+                                onChange={(e) => setConfirmNewPassword(e.target.value)}
+                                placeholder="Təkrar daxil edin"
+                                minLength={8}
+                                required
+                                className="h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/70 dark:border-slate-800 text-[11px]">
+                            {[
+                              { ok: newPassword.length >= 8, label: "Minimum 8 simvol" },
+                              { ok: /[A-Z]/.test(newPassword), label: "1 böyük hərf (A-Z)" },
+                              { ok: /[0-9]/.test(newPassword), label: "1 rəqəm (0-9)" },
+                              { ok: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(newPassword), label: "1 özəl simvol (!@#...)" },
+                            ].map((rule) => (
+                              <div
+                                key={rule.label}
+                                className={`flex items-center gap-1.5 font-medium ${
+                                  rule.ok ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500"
+                                }`}
+                              >
+                                {rule.ok ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <Circle className="w-3.5 h-3.5 shrink-0" />}
+                                <span>{rule.label}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <Button
+                            type="submit"
+                            disabled={changingPassword}
+                            className="h-11 px-6 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                          >
+                            {changingPassword && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                            Şifrəni Yenilə
+                          </Button>
+                        </form>
+
+                        <div className="pt-5 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <p className="text-xs text-muted-foreground">
+                            Cari şifrənizi unutmusunuz? E-poçtunuza (<strong>{email}</strong>) sıfırlama linki göndərin.
+                          </p>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleSendPasswordReset}
+                            disabled={sendingReset}
+                            className="rounded-xl shrink-0"
+                          >
+                            {sendingReset && <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />}
+                            E-poçta Link Göndər
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </>
                   )}
 
                   {activeTab === "notifications" && (
