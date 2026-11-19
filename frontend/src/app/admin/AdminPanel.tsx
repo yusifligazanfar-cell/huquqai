@@ -39,6 +39,7 @@ interface RealUser {
   experience_years: number | null
   specialties: string[]
   is_verified: boolean
+  admin_note?: string
   created_at: string | null
   last_sign_in_at: string | null
   consultations_count: number
@@ -123,7 +124,7 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<"lawyers" | "users" | "feedbacks">("lawyers")
   const [search, setSearch] = useState("")
   const [roleFilter, setRoleFilter] = useState<"all" | "user" | "lawyer">("all")
-  const [lawyerStatusFilter, setLawyerStatusFilter] = useState<"all" | "verified" | "pending">("all")
+  const [lawyerStatusFilter, setLawyerStatusFilter] = useState<"all" | "verified" | "pending" | "rejected">("all")
   const [verifyingId, setVerifyingId] = useState<string | null>(null)
   const [noteTargetId, setNoteTargetId] = useState<string | null>(null)
   const [noteMode, setNoteMode] = useState<"request_info" | "reject">("request_info")
@@ -193,21 +194,31 @@ export default function AdminPanel() {
 
       if (action === "approve" || action === "reject") {
         const nextVerified = action === "approve"
-        const prevUser = users.find((u) => u.id === userId)
-        setUsers((prev) =>
-          prev.map((u) => (u.id === userId ? { ...u, is_verified: nextVerified } : u))
+        const nextNote =
+          action === "approve"
+            ? ""
+            : note
+              ? `REJECTED: ${note}`
+              : "REJECTED: Müraciət rədd edildi"
+
+        const updatedUsers = users.map((u) =>
+          u.id === userId ? { ...u, is_verified: nextVerified, admin_note: nextNote } : u
         )
-        if (prevUser && prevUser.is_verified !== nextVerified) {
-          setStats((prev) => {
-            if (!prev) return prev
-            const delta = nextVerified ? 1 : -1
-            return {
-              ...prev,
-              verifiedLawyers: prev.verifiedLawyers + delta,
-              pendingLawyers: prev.pendingLawyers - delta,
-            }
-          })
-        }
+        setUsers(updatedUsers)
+        const allLawyers = updatedUsers.filter((u) => u.role === "lawyer")
+        const nextVerifiedCount = allLawyers.filter((l) => l.is_verified).length
+        const nextPendingCount = allLawyers.filter(
+          (l) => !l.is_verified && !String(l.admin_note || "").startsWith("REJECTED:")
+        ).length
+        setStats((prev) =>
+          prev
+            ? {
+                ...prev,
+                verifiedLawyers: nextVerifiedCount,
+                pendingLawyers: nextPendingCount,
+              }
+            : prev
+        )
       }
 
       setNoteTargetId(null)
@@ -257,8 +268,10 @@ export default function AdminPanel() {
     return users
       .filter((u) => u.role === "lawyer")
       .filter((u) => {
+        const isRejected = !u.is_verified && String(u.admin_note || "").startsWith("REJECTED:")
         if (lawyerStatusFilter === "verified") return u.is_verified
-        if (lawyerStatusFilter === "pending") return !u.is_verified
+        if (lawyerStatusFilter === "pending") return !u.is_verified && !isRejected
+        if (lawyerStatusFilter === "rejected") return isRejected
         return true
       })
       .filter((u) => {
@@ -611,7 +624,7 @@ export default function AdminPanel() {
         {activeTab === "lawyers" && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              {(["all", "verified", "pending"] as const).map((st) => (
+              {(["all", "verified", "pending", "rejected"] as const).map((st) => (
                 <button
                   key={st}
                   onClick={() => setLawyerStatusFilter(st)}
@@ -625,7 +638,9 @@ export default function AdminPanel() {
                     ? `Hamısı (${users.filter((u) => u.role === "lawyer").length})`
                     : st === "verified"
                     ? `Təsdiqlənmiş (${users.filter((u) => u.role === "lawyer" && u.is_verified).length})`
-                    : `Təsdiq Gözləyən (${users.filter((u) => u.role === "lawyer" && !u.is_verified).length})`}
+                    : st === "pending"
+                    ? `Təsdiq Gözləyən (${users.filter((u) => u.role === "lawyer" && !u.is_verified && !String(u.admin_note || "").startsWith("REJECTED:")).length})`
+                    : `Rədd Edilmiş (${users.filter((u) => u.role === "lawyer" && !u.is_verified && String(u.admin_note || "").startsWith("REJECTED:")).length})`}
                 </button>
               ))}
             </div>
@@ -662,6 +677,10 @@ export default function AdminPanel() {
                       {lawyer.is_verified ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 shrink-0">
                           <BadgeCheck className="w-3.5 h-3.5" /> Təsdiqlənib
+                        </span>
+                      ) : String(lawyer.admin_note || "").startsWith("REJECTED:") ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-red-500/15 text-red-300 border border-red-500/30 shrink-0">
+                          Rədd edildi
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0">
@@ -726,18 +745,20 @@ export default function AdminPanel() {
 
                           {!lawyer.is_verified ? (
                             <>
-                              <button
-                                type="button"
-                                disabled={verifyingId === lawyer.id}
-                                onClick={() => {
-                                  setNoteTargetId(lawyer.id)
-                                  setNoteMode("reject")
-                                  setReviewNote("")
-                                }}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/25 transition-all"
-                              >
-                                Rədd et
-                              </button>
+                              {!String(lawyer.admin_note || "").startsWith("REJECTED:") && (
+                                <button
+                                  type="button"
+                                  disabled={verifyingId === lawyer.id}
+                                  onClick={() => {
+                                    setNoteTargetId(lawyer.id)
+                                    setNoteMode("reject")
+                                    setReviewNote("")
+                                  }}
+                                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/25 transition-all"
+                                >
+                                  Rədd et
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 disabled={verifyingId === lawyer.id}

@@ -619,6 +619,9 @@ export async function handleAppDb(request: Request, env: AppDbEnv): Promise<Resp
       const lawyers = users.filter((u) => u.role === "lawyer");
       const citizens = users.filter((u) => u.role !== "lawyer");
       const verifiedLawyers = lawyers.filter((l) => l.is_verified).length;
+      const pendingLawyers = lawyers.filter(
+        (l) => !l.is_verified && !String(l.admin_note || "").startsWith("REJECTED:")
+      ).length;
 
       const activeLast24h = users.filter(
         (u) => u.last_sign_in_at && nowMs - new Date(u.last_sign_in_at).getTime() <= dayMs
@@ -653,7 +656,7 @@ export async function handleAppDb(request: Request, env: AppDbEnv): Promise<Resp
           totalCitizens: citizens.length,
           totalLawyers: lawyers.length,
           verifiedLawyers,
-          pendingLawyers: lawyers.length - verifiedLawyers,
+          pendingLawyers,
           activeLast24h,
           activeLast7d,
           newUsersLast7d,
@@ -688,10 +691,16 @@ export async function handleAppDb(request: Request, env: AppDbEnv): Promise<Resp
         return json({ error: "İstifadəçi Cloudflare D1 bazasında tapılmadı" }, 404);
       }
 
-      if (action === "approve" || action === "reject") {
+      if (action === "approve") {
         await db
-          .prepare("UPDATE profiles SET is_verified = ?, admin_note = ? WHERE id = ?")
-          .bind(action === "approve" ? 1 : 0, String(body.note || ""), body.userId)
+          .prepare("UPDATE profiles SET is_verified = 1, admin_note = ? WHERE id = ?")
+          .bind(String(body.note || ""), body.userId)
+          .run();
+      } else if (action === "reject") {
+        const rejectNote = body.note ? `REJECTED: ${body.note}` : "REJECTED: Müraciət rədd edildi";
+        await db
+          .prepare("UPDATE profiles SET is_verified = 0, admin_note = ? WHERE id = ?")
+          .bind(rejectNote, body.userId)
           .run();
       } else {
         await db
