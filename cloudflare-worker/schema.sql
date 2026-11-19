@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS community_posts (
   title TEXT NOT NULL,
   content TEXT DEFAULT '',
   category TEXT DEFAULT 'Ümumi',
+  views_count INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
 );
 

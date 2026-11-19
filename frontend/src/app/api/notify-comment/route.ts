@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     }
 
     const { ok, data: cfData } = await cfFetch<{ post?: any }>(
-      `/app/community?id=${encodeURIComponent(postId)}`
+      `/app/community?id=${encodeURIComponent(postId)}&noView=1`
     )
     const post = cfData?.post
 

@@ -940,6 +940,12 @@ export async function handleAppDb(request: Request, env: AppDbEnv): Promise<Resp
     if (path === "/app/community" && request.method === "GET") {
       const id = url.searchParams.get("id");
       if (id) {
+        if (!url.searchParams.get("noView")) {
+          await db
+            .prepare("UPDATE community_posts SET views_count = COALESCE(views_count, 0) + 1 WHERE id = ?")
+            .bind(id)
+            .run();
+        }
         const post = await db.prepare("SELECT * FROM community_posts WHERE id = ?").bind(id).first<Record<string, any>>();
         if (!post) return json({ post: null, comments: [] });
         const author = await db
@@ -958,7 +964,10 @@ export async function handleAppDb(request: Request, env: AppDbEnv): Promise<Resp
             .first<Record<string, any>>();
           comments.push({ ...c, profiles: ca || null });
         }
-        return json({ post: { ...post, profiles: author || null }, comments });
+        return json({
+          post: { ...post, views_count: Number(post.views_count || 0), profiles: author || null },
+          comments,
+        });
       }
 
       const { results: posts } = await db
@@ -976,6 +985,7 @@ export async function handleAppDb(request: Request, env: AppDbEnv): Promise<Resp
           .all<Record<string, any>>();
         enriched.push({
           ...p,
+          views_count: Number(p.views_count || 0),
           profiles: author || null,
           community_comments: cRows || [],
         });
