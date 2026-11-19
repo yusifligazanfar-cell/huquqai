@@ -205,14 +205,14 @@ export default function LoginPage() {
           {/* Lawyer Section */}
           <div className="mt-7 pt-6 border-t border-slate-200 dark:border-slate-800 text-center">
             <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-3">
-              Vəkil kimi fəaliyyət göstərirsiniz?
+              Vəkil və ya hüquqşünas kimi fəaliyyət göstərirsiniz?
             </p>
             <Link
               href="/lawyer-signup"
               className="inline-flex items-center justify-center w-full h-12 gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm border border-emerald-200 dark:border-emerald-800/60 transition-all"
             >
               <Scale className="w-4 h-4" />
-              <span>Vəkil Kimi Daxil Ol / Qeydiyyat</span>
+              <span>Vəkil və ya Hüquqşünas Kimi Daxil Ol / Qeydiyyat</span>
             </Link>
           </div>
         </div>
