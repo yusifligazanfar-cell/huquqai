@@ -39,6 +39,10 @@ export default async function LawyerProfilePage({ params }: { params: Promise<{ 
   const { data: { session } } = await supabase.auth.getSession()
   const isSelf = session?.user?.id === lawyer.id
 
+  if (!lawyer.is_verified && !isSelf) {
+    return notFound()
+  }
+
   const tabs = [
     { id: "haqqinda", label: "Haqqında" },
     { id: "ixtisaslar", label: "İxtisaslar" },
@@ -87,7 +91,7 @@ export default async function LawyerProfilePage({ params }: { params: Promise<{ 
                       )}
                     </h1>
                     <div className="text-lg text-primary font-bold mt-1">
-                      Hüquqşünas / Vəkil
+                      {(lawyer.license_number || '').startsWith('HÜQ:') ? 'Hüquqşünas' : 'Vəkil'}
                     </div>
                   </div>
 

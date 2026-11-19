@@ -22,6 +22,12 @@ export default function LawyerSignupPage() {
   const [licenseNumber, setLicenseNumber] = useState("")
   const [educationDoc, setEducationDoc] = useState("")
   const [experienceYears, setExperienceYears] = useState("")
+  const [hourlyRate, setHourlyRate] = useState("")
+  const [workplaceName, setWorkplaceName] = useState("")
+  const [workplaceAddress, setWorkplaceAddress] = useState("")
+  const [eduInstitution, setEduInstitution] = useState("")
+  const [eduDegree, setEduDegree] = useState("Bakalavr")
+  const [eduField, setEduField] = useState("Hüquqşünaslıq")
   const [bio, setBio] = useState("")
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([])
   
@@ -45,8 +51,23 @@ export default function LawyerSignupPage() {
     return doc ? `HÜQ: ${doc}` : "HÜQ: Hüquqşünas"
   }
 
+  const buildStructuredFields = () => {
+    const workplaces = workplaceName.trim()
+      ? [{ name: workplaceName.trim(), address: workplaceAddress.trim(), hours: "09:00 - 18:00" }]
+      : []
+    const education = eduInstitution.trim()
+      ? [{ degree: eduDegree.trim() || "Ali təhsil", institution: eduInstitution.trim(), field: eduField.trim() || "Hüquqşünaslıq" }]
+      : []
+    return {
+      workplaces,
+      education,
+      hourlyRate: parseInt(hourlyRate, 10) || 0,
+    }
+  }
+
   const handleStep1Submit = (e: React.FormEvent) => {
     e.preventDefault()
+    const extra = buildStructuredFields()
     const payload = JSON.stringify({
       practitionerType,
       name: name.trim(),
@@ -54,7 +75,10 @@ export default function LawyerSignupPage() {
       licenseNumber: getNormalizedLicense(),
       experienceYears: parseInt(experienceYears, 10) || 0,
       bio: bio.trim(),
-      specialties: selectedSpecialties
+      specialties: selectedSpecialties,
+      workplaces: extra.workplaces,
+      education: extra.education,
+      hourlyRate: extra.hourlyRate,
     })
     try {
       localStorage.setItem('pendingLawyerOnboarding', payload)
@@ -69,6 +93,7 @@ export default function LawyerSignupPage() {
     setLoading(true)
     setMessage(null)
 
+    const extra = buildStructuredFields()
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -83,6 +108,9 @@ export default function LawyerSignupPage() {
           experience_years: parseInt(experienceYears, 10) || 0,
           bio: bio.trim(),
           specialties: selectedSpecialties,
+          workplaces: extra.workplaces,
+          education: extra.education,
+          hourly_rate: extra.hourlyRate,
         }
       }
     })
@@ -200,6 +228,32 @@ export default function LawyerSignupPage() {
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold">İş Təcrübəsi (İl)</label>
                     <Input required type="number" min="0" max="60" value={experienceYears} onChange={e => setExperienceYears(e.target.value)} placeholder="Məs: 10" className="h-12 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 rounded-xl" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold">İş Yeri (Ofis / Hüquq Bürosu) *</label>
+                    <Input required value={workplaceName} onChange={e => setWorkplaceName(e.target.value)} placeholder="Məs: Bakı Hüquq Mərkəzi" className="h-12 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold">İş Yeri Ünvanı</label>
+                    <Input value={workplaceAddress} onChange={e => setWorkplaceAddress(e.target.value)} placeholder="Məs: Bakı ş., Nizami küç. 45" className="h-12 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 rounded-xl" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold">Təhsil Müəssisəsi *</label>
+                    <Input required value={eduInstitution} onChange={e => setEduInstitution(e.target.value)} placeholder="Məs: Bakı Dövlət Universiteti" className="h-12 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold">Dərəcə</label>
+                    <Input value={eduDegree} onChange={e => setEduDegree(e.target.value)} placeholder="Bakalavr / Magistr" className="h-12 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 rounded-xl" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-semibold">Saatlıq Xidmət Haqqı (AZN)</label>
+                    <Input type="number" min="0" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} placeholder="Məs: 50" className="h-12 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 rounded-xl" />
                   </div>
                 </div>
 

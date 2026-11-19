@@ -160,8 +160,8 @@ export default function AccountPage() {
                   <div className="flex items-center justify-center sm:justify-start gap-3">
                     <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{name}</h1>
                     {user?.isVerified && (
-                      <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-xs font-bold px-2 py-1 rounded-md">
-                        Təsdiqlənmiş Vəkil
+                      <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs font-bold px-2.5 py-1 rounded-md">
+                        {user?.licenseNumber?.startsWith('HÜQ:') ? 'Təsdiqlənmiş Hüquqşünas' : 'Təsdiqlənmiş Vəkil'}
                       </span>
                     )}
                   </div>
@@ -170,8 +170,8 @@ export default function AccountPage() {
                     <span>{email}</span>
                   </div>
                   {user?.role === 'lawyer' && (
-                    <div className="mt-2 text-sm text-primary font-medium">
-                      Hüquqşünas / Vəkil
+                    <div className="mt-2 text-sm text-primary font-bold">
+                      {user?.licenseNumber?.startsWith('HÜQ:') ? 'Hüquqşünas' : 'Vəkil'}
                     </div>
                   )}
                 </div>
@@ -303,8 +303,8 @@ export default function AccountPage() {
                                 }`}
                               >
                                 {user?.isVerified
-                                  ? 'Hesabınız admin tərəfindən təsdiqlənib və aktivdir. Artıq müştərilər sizi kataloqda görə bilər.'
-                                  : 'Anketiniz admin tərəfindən yoxlanılır (təsdiq gözləyir). Təsdiqləndikdən sonra e-poçt ünvanınıza bildiriş göndəriləcək.'}
+                                  ? 'Hesabınız admin tərəfindən təsdiqlənib və aktivdir. Artıq müştərilər sizi kataloqda görə və randevu ala bilər.'
+                                  : 'Qonaq rejimi: Anketiniz admin tərəfindən yoxlanılır (təsdiq gözləyir). Təsdiqlənənə qədər Vəkillər Kataloqunda görünmürsünüz. Təsdiqdən sonra e-poçtunuza bildiriş göndəriləcək.'}
                               </div>
                             )}
 

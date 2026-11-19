@@ -55,14 +55,58 @@ export default function LawyerProfileTab() {
   }
   const removeFaq = (index: number) => setFaqs(faqs.filter((_, i) => i !== index))
 
-  // --- Unavailable Dates ---
-  const addDate = () => setUnavailableDates([...unavailableDates, ""])
-  const updateDate = (index: number, value: string) => {
-    const newDates = [...unavailableDates]
-    newDates[index] = value
-    setUnavailableDates(newDates)
+  // --- Unavailable Dates, Weekdays & Hours ---
+  const WEEKDAYS = [
+    { day: 1, label: "1-ci gün (B.e)" },
+    { day: 2, label: "2-ci gün (Ç.a)" },
+    { day: 3, label: "3-cü gün (Çər)" },
+    { day: 4, label: "4-cü gün (C.a)" },
+    { day: 5, label: "5-ci gün (Cüm)" },
+    { day: 6, label: "6-cı gün (Şənbə)" },
+    { day: 0, label: "Bazar" },
+  ]
+  const ALL_SLOTS = ["09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00"]
+
+  const toggleWeekdayOff = (day: number) => {
+    const token = `WEEKDAY:${day}`
+    setUnavailableDates((prev) =>
+      prev.includes(token) ? prev.filter((x) => x !== token) : [...prev, token]
+    )
   }
-  const removeDate = (index: number) => setUnavailableDates(unavailableDates.filter((_, i) => i !== index))
+
+  const toggleSlotOff = (slot: string) => {
+    const token = `SLOT_OFF:${slot}`
+    setUnavailableDates((prev) =>
+      prev.includes(token) ? prev.filter((x) => x !== token) : [...prev, token]
+    )
+  }
+
+  const specificDates = unavailableDates.filter((d) => !d.startsWith("WEEKDAY:") && !d.startsWith("SLOT_OFF:"))
+  const addDate = () => setUnavailableDates([...unavailableDates, ""])
+  const updateDate = (specificIndex: number, value: string) => {
+    let seen = -1
+    setUnavailableDates(
+      unavailableDates.map((item) => {
+        if (!item.startsWith("WEEKDAY:") && !item.startsWith("SLOT_OFF:")) {
+          seen++
+          if (seen === specificIndex) return value
+        }
+        return item
+      })
+    )
+  }
+  const removeDate = (specificIndex: number) => {
+    let seen = -1
+    setUnavailableDates(
+      unavailableDates.filter((item) => {
+        if (!item.startsWith("WEEKDAY:") && !item.startsWith("SLOT_OFF:")) {
+          seen++
+          return seen !== specificIndex
+        }
+        return true
+      })
+    )
+  }
 
   return (
     <>
@@ -133,28 +177,84 @@ export default function LawyerProfileTab() {
           {faqs.length === 0 && <p className="text-muted-foreground text-sm">Hələ sual əlavə edilməyib.</p>}
         </div>
 
-        {/* Unavailable Dates */}
+        {/* Weekly Off-Days & Available Hours */}
+        <div className="flex flex-col gap-5">
+          <div className="border-b border-slate-200 dark:border-white/10 pb-2">
+            <h4 className="text-sm font-bold text-foreground uppercase tracking-widest">Randevu Qrafiki (Həftəlik Günlər və Saatlar)</h4>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Müsait olmadığınız həftə günlərini (məs: 6-cı gün) və saatları seçin — saytda avtomatik bağlanacaq.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-muted-foreground">Müsait olmadığınız həftə günləri:</span>
+            <div className="flex flex-wrap gap-2">
+              {WEEKDAYS.map((wd) => {
+                const isOff = unavailableDates.includes(`WEEKDAY:${wd.day}`)
+                return (
+                  <button
+                    key={wd.day}
+                    type="button"
+                    onClick={() => toggleWeekdayOff(wd.day)}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold border transition-all ${
+                      isOff
+                        ? "bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-800 text-red-700 dark:text-red-300"
+                        : "bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300"
+                    }`}
+                  >
+                    {wd.label} {isOff ? "• Bağlı" : "• Açıq"}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-xs font-bold text-muted-foreground">Aktiv randevu saatları (bağlamaq üçün klikləyin):</span>
+            <div className="flex flex-wrap gap-2">
+              {ALL_SLOTS.map((slot) => {
+                const isOff = unavailableDates.includes(`SLOT_OFF:${slot}`)
+                return (
+                  <button
+                    key={slot}
+                    type="button"
+                    onClick={() => toggleSlotOff(slot)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
+                      isOff
+                        ? "bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-400 line-through"
+                        : "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                    }`}
+                  >
+                    {slot}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Specific Unavailable Dates */}
         <div className="flex flex-col gap-4">
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-2">
             <div>
-              <h4 className="text-sm font-bold text-foreground uppercase tracking-widest">Müsait Olmayan Günlər</h4>
-              <p className="text-xs text-muted-foreground">Bu günlərdə pasiyentlər randevu ala bilməyəcək.</p>
+              <h4 className="text-sm font-bold text-foreground uppercase tracking-widest">Xüsusi Müsait Olmayan Tarixlər</h4>
+              <p className="text-xs text-muted-foreground">Konkret tarixlərdə randevu qəbulunu bağlayın.</p>
             </div>
             <Button size="sm" variant="outline" onClick={addDate}><Plus className="w-4 h-4 mr-2" /> Əlavə et</Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {unavailableDates.map((date, idx) => (
+            {specificDates.map((date, idx) => (
               <div key={idx} className="flex items-center gap-2">
                 <Input type="date" value={date || ''} onChange={e => updateDate(idx, e.target.value)} className="flex-1" />
                 <Button size="icon" variant="ghost" className="text-red-500 shrink-0" onClick={() => removeDate(idx)}><Trash2 className="w-4 h-4" /></Button>
               </div>
             ))}
           </div>
-          {unavailableDates.length === 0 && <p className="text-muted-foreground text-sm">Müsait olmayan gün seçilməyib.</p>}
+          {specificDates.length === 0 && <p className="text-muted-foreground text-sm">Xüsusi müsait olmayan tarix seçilməyib.</p>}
         </div>
 
         <div className="pt-4 flex items-center justify-end">
-          <Button onClick={handleSave} disabled={isUpdating} size="lg" className="gap-2 bg-primary hover:bg-primary/90 text-white px-8 h-12 rounded-xl text-base font-semibold shadow-[0_0_20px_rgba(234,88,12,0.3)] hover:shadow-[0_0_30px_rgba(234,88,12,0.5)] transition-all">
+          <Button onClick={handleSave} disabled={isUpdating} size="lg" className="gap-2 px-8 h-12 rounded-xl text-base font-semibold transition-all">
             <Save className="w-5 h-5" />
             {isUpdating ? "Saxlanılır..." : "Dəyişiklikləri Yadda Saxla"}
           </Button>

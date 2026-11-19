@@ -89,6 +89,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             experience_years: Number(pending.experienceYears) || 0,
             bio: pending.bio || '',
             specialties: Array.isArray(pending.specialties) ? pending.specialties : [],
+            workplaces: Array.isArray(pending.workplaces) ? pending.workplaces : [],
+            education: Array.isArray(pending.education) ? pending.education : [],
+            hourly_rate: Number(pending.hourlyRate) || 0,
             is_verified: false,
           })
           localStorage.removeItem('pendingLawyerOnboarding')

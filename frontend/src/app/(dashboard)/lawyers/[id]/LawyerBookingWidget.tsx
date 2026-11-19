@@ -1,8 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Loader2, Calendar, Clock, CheckCircle2 } from "lucide-react"
+import { Loader2, Calendar, Clock, CheckCircle2, Lock } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import { useRouter } from "next/navigation"
 
@@ -36,11 +37,19 @@ export default function LawyerBookingWidget({
   unavailableDates?: string[]
 }) {
   const days = generateDays()
-  const [selectedDate, setSelectedDate] = useState<Date>(days[0])
+  const isDayUnavailable = (d: Date) =>
+    unavailableDates.includes(toDateKey(d)) ||
+    unavailableDates.includes(`WEEKDAY:${d.getDay()}`)
+
+  const firstAvailableDay = days.find((d) => !isDayUnavailable(d)) || days[0]
+  const activeTimeSlots = timeSlots.filter((t) => !unavailableDates.includes(`SLOT_OFF:${t}`))
+
+  const [selectedDate, setSelectedDate] = useState<Date>(firstAvailableDay)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [description, setDescription] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
 
   // Booked slots: { "2026-07-29": ["10:00", "13:00"], ... }
   const [bookedSlots, setBookedSlots] = useState<Record<string, string[]>>({})
@@ -48,6 +57,12 @@ export default function LawyerBookingWidget({
 
   const router = useRouter()
   const supabase = createClient()
+
+  useEffect(() => {
+    supabase.auth.getSession().then((res: any) => {
+      setIsAuthenticated(Boolean(res?.data?.session?.user))
+    })
+  }, [supabase])
 
   // Fetch booked time slots for this lawyer
   useEffect(() => {
@@ -156,6 +171,27 @@ export default function LawyerBookingWidget({
       </div>
 
       <div className="p-4">
+        {isAuthenticated === false ? (
+          <div className="py-6 px-3 text-center space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div className="space-y-1.5">
+              <p className="text-sm font-extrabold text-slate-950 dark:text-white">
+                Randevu almaq üçün qeydiyyatdan keçin
+              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Vəkil və ya hüquqşünasdan randevu almaq üçün hesabınıza daxil olmalısınız.
+              </p>
+            </div>
+            <Link href={`/login?next=/lawyers/${lawyerId}`} className="block">
+              <Button className="w-full h-11 rounded-xl font-bold">
+                Daxil Ol / Qeydiyyatdan Keç
+              </Button>
+            </Link>
+          </div>
+        ) : (
+        <>
         {/* Month Name */}
         <div className="text-center font-bold text-slate-800 dark:text-white mb-4">
           {azMonths[selectedDate.getMonth()]} {selectedDate.getFullYear()}
@@ -165,8 +201,7 @@ export default function LawyerBookingWidget({
         <div className="flex overflow-x-auto pb-4 gap-2 snap-x hide-scrollbar">
           {days.map((d, i) => {
             const isSelected = d.getDate() === selectedDate.getDate() && d.getMonth() === selectedDate.getMonth()
-            const dateStr = toDateKey(d)
-            const isUnavailable = unavailableDates.includes(dateStr)
+            const isUnavailable = isDayUnavailable(d)
 
             return (
               <button
@@ -201,8 +236,12 @@ export default function LawyerBookingWidget({
             <div className="col-span-3 flex justify-center py-4">
               <Loader2 className="w-5 h-5 animate-spin text-primary/40" />
             </div>
+          ) : activeTimeSlots.length === 0 ? (
+            <div className="col-span-3 text-center text-xs text-muted-foreground py-3">
+              Bu gün üçün aktiv randevu saatı yoxdur.
+            </div>
           ) : (
-            timeSlots.map(time => {
+            activeTimeSlots.map(time => {
               const isBooked = bookedTimesForDay.includes(time)
               const isSelected = selectedTime === time
 
@@ -244,7 +283,7 @@ export default function LawyerBookingWidget({
                 placeholder="Məsələn: Əmək mübahisəsi barədə..."
                 className="w-full min-h-[100px] p-3 text-sm rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-900/50 focus:ring-2 focus:ring-primary/50 outline-none resize-none text-foreground"
               />
-              <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold shadow-lg transition-all">
+              <Button type="submit" disabled={isSubmitting} className="w-full h-12 rounded-xl font-bold transition-all">
                 {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Clock className="w-4 h-4 mr-2" />}
                 Randevu Al
               </Button>
@@ -261,6 +300,8 @@ export default function LawyerBookingWidget({
             <h4 className="font-bold text-foreground">Tələbiniz göndərildi!</h4>
             <p className="text-xs text-muted-foreground mt-1">Konsultasiyalarım səhifəsinə yönləndirilirsiniz...</p>
           </div>
+        )}
+        </>
         )}
       </div>
 

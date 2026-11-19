@@ -14,12 +14,13 @@ export default async function LawyersDirectoryPage({
   const q = params.q?.toLowerCase() || ''
   const categoryId = params.category || ''
 
-  // Build the query
+  // Build the query (only admin-verified lawyers/jurists appear in catalog)
   let query = supabase
     .from('profiles')
     .select('*')
     .eq('role', 'lawyer')
-    .order('is_verified', { ascending: false })
+    .eq('is_verified', true)
+    .order('created_at', { ascending: false })
 
   // Apply filters
   if (categoryId) {
@@ -89,7 +90,9 @@ export default async function LawyersDirectoryPage({
                           <Shield className="w-4 h-4 text-blue-500 fill-blue-500" />
                         )}
                       </h3>
-                      <p className="text-sm text-primary font-medium">Hüquqşünas / Vəkil</p>
+                      <p className="text-sm text-primary font-medium">
+                        {(lawyer.license_number || '').startsWith('HÜQ:') ? 'Hüquqşünas' : 'Vəkil'}
+                      </p>
                     </div>
                   </div>
 

@@ -24,6 +24,9 @@ export async function GET(request: Request) {
         if (typeof meta.experience_years === 'number') profileUpdate.experience_years = meta.experience_years
         if (meta.bio) profileUpdate.bio = meta.bio
         if (Array.isArray(meta.specialties)) profileUpdate.specialties = meta.specialties
+        if (Array.isArray(meta.workplaces)) profileUpdate.workplaces = meta.workplaces
+        if (Array.isArray(meta.education)) profileUpdate.education = meta.education
+        if (typeof meta.hourly_rate === 'number') profileUpdate.hourly_rate = meta.hourly_rate
 
         await supabase
           .from('profiles')
