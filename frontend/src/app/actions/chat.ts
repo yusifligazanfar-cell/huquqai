@@ -943,7 +943,11 @@ ${query}`;
       for (const candidate of [cleanedContent, sanitizeJsonControlChars(cleanedContent)]) {
         try {
           const obj = JSON.parse(candidate);
-          if (obj && typeof obj === "object" && (typeof obj.cavab === "string" || typeof obj.answer === "string")) {
+          if (
+            obj &&
+            typeof obj === "object" &&
+            (typeof obj.cavab === "string" || typeof obj.answer === "string" || obj.insufficient_sources === true)
+          ) {
             return obj;
           }
         } catch {
@@ -1003,7 +1007,13 @@ ${query}`;
     }
 
     // 6. HONEST ABSTENTION + 2-STAGE ZERO-HALLUCINATION BACKEND AUDIT GATE (BEFORE RETURNING TO USER!)
-    if (!usedLlmFallback && parsedJson?.insufficient_sources === true) {
+    const hasStrongStatutoryGrounding =
+      primaryScore >= 580 ||
+      lawMatch.confidence === "explicit" ||
+      lawMatch.confidence === "strong" ||
+      Boolean(queryAnalysis.targetArticleNum);
+
+    if (!usedLlmFallback && parsedJson?.insufficient_sources === true && !hasStrongStatutoryGrounding) {
       return buildInsufficientSourceResponse(
         query,
         typeof parsedJson.missing_reason === "string" ? parsedJson.missing_reason : undefined
@@ -1037,7 +1047,7 @@ ${query}`;
         8500
       );
       if (audit) {
-        if (audit.insufficient_sources) {
+        if (audit.insufficient_sources && !hasStrongStatutoryGrounding) {
           return buildInsufficientSourceResponse(
             query,
             audit.issues[0] || "Tapılan mənbələr bu konkret suala birbaşa normativ cavab vermir."
@@ -1064,31 +1074,47 @@ ${query}`;
           [
             ...baseMessages,
             {
+              role: "assistant",
+              content: JSON.stringify({
+                cavab: validated.answer,
+                maddeler: validated.maddeler,
+                legal_basis: validated.legal_basis,
+                follow_ups: followUps,
+              }),
+            },
+            {
               role: "user",
-              content: `MÜSTƏQİL HÜQUQİ AUDİT XƏTA HESABATI:\n${issueBullets}\n\nTƏLƏB: Yuxarıdakı BÜTÜN xətaları DƏQİQ DÜZƏLT! Uydurma maddə/bölmə nömrələrini TAMAMİLƏ SİL, qüvvədən düşmüş ([QÜVVƏDƏN DÜŞÜB]) bəndləri ləğv olunmuş kimi qeyd et, əsas hal üçün doğru bəndi və məbləği yaz, "lazımi keyfiyyətli" kimi ifadələrin mənasını əsla tərsinə çevirmə. Əgər [MƏNBƏ 1..N] suala ümumiyyətlə cavab vermirsə, "insufficient_sources": true qaytar. YALNIZ etibarlı JSON yaz.`,
+              content: `Yuxarıdakı qaralama cavabında müstəqil hüquqi audit bu nöqsanları aşkar etdi:\n${issueBullets}\n\nTƏLƏB:\n1. "## Hüquqi sual" başlığının altında YALNIZ istifadəçinin əsl sualını olduğu kimi saxla: "${query}" (əsla bu təlimatı sual kimi yazma!).\n2. Qeyd olunan nöqsanları [MƏNBƏ 1..N] mətninə tam uyğun düzəlt, "insufficient_sources": false saxla və tam, kəsilməmiş JSON qaytar.`,
             },
           ],
           4500
         );
         const correctedJson = parseRawLlmJson(correctiveRaw);
-        if (correctedJson?.insufficient_sources === true) {
+        if (correctedJson?.insufficient_sources === true && !hasStrongStatutoryGrounding) {
           return buildInsufficientSourceResponse(
             query,
             typeof correctedJson.missing_reason === "string" ? correctedJson.missing_reason : undefined
           );
         }
-        const revalidated = validateLegalResponse(correctedJson, allRetrievedChunks, contextChunks);
-        if (
-          (revalidated.ungrounded_articles?.length ?? 0) <= (validated.ungrounded_articles?.length ?? 0) &&
-          revalidated.answer.length >= 120
-        ) {
-          validated = revalidated;
-          auditVerified = (revalidated.ungrounded_articles?.length ?? 0) === 0;
-          if (Array.isArray(correctedJson?.follow_ups) && correctedJson.follow_ups.length > 0) {
-            followUps = correctedJson.follow_ups
-              .map((x: unknown) => String(x || "").trim())
-              .filter((s: string) => s.length >= 8 && s.length <= 140)
-              .slice(0, 3);
+        if (typeof correctedJson?.cavab === "string" && correctedJson.cavab.trim().length >= 120) {
+          // Ensure "## Hüquqi sual" always displays the user's real question, never the audit instruction
+          correctedJson.cavab = correctedJson.cavab.replace(
+            /^(\s*##\s*Hüquqi sual\s*\n)[^\n]+/i,
+            `$1${query}`
+          );
+          const revalidated = validateLegalResponse(correctedJson, allRetrievedChunks, contextChunks);
+          if (
+            (revalidated.ungrounded_articles?.length ?? 0) <= (validated.ungrounded_articles?.length ?? 0) &&
+            revalidated.answer.length >= 120
+          ) {
+            validated = revalidated;
+            auditVerified = (revalidated.ungrounded_articles?.length ?? 0) === 0;
+            if (Array.isArray(correctedJson?.follow_ups) && correctedJson.follow_ups.length > 0) {
+              followUps = correctedJson.follow_ups
+                .map((x: unknown) => String(x || "").trim())
+                .filter((s: string) => s.length >= 8 && s.length <= 140)
+                .slice(0, 3);
+            }
           }
         }
       } catch (retryErr: any) {

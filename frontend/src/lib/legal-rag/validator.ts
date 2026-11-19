@@ -517,7 +517,8 @@ export function validateLegalResponse(
       }
     }
 
-    if (!judicialSecIsEmpty && /(?:ali məhkəmə|plenum|konstitusiya məhkəməsi)/i.test(answer)) {
+    const citesJudicialInProse = !judicialSecIsEmpty && /(?:ali məhkəmə|plenum|konstitusiya məhkəməsi)/i.test(answer);
+    if (citesJudicialInProse) {
       for (const jc of refChunks.filter((c) => c.lawId.startsWith("judicial_"))) {
         pushVerifiedEntry({
           lawName: jc.lawName,
@@ -526,8 +527,8 @@ export function validateLegalResponse(
           retrievedMatch: jc,
         });
       }
-    } else if (judicialSecIsEmpty) {
-      // Remove unused judicial cards if no judicial holding was actually cited in the answer
+    } else {
+      // Remove unused judicial cards if no judicial holding was actually cited in the answer prose
       for (let i = verifiedSources.length - 1; i >= 0; i--) {
         if (verifiedSources[i].source_id.startsWith("cf_judicial_")) {
           verifiedSources.splice(i, 1);
