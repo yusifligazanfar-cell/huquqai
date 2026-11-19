@@ -467,16 +467,27 @@ export function validateLegalResponse(
       );
       // Strip fabricated inline section references like "(Ali Məhkəmə qərarı, bölmə 10.4)" or ", bölmə 10.4"
       answer = answer.replace(
-        new RegExp(`\\s*\\([^)]*\\bbölmə\\s+${esc}\\b[^)]*\\)`, "gi"),
+        new RegExp(`\\s*\\([^)]*\\b(?:bölmə|maddə|CM|MPM|CPM|İXM)\\s+${esc}(?:[-–]\\d+)?\\b[^)]*\\)`, "gi"),
         ""
       );
       answer = answer.replace(
         new RegExp(`,?\\s*\\bbölmə\\s+${esc}\\b`, "gi"),
         ""
       );
+      answer = answer.replace(
+        new RegExp(`(?:Azərbaycan Respublikasının\\s+)?[A-ZƏÖÜĞŞÇ][a-zəöüğışç]+(?:\\s+[A-ZƏÖÜĞŞÇ][a-zəöüğışç]+)*\\s+Məcəlləsinin\\s+${esc}\\s*[-–]?\\s*c[ıiuü]\\s+maddəsin[əi](?:\\s*\\([^)]*\\))?`, "gi"),
+        "qanunvericiliyə"
+      );
     }
     if (ungroundedArticles.length > 0) {
       answer = answer.replace(/\n{3,}/g, "\n\n").trim();
+      // Re-evaluate remaining ungrounded articles after deterministic purge
+      const stillUngrounded = ungroundedArticles.filter((art) => {
+        const esc = art.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        return new RegExp(`(?:Maddə\\s+${esc}\\b|\\b${esc}\\s*[-–]?\\s*c[ıiuü]\\s*maddə|\\bbölmə\\s+${esc}\\b)`, "i").test(answer);
+      });
+      ungroundedArticles.length = 0;
+      ungroundedArticles.push(...stillUngrounded);
     }
   }
 
@@ -541,11 +552,12 @@ export function validateLegalResponse(
       }
     }
 
-    // Normalize Unicode non-breaking hyphens and clean artifacts like "Maddə 330-0" -> "Maddə 330"
+    // Normalize Unicode non-breaking hyphens and clean artifacts like "Maddə 330-0" -> "Maddə 330" and "1-2 k manat" -> "1-2 min manat"
     answer = answer
       .replace(/[\u2011\u2010]/g, "-")
       .replace(/\b(Maddə\s+\d+)-0\b/gi, "$1")
-      .replace(/\b(\d+)-0(\s+maddə)/gi, "$1-cu$2");
+      .replace(/\b(\d+)-0(\s+maddə)/gi, "$1-cu$2")
+      .replace(/\b(\d+(?:\s*[-–]\s*\d+)?)\s*[\u202F\u00A0\s]*k\s+(manat|cərimə)/gi, "$1 min $2");
 
     // Convert "(mənbə 6)" / "[mənbə 6]" prose markers into standard [6] before linkifying
     answer = answer.replace(/[(\[]\s*mənbə\s+(\d{1,2})\s*[)\]]/gi, "[$1]");
