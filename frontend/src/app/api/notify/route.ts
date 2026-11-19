@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, warning: 'RESEND_API_KEY missing' })
     }
     const resend = new Resend(resendApiKey)
-    const { consultationId, event } = await req.json()
+    const { consultationId, event, meetingUrl } = await req.json()
 
     if (!consultationId) {
       return NextResponse.json({ error: 'consultationId required' }, { status: 400 })
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
       dateStr = d.toLocaleDateString('az-AZ', { day: '2-digit', month: 'long', year: 'numeric' })
     }
 
-    const meetLink = 'https://nitrocalls.site'
+    const meetLink = meetingUrl || `https://huquqai.az/consultations/${consultationId}`
 
     if (event === 'new_booking') {
       if (!lawyerEmail) {

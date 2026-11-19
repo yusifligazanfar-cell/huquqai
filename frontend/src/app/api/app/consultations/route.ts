@@ -45,20 +45,43 @@ export async function POST(req: Request) {
       }
     )
 
-    if (ok && data?.consultation?.id && process.env.CAL_API_KEY && body.preferred_date && body.preferred_time) {
-      try {
-        const userRes = await cfFetch<{ user?: any }>(
-          `/app/auth/user?id=${encodeURIComponent(clientId)}`
-        )
-        const clientEmail = userRes?.data?.user?.email || session?.email
-        const clientName =
-          `${userRes?.data?.user?.name || ""} ${userRes?.data?.user?.surname || ""}`.trim() ||
-          "HuquqAI Müştəri"
+    return NextResponse.json(data, { status: ok ? 200 : status || 500 })
+  } catch (err: any) {
+    return NextResponse.json({ error: err?.message || "Server xətası" }, { status: 500 })
+  }
+}
 
-        if (clientEmail) {
+export async function PATCH(req: Request) {
+  try {
+    const session = await getServerSession()
+    if (!session?.userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+    const body = await req.json()
+    const { ok, status, data } = await cfFetch<{ success?: boolean; consultation?: any }>(
+      "/app/consultations",
+      {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }
+    )
+
+    let meetingUrl: string | null = null
+
+    if (ok && body.status === "Qəbul edildi" && body.id && process.env.CAL_API_KEY) {
+      try {
+        const detailRes = await cfFetch<{ consultation?: any }>(
+          `/app/consultations?id=${encodeURIComponent(String(body.id))}`
+        )
+        const cons = detailRes?.data?.consultation
+        const clientEmail = cons?.client?.email
+        const clientName =
+          `${cons?.client?.name || ""} ${cons?.client?.surname || ""}`.trim() || "HuquqAI Müştəri"
+
+        if (cons?.preferred_date && cons?.preferred_time && clientEmail) {
           const eventTypeId = Number(process.env.CAL_EVENT_TYPE_ID || 6391794)
-          const startIso = `${body.preferred_date}T${body.preferred_time}:00+04:00`
-          await fetch("https://api.cal.com/v2/bookings", {
+          const startIso = `${cons.preferred_date}T${cons.preferred_time}:00+04:00`
+          const calRes = await fetch("https://api.cal.com/v2/bookings", {
             method: "POST",
             headers: {
               Authorization: `Bearer ${process.env.CAL_API_KEY}`,
@@ -75,33 +98,27 @@ export async function POST(req: Request) {
                 language: "en",
               },
               metadata: {
-                consultationId: String(data.consultation.id),
-                lawyerId: String(body.lawyer_id),
+                consultationId: String(cons.id),
+                lawyerId: String(cons.lawyer_id || ""),
               },
             }),
-          }).catch(() => {})
+          })
+          const calJson = (await calRes.json().catch(() => ({}))) as any
+          const calData = calJson?.data || {}
+          meetingUrl =
+            calData.meetingUrl ||
+            calData.references?.[0]?.meetingUrl ||
+            (typeof calData.location === "string" && calData.location.startsWith("http")
+              ? calData.location
+              : null) ||
+            (calData.uid ? `https://app.cal.com/booking/${calData.uid}` : null)
         }
-      } catch {}
+      } catch (calErr) {
+        console.warn("Cal.com booking creation skipped:", calErr)
+      }
     }
 
-    return NextResponse.json(data, { status: ok ? 200 : status || 500 })
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || "Server xətası" }, { status: 500 })
-  }
-}
-
-export async function PATCH(req: Request) {
-  try {
-    const session = await getServerSession()
-    if (!session?.userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-    const body = await req.json()
-    const { ok, status, data } = await cfFetch("/app/consultations", {
-      method: "PATCH",
-      body: JSON.stringify(body),
-    })
-    return NextResponse.json(data, { status: ok ? 200 : status || 500 })
+    return NextResponse.json({ ...data, meetingUrl }, { status: ok ? 200 : status || 500 })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Server xətası" }, { status: 500 })
   }

@@ -58,6 +58,7 @@ export default function ConsultationClient({
     })
 
     if (res.ok) {
+      const patchJson = await res.json().catch(() => ({}))
       setStatus(newStatus)
       if (newStatus === 'Qəbul edildi' || newStatus === 'İmtina edildi') {
         try {
@@ -67,6 +68,7 @@ export default function ConsultationClient({
             body: JSON.stringify({
               consultationId: consultation.id,
               event: newStatus === 'İmtina edildi' ? 'rejected' : 'accepted',
+              meetingUrl: patchJson?.meetingUrl || undefined,
             }),
           })
         } catch (e) {

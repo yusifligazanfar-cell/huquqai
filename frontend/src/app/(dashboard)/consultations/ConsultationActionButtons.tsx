@@ -37,6 +37,8 @@ export default function ConsultationActionButtons({
       return
     }
 
+    const patchJson = await res.json().catch(() => ({}))
+
     // 2. Send email notification to client for both Accept & Reject
     try {
       await fetch("/api/notify", {
@@ -45,6 +47,7 @@ export default function ConsultationActionButtons({
         body: JSON.stringify({
           consultationId,
           event: newStatus === "İmtina edildi" ? "rejected" : "accepted",
+          meetingUrl: patchJson?.meetingUrl || undefined,
         }),
       })
       setFeedback(
