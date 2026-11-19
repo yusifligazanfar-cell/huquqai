@@ -1,33 +1,74 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { CategoryIcon } from "@/components/ui/category-icon"
+import categoriesData from "@/data/lawyer_categories.json"
 import {
   Mail,
   ArrowRight,
   Loader2,
   Scale,
-  LogIn,
-  UserPlus,
   User,
   Lock,
   Eye,
   EyeOff,
   KeyRound,
+  CheckCircle2,
+  Circle,
+  ShieldCheck,
+  Briefcase,
 } from "lucide-react"
 
+function getPasswordChecks(pw: string) {
+  return {
+    minLength: pw.length >= 8,
+    hasUpper: /[A-Z]/.test(pw),
+    hasDigit: /[0-9]/.test(pw),
+    hasSpecial: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(pw),
+  }
+}
+
 export default function LoginPage() {
+  const [accountRole, setAccountRole] = useState<"citizen" | "lawyer">("citizen")
   const [authMode, setAuthMode] = useState<"login" | "signup">("login")
   const [loginMethod, setLoginMethod] = useState<"password" | "otp">("password")
+
+  // Customer / Common Auth fields
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+
+  // Pre-signup email verification state
+  const [emailToken, setEmailToken] = useState("")
+  const [emailCode, setEmailCode] = useState("")
+  const [isCodeSent, setIsCodeSent] = useState(false)
+  const [isEmailVerified, setIsEmailVerified] = useState(false)
+  const [verifiedEmail, setVerifiedEmail] = useState("")
+  const [codeLoading, setCodeLoading] = useState(false)
+
+  // Lawyer onboarding step (only when accountRole === "lawyer" && authMode === "signup")
+  const [lawyerStep, setLawyerStep] = useState<1 | 2>(1)
+  const [practitionerType, setPractitionerType] = useState<"vekil" | "huquqsunas">("vekil")
+  const [licenseNumber, setLicenseNumber] = useState("")
+  const [educationDoc, setEducationDoc] = useState("")
+  const [experienceYears, setExperienceYears] = useState("")
+  const [hourlyRate, setHourlyRate] = useState("")
+  const [workplaceName, setWorkplaceName] = useState("")
+  const [workplaceAddress, setWorkplaceAddress] = useState("")
+  const [eduInstitution, setEduInstitution] = useState("")
+  const [eduDegree, setEduDegree] = useState("Bakalavr")
+  const [eduField, setEduField] = useState("Hüquqşünaslıq")
+  const [bio, setBio] = useState("")
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([])
+
   const [isOtpSent, setIsOtpSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [videoFailed, setVideoFailed] = useState(false)
@@ -35,14 +76,172 @@ export default function LoginPage() {
 
   const supabase = createClient()
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const roleParam = params.get("role")
+    const modeParam = params.get("mode")
+    if (roleParam === "lawyer") setAccountRole("lawyer")
+    if (modeParam === "signup") setAuthMode("signup")
+    if (modeParam === "login") setAuthMode("login")
+  }, [])
+
+  const pwChecks = getPasswordChecks(password)
+  const isPasswordStrong =
+    pwChecks.minLength && pwChecks.hasUpper && pwChecks.hasDigit && pwChecks.hasSpecial
+
+  const resetEmailVerification = () => {
+    setEmailToken("")
+    setEmailCode("")
+    setIsCodeSent(false)
+    setIsEmailVerified(false)
+    setVerifiedEmail("")
+  }
+
+  const handleEmailChange = (val: string) => {
+    setEmail(val)
+    if (isEmailVerified && val.trim().toLowerCase() !== verifiedEmail) {
+      resetEmailVerification()
+    }
+  }
+
+  const toggleSpecialty = (spec: string) => {
+    setSelectedSpecialties((prev) =>
+      prev.includes(spec) ? prev.filter((s) => s !== spec) : [...prev, spec]
+    )
+  }
+
+  const getNormalizedLicense = () => {
+    if (practitionerType === "vekil") return licenseNumber.trim()
+    const doc = educationDoc.trim()
+    return doc ? `HÜQ: ${doc}` : "HÜQ: Hüquqşünas"
+  }
+
+  const buildLawyerStructuredFields = () => {
+    const workplaces = workplaceName.trim()
+      ? [{ name: workplaceName.trim(), address: workplaceAddress.trim(), hours: "09:00 - 18:00" }]
+      : []
+    const education = eduInstitution.trim()
+      ? [{ degree: eduDegree.trim() || "Ali təhsil", institution: eduInstitution.trim(), field: eduField.trim() || "Hüquqşünaslıq" }]
+      : []
+    return {
+      workplaces,
+      education,
+      hourlyRate: parseInt(hourlyRate, 10) || 0,
+    }
+  }
+
+  const handleLawyerStep1Submit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setMessage(null)
+    const extra = buildLawyerStructuredFields()
+    const payload = JSON.stringify({
+      practitionerType,
+      name: firstName.trim(),
+      surname: lastName.trim(),
+      licenseNumber: getNormalizedLicense(),
+      experienceYears: parseInt(experienceYears, 10) || 0,
+      bio: bio.trim(),
+      specialties: selectedSpecialties,
+      workplaces: extra.workplaces,
+      education: extra.education,
+      hourlyRate: extra.hourlyRate,
+    })
+    try {
+      localStorage.setItem("pendingLawyerOnboarding", payload)
+      sessionStorage.setItem("pendingLawyerOnboarding", payload)
+    } catch {}
+    setLawyerStep(2)
+  }
+
+  const handleSendVerificationCode = async () => {
+    const cleanEmail = email.trim().toLowerCase()
+    if (!cleanEmail) {
+      setMessage({ text: "Əvvəlcə e-poçt ünvanınızı daxil edin.", type: "error" })
+      return
+    }
+    setCodeLoading(true)
+    setMessage(null)
+    try {
+      const res = await fetch("/api/auth/email-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "send", email: cleanEmail }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        setMessage({ text: data.error || "Təsdiq kodu göndərilmədi.", type: "error" })
+      } else {
+        setEmailToken(data.token)
+        setIsCodeSent(true)
+        setMessage({
+          text: "6 rəqəmli təsdiq kodu e-poçt ünvanınıza göndərildi. Kodu daxil edib təsdiqləyin.",
+          type: "success",
+        })
+      }
+    } catch {
+      setMessage({ text: "Şəbəkə xətası baş verdi.", type: "error" })
+    } finally {
+      setCodeLoading(false)
+    }
+  }
+
+  const handleVerifyEmailCode = async () => {
+    const cleanEmail = email.trim().toLowerCase()
+    if (!emailCode.trim()) {
+      setMessage({ text: "6 rəqəmli təsdiq kodunu daxil edin.", type: "error" })
+      return
+    }
+    setCodeLoading(true)
+    setMessage(null)
+    try {
+      const res = await fetch("/api/auth/email-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "verify",
+          email: cleanEmail,
+          code: emailCode.trim(),
+          token: emailToken,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.ok) {
+        setMessage({ text: data.error || "Təsdiq kodu yanlışdır.", type: "error" })
+      } else {
+        setIsEmailVerified(true)
+        setVerifiedEmail(cleanEmail)
+        setMessage({
+          text: "E-poçt ünvanınız təsdiqləndi! İndi şifrənizi təyin edib qeydiyyatı tamamlaya bilərsiniz.",
+          type: "success",
+        })
+      }
+    } catch {
+      setMessage({ text: "Şəbəkə xətası baş verdi.", type: "error" })
+    } finally {
+      setCodeLoading(false)
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setMessage(null)
 
     if (authMode === "signup") {
-      if (password.length < 6) {
-        setMessage({ text: "Şifrə ən azı 6 simvoldan ibarət olmalıdır.", type: "error" })
+      const cleanEmail = email.trim().toLowerCase()
+      if (!isEmailVerified || verifiedEmail !== cleanEmail) {
+        setMessage({
+          text: "Qeydiyyatdan keçməzdən əvvəl e-poçt ünvanınızı 6 rəqəmli kod ilə təsdiqləyin.",
+          type: "error",
+        })
+        setLoading(false)
+        return
+      }
+      if (!isPasswordStrong) {
+        setMessage({
+          text: "Şifrə minimum 8 simvol, 1 böyük hərf, 1 rəqəm və 1 özəl simvol içərməlidir.",
+          type: "error",
+        })
         setLoading(false)
         return
       }
@@ -53,29 +252,52 @@ export default function LoginPage() {
       }
 
       const fullName = `${firstName.trim()} ${lastName.trim()}`.trim()
+      const extra = buildLawyerStructuredFields()
+      const metadata =
+        accountRole === "lawyer"
+          ? {
+              role: "lawyer",
+              practitioner_type: practitionerType,
+              name: firstName.trim(),
+              surname: lastName.trim(),
+              full_name: fullName,
+              license_number: getNormalizedLicense(),
+              experience_years: parseInt(experienceYears, 10) || 0,
+              bio: bio.trim(),
+              specialties: selectedSpecialties,
+              workplaces: extra.workplaces,
+              education: extra.education,
+              hourly_rate: extra.hourlyRate,
+            }
+          : {
+              role: "citizen",
+              name: firstName.trim(),
+              surname: lastName.trim(),
+              full_name: fullName,
+            }
+
+      const redirectNext = accountRole === "lawyer" ? "?next=/account%3Frole=lawyer" : ""
       const { data, error } = await supabase.auth.signUp({
-        email: email.trim(),
+        email: cleanEmail,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-          data: {
-            role: "citizen",
-            name: firstName.trim(),
-            surname: lastName.trim(),
-            full_name: fullName,
-          },
+          emailRedirectTo: `${window.location.origin}/auth/callback${redirectNext}`,
+          data: metadata,
         },
       })
 
       if (error) {
         setMessage({ text: error.message, type: "error" })
       } else if (data.session) {
-        window.location.assign("/")
+        window.location.assign(accountRole === "lawyer" ? "/account?role=lawyer" : "/")
         return
       } else {
         setIsOtpSent(true)
         setMessage({
-          text: "Qeydiyyat tamamlandı! Hesabınızı aktivləşdirmək üçün e-poçtunuza göndərilən təsdiq linkinə klikləyin.",
+          text:
+            accountRole === "lawyer"
+              ? "Qeydiyyat tamamlandı! E-poçtunuza göndərilən linkə kliklədikdən sonra anketiniz admin yoxlamasına göndəriləcək."
+              : "Qeydiyyat tamamlandı! Hesabınızı aktivləşdirmək üçün e-poçtunuza göndərilən təsdiq linkinə klikləyin.",
           type: "success",
         })
       }
@@ -83,6 +305,7 @@ export default function LoginPage() {
       return
     }
 
+    // Login mode (for both citizen and lawyer)
     if (loginMethod === "password") {
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
@@ -101,14 +324,15 @@ export default function LoginPage() {
         return
       }
 
-      window.location.assign("/")
+      window.location.assign(accountRole === "lawyer" ? "/account" : "/")
       return
     }
 
+    const redirectNext = accountRole === "lawyer" ? "?next=/account" : ""
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: `${window.location.origin}/auth/callback${redirectNext}`,
       },
     })
 
@@ -126,7 +350,10 @@ export default function LoginPage() {
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
-      setMessage({ text: "Şifrə sıfırlamaq üçün əvvəlcə e-poçt ünvanınızı daxil edin.", type: "error" })
+      setMessage({
+        text: "Şifrə sıfırlamaq üçün əvvəlcə e-poçt ünvanınızı daxil edin.",
+        type: "error",
+      })
       return
     }
     setLoading(true)
@@ -147,10 +374,16 @@ export default function LoginPage() {
 
   const handleOAuthLogin = async (provider: "google" | "facebook") => {
     setLoading(true)
+    const redirectNext =
+      accountRole === "lawyer"
+        ? authMode === "signup"
+          ? "?next=/account%3Frole=lawyer"
+          : "?next=/account"
+        : ""
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback${redirectNext}`,
       },
     })
 
@@ -159,6 +392,8 @@ export default function LoginPage() {
       setLoading(false)
     }
   }
+
+  const showLawyerStep1 = accountRole === "lawyer" && authMode === "signup" && lawyerStep === 1
 
   return (
     <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-white dark:bg-slate-950">
@@ -179,9 +414,8 @@ export default function LoginPage() {
         )}
       </div>
 
-      {/* RIGHT PART: Modern Clean Login Form */}
-      <div className="flex flex-col justify-between min-h-screen px-5 py-8 sm:px-10 lg:px-14 xl:px-20 bg-slate-50/70 dark:bg-slate-950">
-        {/* Mobile Top Compact Video/Brand Header */}
+      {/* RIGHT PART: Unified Modern Auth Form */}
+      <div className="flex flex-col justify-between min-h-screen px-5 py-8 sm:px-10 lg:px-12 xl:px-16 bg-slate-50/70 dark:bg-slate-950 overflow-y-auto">
         <div className="lg:hidden flex items-center justify-center gap-2.5 pt-2">
           <img src="/logo.png" alt="HÜQUQ AI Logo" className="w-9 h-9 object-contain" />
           <span className="text-xl font-black tracking-tight text-slate-950 dark:text-white">
@@ -189,23 +423,70 @@ export default function LoginPage() {
           </span>
         </div>
 
-        <div className="w-full max-w-[460px] mx-auto my-auto py-6">
-          <div className="mb-6 text-center lg:text-left">
+        <div className={`w-full ${showLawyerStep1 ? "max-w-[600px]" : "max-w-[460px]"} mx-auto my-auto py-6 transition-all`}>
+          <div className="mb-5 text-center lg:text-left">
             <div className="hidden lg:inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 mb-4 p-2">
               <img src="/logo.png" alt="HÜQUQ AI Logo" className="w-full h-full object-contain" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-950 dark:text-white">
-              {authMode === "signup" ? "Hesab Yaradın" : "Xoş gəldiniz"}
-            </h1>
-            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1.5">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 dark:text-white">
               {authMode === "signup"
-                ? "Adi müştəri kimi qeydiyyatdan keçin"
+                ? accountRole === "lawyer"
+                  ? "Vəkil / Hüquqşünas Qeydiyyatı"
+                  : "Hesab Yaradın"
+                : accountRole === "lawyer"
+                  ? "Vəkil / Hüquqşünas Girişi"
+                  : "Xoş gəldiniz"}
+            </h1>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+              {authMode === "signup"
+                ? accountRole === "lawyer"
+                  ? lawyerStep === 1
+                    ? "Müştərilərin sizi tapa bilməsi üçün anketinizi doldurun"
+                    : "E-poçtunuzu təsdiqləyin və şifrə təyin edin"
+                  : "Adi müştəri kimi qeydiyyatdan keçin"
                 : "Şəxsi hüquq köməkçinizə daxil olun"}
             </p>
           </div>
 
-          <div className="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl shadow-slate-200/50 dark:shadow-black/30">
-            <div className="grid grid-cols-2 gap-1.5 p-1 mb-5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800">
+          <div className="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl shadow-slate-200/50 dark:shadow-black/30 space-y-4">
+            {/* Role Selector */}
+            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/70 dark:border-emerald-800/50">
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountRole("citizen")
+                  setMessage(null)
+                  setIsOtpSent(false)
+                }}
+                className={`h-10 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  accountRole === "citizen"
+                    ? "bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-300 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                <User className="w-4 h-4" />
+                <span>Adi Müştəri</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAccountRole("lawyer")
+                  setMessage(null)
+                  setIsOtpSent(false)
+                }}
+                className={`h-10 rounded-lg text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 transition-all ${
+                  accountRole === "lawyer"
+                    ? "bg-white dark:bg-slate-900 text-emerald-700 dark:text-emerald-300 shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                <Scale className="w-4 h-4" />
+                <span>Vəkil / Hüquqşünas</span>
+              </button>
+            </div>
+
+            {/* Action Tabs: Daxil Ol / Qeydiyyat */}
+            <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => {
@@ -225,6 +506,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => {
                   setAuthMode("signup")
+                  setLawyerStep(1)
                   setMessage(null)
                   setIsOtpSent(false)
                 }}
@@ -240,7 +522,7 @@ export default function LoginPage() {
 
             {message && (
               <div
-                className={`p-3.5 mb-5 rounded-2xl text-sm font-medium border ${
+                className={`p-3.5 rounded-2xl text-sm font-medium border ${
                   message.type === "error"
                     ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400"
                     : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300"
@@ -250,16 +532,185 @@ export default function LoginPage() {
               </div>
             )}
 
-            {!isOtpSent ? (
-              <form onSubmit={handleSubmit} className="space-y-3.5 mb-5">
-                {authMode === "signup" && (
+            {showLawyerStep1 ? (
+              <form onSubmit={handleLawyerStep1Submit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setPractitionerType("vekil")}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      practitionerType === "vekil"
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                        : "bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+                    }`}
+                  >
+                    <p className="text-sm font-bold">Vəkil</p>
+                    <p className={`text-[11px] mt-0.5 ${practitionerType === "vekil" ? "text-emerald-100" : "text-slate-500"}`}>
+                      Vəkillər Kollegiyası üzvü
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPractitionerType("huquqsunas")}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      practitionerType === "huquqsunas"
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                        : "bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+                    }`}
+                  >
+                    <p className="text-sm font-bold">Hüquqşünas</p>
+                    <p className={`text-[11px] mt-0.5 ${practitionerType === "huquqsunas" ? "text-emerald-100" : "text-slate-500"}`}>
+                      Ali hüquq təhsilli mütəxəssis
+                    </p>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Input
+                    required
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Adınız (Məs: Əli)"
+                    className="h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                  />
+                  <Input
+                    required
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Soyadınız (Məs: Əliyev)"
+                    className="h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {practitionerType === "vekil" ? (
+                    <Input
+                      required
+                      value={licenseNumber}
+                      onChange={(e) => setLicenseNumber(e.target.value)}
+                      placeholder="Vəkil Vəsiqəsi № (VK-12345)"
+                      className="h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                    />
+                  ) : (
+                    <Input
+                      required
+                      value={educationDoc}
+                      onChange={(e) => setEducationDoc(e.target.value)}
+                      placeholder="Diplom / Təhsil sənədi №"
+                      className="h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                    />
+                  )}
+                  <Input
+                    required
+                    type="number"
+                    min="0"
+                    max="60"
+                    value={experienceYears}
+                    onChange={(e) => setExperienceYears(e.target.value)}
+                    placeholder="İş Təcrübəsi (İl)"
+                    className="h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input
+                    type="number"
+                    min="0"
+                    value={hourlyRate}
+                    onChange={(e) => setHourlyRate(e.target.value)}
+                    placeholder="Qiymət (AZN/saat)"
+                    className="h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                  />
+                  <Input
+                    value={workplaceName}
+                    onChange={(e) => setWorkplaceName(e.target.value)}
+                    placeholder="İş yeri / Büro"
+                    className="h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                  />
+                  <Input
+                    value={workplaceAddress}
+                    onChange={(e) => setWorkplaceAddress(e.target.value)}
+                    placeholder="Ofis ünvanı"
+                    className="h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input
+                    required
+                    value={eduInstitution}
+                    onChange={(e) => setEduInstitution(e.target.value)}
+                    placeholder="Universitet (Məs: BDU)"
+                    className="h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                  />
+                  <Input
+                    value={eduDegree}
+                    onChange={(e) => setEduDegree(e.target.value)}
+                    placeholder="Dərəcə (Bakalavr/Magistr)"
+                    className="h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                  />
+                  <Input
+                    value={eduField}
+                    onChange={(e) => setEduField(e.target.value)}
+                    placeholder="İxtisas"
+                    className="h-11 rounded-xl bg-slate-50/70 dark:bg-slate-950"
+                  />
+                </div>
+
+                <Textarea
+                  required
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder="Özünüz və təcrübəniz haqqında qısa məlumat (Bio)..."
+                  className="min-h-[80px] rounded-xl resize-none bg-slate-50/70 dark:bg-slate-950"
+                />
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                    İxtisaslaşdığınız Hüquq Sahələri
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-44 overflow-y-auto pr-1">
+                    {categoriesData.map((category) => {
+                      const isSelected = selectedSpecialties.includes(category.name_az)
+                      return (
+                        <button
+                          key={category.id}
+                          type="button"
+                          onClick={() => toggleSpecialty(category.name_az)}
+                          className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all ${
+                            isSelected
+                              ? "bg-emerald-600 text-white border-emerald-600"
+                              : "bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-emerald-500/50"
+                          }`}
+                        >
+                          <CategoryIcon
+                            id={category.id}
+                            className={`w-4 h-4 shrink-0 ${isSelected ? "text-white" : "text-slate-500"}`}
+                          />
+                          <span className="text-xs font-medium leading-tight line-clamp-2">
+                            {category.name_az}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <Button type="submit" className="w-full h-12 font-bold rounded-xl">
+                  Növbəti Addım: E-poçt və Şifrə
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </form>
+            ) : !isOtpSent ? (
+              <form onSubmit={handleSubmit} className="space-y-3.5">
+                {authMode === "signup" && accountRole === "citizen" && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="relative group/input">
                       <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
                       <Input
                         type="text"
                         placeholder="Adınız"
-                        className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-sm rounded-xl transition-all"
+                        className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl text-sm"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         required
@@ -270,7 +721,7 @@ export default function LoginPage() {
                       <Input
                         type="text"
                         placeholder="Soyadınız"
-                        className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-sm rounded-xl transition-all"
+                        className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl text-sm"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         required
@@ -279,16 +730,60 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                <div className="relative group/input">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
-                  <Input
-                    type="email"
-                    placeholder="E-poçt ünvanınız"
-                    className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-sm rounded-xl transition-all"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
+                {/* Email + Verify button on signup */}
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <div className="relative flex-1 group/input">
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
+                      <Input
+                        type="email"
+                        placeholder="E-poçt ünvanınız"
+                        className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+                        value={email}
+                        onChange={(e) => handleEmailChange(e.target.value)}
+                        required
+                      />
+                    </div>
+                    {authMode === "signup" && !isEmailVerified && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSendVerificationCode}
+                        disabled={codeLoading || !email.trim()}
+                        className="h-12 px-3.5 rounded-xl font-semibold text-xs shrink-0 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300"
+                      >
+                        {codeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : isCodeSent ? "Yenidən" : "Kodu göndər"}
+                      </Button>
+                    )}
+                    {authMode === "signup" && isEmailVerified && (
+                      <div className="h-12 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 text-xs font-bold shrink-0">
+                        <ShieldCheck className="w-4 h-4" />
+                        <span>Təsdiqləndi</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {authMode === "signup" && isCodeSent && !isEmailVerified && (
+                    <div className="flex gap-2">
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={6}
+                        placeholder="E-poçta gələn 6 rəqəmli kod"
+                        className="h-11 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl text-sm tracking-widest font-bold text-center"
+                        value={emailCode}
+                        onChange={(e) => setEmailCode(e.target.value)}
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleVerifyEmailCode}
+                        disabled={codeLoading || emailCode.trim().length < 6}
+                        className="h-11 px-4 rounded-xl text-xs font-bold shrink-0"
+                      >
+                        {codeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Təsdiqlə"}
+                      </Button>
+                    </div>
+                  )}
                 </div>
 
                 {(authMode === "signup" || loginMethod === "password") && (
@@ -296,11 +791,11 @@ export default function LoginPage() {
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
                     <Input
                       type={showPassword ? "text" : "password"}
-                      placeholder={authMode === "signup" ? "Şifrə (min. 6 simvol)" : "Şifrəniz"}
-                      className="pl-10 pr-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-sm rounded-xl transition-all"
+                      placeholder={authMode === "signup" ? "Şifrə təyin edin" : "Şifrəniz"}
+                      className="pl-10 pr-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl text-sm"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      minLength={6}
+                      minLength={authMode === "signup" ? 8 : 6}
                       required
                     />
                     <button
@@ -315,18 +810,43 @@ export default function LoginPage() {
                 )}
 
                 {authMode === "signup" && (
-                  <div className="relative group/input">
-                    <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
-                    <Input
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Şifrəni təsdiqləyin"
-                      className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-sm rounded-xl transition-all"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      minLength={6}
-                      required
-                    />
-                  </div>
+                  <>
+                    <div className="relative group/input">
+                      <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        placeholder="Şifrəni təsdiqləyin"
+                        className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        minLength={8}
+                        required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200/70 dark:border-slate-800 text-[11px]">
+                      {[
+                        { ok: pwChecks.minLength, label: "Minimum 8 simvol" },
+                        { ok: pwChecks.hasUpper, label: "1 böyük hərf (A-Z)" },
+                        { ok: pwChecks.hasDigit, label: "1 rəqəm (0-9)" },
+                        { ok: pwChecks.hasSpecial, label: "1 özəl simvol (!@#...)" },
+                      ].map((rule) => (
+                        <div
+                          key={rule.label}
+                          className={`flex items-center gap-1.5 font-medium ${
+                            rule.ok ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500"
+                          }`}
+                        >
+                          {rule.ok ? (
+                            <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                          ) : (
+                            <Circle className="w-3.5 h-3.5 shrink-0" />
+                          )}
+                          <span>{rule.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </>
                 )}
 
                 {authMode === "login" && (
@@ -357,8 +877,11 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full h-12 font-bold text-sm sm:text-base rounded-xl transition-all mt-1"
-                  disabled={loading}
+                  className="w-full h-12 font-bold text-sm sm:text-base rounded-xl transition-all"
+                  disabled={
+                    loading ||
+                    (authMode === "signup" && (!isEmailVerified || !isPasswordStrong))
+                  }
                 >
                   {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                   {loading
@@ -370,9 +893,19 @@ export default function LoginPage() {
                         : "Giriş Linki (OTP) Göndər"}
                   {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
                 </Button>
+
+                {accountRole === "lawyer" && authMode === "signup" && (
+                  <button
+                    type="button"
+                    onClick={() => setLawyerStep(1)}
+                    className="w-full text-center text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 pt-1"
+                  >
+                    &larr; Anket məlumatlarına qayıt
+                  </button>
+                )}
               </form>
             ) : (
-              <div className="mb-5">
+              <div>
                 <Button
                   variant="outline"
                   className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-sm"
@@ -383,93 +916,72 @@ export default function LoginPage() {
               </div>
             )}
 
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200 dark:border-slate-800" />
-            </div>
-            <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wider">
-              <span className="bg-white dark:bg-slate-900 px-3 text-slate-400">
-                Və ya Sosial Şəbəkələrlə
-              </span>
-            </div>
-          </div>
+            {!showLawyerStep1 && (
+              <>
+                <div className="relative my-2">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+                  </div>
+                  <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wider">
+                    <span className="bg-white dark:bg-slate-900 px-3 text-slate-400">
+                      Və ya Sosial Şəbəkələrlə
+                    </span>
+                  </div>
+                </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              className="h-12 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800 flex items-center justify-center gap-2.5 rounded-xl transition-all"
-              onClick={() => handleOAuthLogin("google")}
-              disabled={loading}
-            >
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              <span className="font-semibold text-xs sm:text-sm text-slate-700 dark:text-slate-200">
-                Google
-              </span>
-            </Button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800 flex items-center justify-center gap-2.5 rounded-xl transition-all"
+                    onClick={() => handleOAuthLogin("google")}
+                    disabled={loading}
+                  >
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                      />
+                    </svg>
+                    <span className="font-semibold text-xs sm:text-sm text-slate-700 dark:text-slate-200">
+                      Google {accountRole === "lawyer" ? "(Vəkil)" : ""}
+                    </span>
+                  </Button>
 
-            <Button
-              type="button"
-              variant="outline"
-              className="h-12 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800 flex items-center justify-center gap-2.5 rounded-xl transition-all"
-              onClick={() => handleOAuthLogin("facebook")}
-              disabled={loading}
-            >
-              <svg className="w-4 h-4 text-[#1877F2] shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.114.198v3.625c-.523-.025-1.051-.039-1.586-.039-1.183 0-1.566.273-1.566 1.436v1.942h3.906l-.511 3.667h-3.395v7.98h-5.288z" />
-              </svg>
-              <span className="font-semibold text-xs sm:text-sm text-slate-700 dark:text-slate-200">
-                Facebook
-              </span>
-            </Button>
-          </div>
-
-          </div>
-
-          {/* Lawyer Section */}
-          <div className="mt-4 bg-white/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 text-center">
-            <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 mb-3 flex items-center justify-center gap-1.5">
-              <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Vəkil və ya hüquqşünas kimi fəaliyyət göstərirsiniz?</span>
-            </p>
-            <div className="grid grid-cols-2 gap-2.5">
-              <Link
-                href="/lawyer-signup?mode=login"
-                className="inline-flex items-center justify-center w-full h-11 gap-2 rounded-xl bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold text-sm border border-slate-200 dark:border-slate-700 transition-all"
-              >
-                <LogIn className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <span>Daxil Ol</span>
-              </Link>
-              <Link
-                href="/lawyer-signup"
-                className="inline-flex items-center justify-center w-full h-11 gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm border border-emerald-200 dark:border-emerald-800/60 transition-all"
-              >
-                <UserPlus className="w-4 h-4" />
-                <span>Qeydiyyat</span>
-              </Link>
-            </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-11 bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 border-slate-200 dark:border-slate-800 flex items-center justify-center gap-2.5 rounded-xl transition-all"
+                    onClick={() => handleOAuthLogin("facebook")}
+                    disabled={loading}
+                  >
+                    <svg className="w-4 h-4 text-[#1877F2] shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M9.101 23.691v-7.98H6.627v-3.667h2.474v-1.58c0-4.085 1.848-5.978 5.858-5.978.401 0 .955.042 1.468.103a8.68 8.68 0 0 1 1.114.198v3.625c-.523-.025-1.051-.039-1.586-.039-1.183 0-1.566.273-1.566 1.436v1.942h3.906l-.511 3.667h-3.395v7.98h-5.288z" />
+                    </svg>
+                    <span className="font-semibold text-xs sm:text-sm text-slate-700 dark:text-slate-200">
+                      Facebook {accountRole === "lawyer" ? "(Vəkil)" : ""}
+                    </span>
+                  </Button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
         {/* Footer Links */}
-        <div className="text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 flex items-center justify-center gap-4">
+        <div className="text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 flex items-center justify-center gap-4 pt-4">
           <Link href="/privacy" className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors hover:underline">
             Məxfilik Siyasəti
           </Link>
