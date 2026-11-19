@@ -61,9 +61,9 @@ export default function DashboardPage() {
               aria-label="Sualı göndər"
               title="Sualı göndər"
               disabled={!query.trim()}
-              className="absolute right-3 rounded-full h-12 w-12 bg-primary text-white hover:opacity-90 shadow-[0_4px_15px_rgba(234,88,12,0.4)] transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
+              className="absolute right-3 rounded-full p-0 flex items-center justify-center h-12 w-12 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
             >
-              <Send className="h-5 w-5 ml-1" />
+              <Send className="h-5 w-5" />
             </Button>
           </form>
         </div>

@@ -768,9 +768,9 @@ function ChatContent() {
                       aria-label="Sualı göndər"
                       title="Sualı göndər"
                       disabled={!input.trim() || isLoading}
-                      className="rounded-full h-10 w-10 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
+                      className="rounded-full p-0 flex items-center justify-center h-10 w-10 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
                     >
-                      <Send className="h-4 w-4 md:ml-0.5" />
+                      <Send className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -1047,9 +1047,9 @@ function ChatContent() {
                   aria-label="Sualı göndər"
                   title="Sualı göndər"
                   disabled={!input.trim() || isLoading}
-                  className="rounded-full h-10 w-10 md:h-11 md:w-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
+                  className="rounded-full p-0 flex items-center justify-center h-10 w-10 md:h-11 md:w-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
                 >
-                  <Send className="h-4 w-4 md:h-5 md:w-5 md:ml-0.5" />
+                  <Send className="h-4 w-4 md:h-5 md:w-5" />
                 </Button>
               </div>
             </div>
