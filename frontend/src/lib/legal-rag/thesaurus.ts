@@ -48,16 +48,17 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     id: "labor_termination",
     domain: "Əmək hüququ",
     primaryLawId: "emek",
+    primaryDocId: "46943",
     triggerPhrases: [
       "isden cixarma", "isden cixarilma", "isden cixmaq", "oz erizesi", "xeberdarliq etmeden",
       "xeberdarliqsiz", "is muqavilesine xitam", "muqavilenin legvi", "isden azad", "isden qovulma", "is yerinden cixarilma",
-      "emek muqavilesine xitam"
+      "emek muqavilesine xitam", "emek muqavilesi legv", "emek muqavilesinin legv", "emek muqavilesi xitam"
     ],
     expandedTerms: [
       "emek muqavilesine xitam", "iscinin tesebbusu ile xitam", "isegoturen terefinden xitam",
       "emek muqavilesine xitam verilmesinin esaslari", "iscilerin teminatlari", "xeberdarliq muddetleri",
       "emek vezifelerinin kobud sekilde pozulmasi", "sinaq muddeti", "iscinin teqsirli hereketleri",
-      "staj", "muddet", "xitam verilmesi qaydalari", "emek mecellesi madde 68", "emek mecellesi madde 70",
+      "staj", "muddet", "xitam verilmesi qaydalari", "emek mecellesi madde 68", "emek mecellesi madde 69", "emek mecellesi madde 70",
       "emek mecellesi madde 294", "emek mecellesi madde 296", "emek mecellesi madde 300"
     ],
     priorityArticles: ["68", "69", "70", "71", "72", "73", "74", "76", "77", "79", "80", "84", "294", "296", "300"],

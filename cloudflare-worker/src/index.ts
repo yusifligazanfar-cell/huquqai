@@ -185,10 +185,48 @@ function extractArticleNumbersAz(query: string): string[] {
   return found;
 }
 
+const STATUTORY_STEM_SYNONYMS: Record<string, string[]> = {
+  legv: ["xitam", "pozu"],
+  xitam: ["legv"],
+  bosan: ["nikah", "pozu", "emlak"],
+  bosanm: ["nikah", "pozu", "emlak"],
+  maas: ["emek", "haqq"],
+  emekhaqq: ["emek", "haqq"],
+  qovul: ["xitam", "emek", "muqavil"],
+  soyus: ["tehqir", "seref", "leyaqet"],
+  alcalt: ["tehqir", "seref", "leyaqet"],
+  feyk: ["saxta", "profil", "hesab", "internet"],
+  firildaq: ["deleduz", "etibar"],
+  aldat: ["deleduz", "etibar"],
+  icaz: ["lisenziya", "icaze"],
+  icaze: ["lisenziya", "icaz"],
+  avariya: ["hadise", "yol", "hereket"],
+  qeza: ["hadise", "yol", "hereket"],
+  kiray: ["icare", "kiraye"],
+  kiraye: ["icare", "kiray"],
+  propiska: ["qeydiyyat", "yasayis"],
+};
+
+function isAskingAboutRepealedLaw(queryNorm: string): boolean {
+  if (queryNorm.includes("quvveden dus") || queryNorm.includes("xett cekil")) return true;
+  if (
+    /(?:qanun|mecelle|madde|bend|norma|ferman|serencam|qerar)\S*\s+(?:ne vaxt\s+|niye\s+|artiq\s+)?legv edil/.test(
+      queryNorm
+    ) ||
+    /legv edil\S*\s+(?:qanun|mecelle|madde|bend|norma|ferman|serencam|qerar)/.test(queryNorm)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 function stemVariants(stem: string): string[] {
   const vars = [stem];
   if (stem.length >= 4 && stem.endsWith("q")) vars.push(`${stem.slice(0, -1)}g`);
   if (stem.length >= 4 && stem.endsWith("k")) vars.push(`${stem.slice(0, -1)}y`);
+  if (stem.length >= 4 && !/[aeiou]$/.test(stem)) {
+    vars.push(`${stem}e`, `${stem}a`);
+  }
   return vars;
 }
 
@@ -358,6 +396,14 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
   ).slice(0, rawStemCap);
 
   const expStems: string[] = [];
+  for (const rs of rawStems) {
+    const syns = STATUTORY_STEM_SYNONYMS[rs];
+    if (syns) {
+      for (const syn of syns) {
+        if (!rawStems.includes(syn) && !expStems.includes(syn)) expStems.push(syn);
+      }
+    }
+  }
   for (const eq of expandedQueries) {
     for (const tok of tokenizeAzForFts(eq)) {
       if (/^\d+$/.test(tok)) continue;
@@ -367,7 +413,7 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
       }
     }
   }
-  const limitedExpStems = expStems.slice(0, 5);
+  const limitedExpStems = expStems.slice(0, 7);
   const assets = new RequestAssetCache(env);
 
   // 1. Determine index buckets for raw + expanded stems (with q<->g, k<->y alternations up to cap)
@@ -381,7 +427,7 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
           stemEntries.push({
             stem: v,
             isRaw,
-            isMeta: GENERIC_META.has(v),
+            isMeta: GENERIC_META.has(v) || GENERIC_META.has(st),
           });
         }
       }
@@ -392,7 +438,7 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
 
   const uniqueIdxBuckets = Array.from(
     new Set(stemEntries.map((s) => fnv1a32(s.stem) % INDEX_BUCKETS))
-  ).slice(0, 12);
+  ).slice(0, 14);
 
   // Title discovery buckets (top 3 substantive raw stems)
   const titleDiscoveryStems = rawStems.filter((s) => s.length >= 4 && !GENERIC_META.has(s)).slice(0, 3);
@@ -400,8 +446,10 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
     new Set(titleDiscoveryStems.map((s) => fnv1a32(s) % TITLE_BUCKETS))
   );
 
-  // Article maps for primary target laws
-  const targetMapIds = targetDocs.slice(0, 2);
+  // Article maps for primary target laws (fallback to core Codes if no explicit law was detected)
+  const targetMapIds = (
+    targetDocs.length > 0 ? targetDocs : ["46944", "46947", "46960", "46943", "46946"]
+  ).slice(0, 3);
 
   const [idxShards, titleShards, artMaps] = await Promise.all([
     Promise.all(
@@ -464,8 +512,9 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
   }
 
   const candidates = new Map<string, CandScore>();
+  const substantiveStems = rawStems.filter((s) => !GENERIC_META.has(s));
 
-  // Exact/priority article lookup inside target laws via `am/`
+  // Exact/priority article lookup + full in-memory Article Title scan inside target laws via `am/`
   for (const { did, data } of artMaps) {
     if (!data) continue;
     for (const art of lookupArts) {
@@ -490,6 +539,66 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
             isImpl: false,
             isTreaty: false,
           });
+        }
+      }
+    }
+
+    // In-memory scan of all article headings in this Code (zero global posting truncation!)
+    if (substantiveStems.length > 0) {
+      const headingMatches: Array<{ realArt: string; bid: number; hScore: number; mRaw: number }> = [];
+      for (const [k, [bid, rawHeading, parentArt]] of Object.entries(data)) {
+        if (!rawHeading || parentArt) continue;
+        if (
+          rawHeading.includes("QÜVVƏDƏN DÜŞÜB") ||
+          rawHeading.includes("LƏĞV EDİLİB") ||
+          rawHeading.toLowerCase().includes("ləğv edilmişdir") ||
+          rawHeading.toLowerCase().includes("çıxarılıb")
+        ) {
+          continue;
+        }
+        const hNorm = normalizeAzSearch(rawHeading.slice(0, 120));
+        let mRaw = 0;
+        let hScore = 0;
+        for (const st of substantiveStems) {
+          const syns = STATUTORY_STEM_SYNONYMS[st] ?? [];
+          if (doesTextMatchStem(hNorm, st)) {
+            mRaw += 1;
+            hScore += 180;
+          } else if (syns.some((syn) => doesTextMatchStem(hNorm, syn))) {
+            mRaw += 1;
+            hScore += 165;
+          }
+        }
+        if (mRaw === 0) continue;
+        if (mRaw >= 2) hScore += 140;
+        if (mRaw >= substantiveStems.length) hScore += 110;
+        // Prefer concise canonical headings (e.g., "Əmək müqaviləsinə xitam verilməsinin əsasları")
+        if (rawHeading.length <= 95) hScore += 45;
+        if (hNorm.includes("esaslari") || hNorm.includes("qaydasi")) hScore += 35;
+        headingMatches.push({ realArt: k, bid, hScore, mRaw });
+      }
+      headingMatches.sort((a, b) => b.hScore - a.hScore);
+      for (const hm of headingMatches.slice(0, 8)) {
+        const ckey = `${did}::${hm.realArt}`;
+        const prev = candidates.get(ckey);
+        if (!prev) {
+          candidates.set(ckey, {
+            docId: did,
+            artNum: hm.realArt,
+            bucketId: hm.bid,
+            score: hm.hScore,
+            matchedRaw: hm.mRaw,
+            matchedExp: 0,
+            inTitle: 0,
+            inArtTitle: hm.mRaw,
+            isAmend: false,
+            isImpl: false,
+            isTreaty: false,
+          });
+        } else {
+          prev.score = Math.max(prev.score, hm.hScore) + 90;
+          prev.matchedRaw = Math.max(prev.matchedRaw, hm.mRaw);
+          prev.inArtTitle = Math.max(prev.inArtTitle, hm.mRaw);
         }
       }
     }
@@ -639,7 +748,7 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
   const docMetaMap = new Map<string, DocMeta>();
   for (const m of metaRes) if (m.meta) docMetaMap.set(m.did, m.meta);
 
-  const allowRepealed = queryNorm.includes("quvveden dus") || queryNorm.includes("legv edil");
+  const allowRepealed = isAskingAboutRepealedLaw(queryNorm);
   const finalScored: Array<{ chunk: Record<string, unknown>; score: number }> = [];
   for (const cand of preTop) {
     const bucket = contentMap.get(cand.bucketId);
@@ -647,6 +756,13 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
     const meta = docMetaMap.get(cand.docId);
     if (!entry || !meta) continue;
     if (meta.r && !allowRepealed) continue;
+    if (
+      !allowRepealed &&
+      !explicitArts.includes(cand.artNum) &&
+      (entry.at.includes("QÜVVƏDƏN DÜŞÜB") || /^Maddə\s+\S+[\s.]*\[QÜVVƏDƏN DÜŞÜB/i.test(entry.txt.trim()))
+    ) {
+      continue;
+    }
 
     let score = cand.score;
     const content = entry.txt;
@@ -792,8 +908,7 @@ async function handleDocSearch(body: Record<string, unknown>, env: Env): Promise
     })
   );
 
-  const allowRepealedDoc =
-    normalizeAzSearch(query).includes("quvveden dus") || normalizeAzSearch(query).includes("legv edil");
+  const allowRepealedDoc = isAskingAboutRepealedLaw(normalizeAzSearch(query));
   const results = metas
     .filter((x) => x.meta && (!x.meta.r || allowRepealedDoc))
     .map(({ did, info, meta, entry }) => ({
@@ -974,8 +1089,7 @@ async function handleSemantic(body: Record<string, unknown>, env: Env): Promise<
     if (picked.length >= Math.min(topK, 18)) break;
   }
 
-  const allowRepealedSem =
-    normalizeAzSearch(query).includes("quvveden dus") || normalizeAzSearch(query).includes("legv edil");
+  const allowRepealedSem = isAskingAboutRepealedLaw(normalizeAzSearch(query));
 
   // Resolve current live doc metadata + live article->bucket map so semantic hits ALWAYS serve
   // active (non-repealed) & freshly strikethrough-purged text even after static shard rebuilds!
