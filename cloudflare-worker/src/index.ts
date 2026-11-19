@@ -610,12 +610,14 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
   const docMetaMap = new Map<string, DocMeta>();
   for (const m of metaRes) if (m.meta) docMetaMap.set(m.did, m.meta);
 
+  const allowRepealed = queryNorm.includes("quvveden dus") || queryNorm.includes("legv edil");
   const finalScored: Array<{ chunk: Record<string, unknown>; score: number }> = [];
   for (const cand of preTop) {
     const bucket = contentMap.get(cand.bucketId);
     const entry = bucket?.[`${cand.docId}::${cand.artNum || "0"}`];
     const meta = docMetaMap.get(cand.docId);
     if (!entry || !meta) continue;
+    if (meta.r && !allowRepealed) continue;
 
     let score = cand.score;
     const content = entry.txt;
@@ -761,8 +763,10 @@ async function handleDocSearch(body: Record<string, unknown>, env: Env): Promise
     })
   );
 
+  const allowRepealedDoc =
+    normalizeAzSearch(query).includes("quvveden dus") || normalizeAzSearch(query).includes("legv edil");
   const results = metas
-    .filter((x) => x.meta)
+    .filter((x) => x.meta && (!x.meta.r || allowRepealedDoc))
     .map(({ did, info, meta, entry }) => ({
       documentId: did,
       title: meta!.t,
@@ -939,9 +943,50 @@ async function handleSemantic(body: Record<string, unknown>, env: Env): Promise<
     if (picked.length >= Math.min(topK, 18)) break;
   }
 
+  const allowRepealedSem =
+    normalizeAzSearch(query).includes("quvveden dus") || normalizeAzSearch(query).includes("legv edil");
+
+  // Resolve current live doc metadata + live article->bucket map so semantic hits ALWAYS serve
+  // active (non-repealed) & freshly strikethrough-purged text even after static shard rebuilds!
+  const uniqueDocIds = Array.from(new Set(picked.map((p) => String(p.md.document_id || "")).filter(Boolean))).slice(0, 18);
+  const metaMap = new Map<string, DocMeta>();
+  const artMapByDoc = new Map<string, Record<string, ArtMapEntry>>();
+  await Promise.all(
+    uniqueDocIds.map(async (did) => {
+      const [meta, amap] = await Promise.all([
+        assets.getDocMeta(did),
+        assets.getJson<Record<string, ArtMapEntry>>(`/am/${did}.json`),
+      ]);
+      if (meta) metaMap.set(did, meta);
+      if (amap) artMapByDoc.set(did, amap);
+    })
+  );
+
+  const activePicked = picked.filter((p) => {
+    const did = String(p.md.document_id || "");
+    const meta = metaMap.get(did);
+    if (meta?.r && !allowRepealedSem) return false;
+    return true;
+  });
+
+  const resolvedBidFor = (did: string, art: string, fallbackBid: number): number => {
+    const amap = artMapByDoc.get(did);
+    if (amap && art) {
+      const direct = amap[art] || (art.includes(".") ? amap[art.split(".")[0]] : undefined);
+      if (direct && Number.isFinite(direct[0])) return direct[0];
+    }
+    const meta = metaMap.get(did);
+    if (meta?.bs && meta.bs.length > 0 && !art) return meta.bs[0];
+    return fallbackBid;
+  };
+
   const bucketIds = Array.from(
-    new Set(picked.map((p) => Number(p.md.bucket_id)).filter((n) => Number.isFinite(n)))
-  ).slice(0, 14);
+    new Set(
+      activePicked
+        .map((p) => resolvedBidFor(String(p.md.document_id || ""), String(p.md.article_number || ""), Number(p.md.bucket_id)))
+        .filter((n) => Number.isFinite(n))
+    )
+  ).slice(0, 16);
   const bucketMap = new Map<number, Record<string, ContentEntry>>();
   await Promise.all(
     bucketIds.map(async (bid) => {
@@ -950,24 +995,29 @@ async function handleSemantic(body: Record<string, unknown>, env: Env): Promise<
     })
   );
 
-  const results = picked.map((p) => {
+  const results = activePicked.map((p) => {
     const did = String(p.md.document_id || "");
     const art = String(p.md.article_number || "");
-    const bid = Number(p.md.bucket_id);
-    const entry = Number.isFinite(bid) ? bucketMap.get(bid)?.[`${did}::${art || "0"}`] : undefined;
+    const bid = resolvedBidFor(did, art, Number(p.md.bucket_id));
+    const amap = artMapByDoc.get(did);
+    const parentArt = (art && amap?.[art]?.[2]) || art;
+    const entry = Number.isFinite(bid)
+      ? bucketMap.get(bid)?.[`${did}::${parentArt || "0"}`] ?? bucketMap.get(bid)?.[`${did}::${art || "0"}`]
+      : undefined;
+    const meta = metaMap.get(did);
     return {
       chunk_id: Number(p.md.chunk_id || 0) || undefined,
       document_id: did,
       chunk_index: Number(p.md.chunk_index || 0),
       article_number: art,
-      article_title: String(p.md.article_title || entry?.at || ""),
+      article_title: String(entry?.at || p.md.article_title || ""),
       content: (entry?.txt || String(p.md.snippet || "")).slice(0, 5600),
-      title: String(p.md.title || `e-Qanun № ${did}`),
-      source_url: String(p.md.source_url || `https://www.e-qanun.ai/results/${did}`),
+      title: String(meta?.t || p.md.title || `e-Qanun № ${did}`),
+      source_url: String(meta?.u || p.md.source_url || `https://www.e-qanun.ai/results/${did}`),
       file_name: `eqanun_doc_${did}`,
-      doc_type: String(p.md.doc_type || "qanun"),
-      is_repealed: 0,
-      priority_boost: Number(p.md.priority_boost || 0),
+      doc_type: String(meta?.dt || p.md.doc_type || "qanun"),
+      is_repealed: meta?.r ? 1 : 0,
+      priority_boost: Number(meta?.pb ?? p.md.priority_boost ?? 0),
       semantic_score: Math.round(p.match.score * 10000) / 10000,
     };
   });
@@ -1150,6 +1200,14 @@ export default {
     if (path === "/rag/answer" && request.method === "POST") {
       const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
       return handleRagAnswer(body, env);
+    }
+    if (path === "/rag/rewrite-query" && request.method === "POST") {
+      const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+      return handleRewriteQuery(body, env);
+    }
+    if (path === "/rag/verify" && request.method === "POST") {
+      const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+      return handleVerifyAnswer(body, env);
     }
     if (path === "/rag/generate-document" && request.method === "POST") {
       const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
@@ -1517,6 +1575,7 @@ async function handleJudicial(body: Record<string, unknown>, env: Env): Promise<
     // Require genuine topical overlap (either exact paired article match or >=2 title hits or lawHit + title hit)
     if (!exactArtHit && rawHits === 0 && expHits < 2) continue;
     if (!lawHit && rawHits < 2) continue;
+    if (matchedLaws.size > 0 && entry.laws.length === 0 && rawHits < 3) continue;
 
     if (entry.k === "plenum" && score >= 130) {
       score += 55;
@@ -1640,4 +1699,152 @@ async function handleJudicial(body: Record<string, unknown>, env: Env): Promise<
   }
 
   return jsonResp({ chunks, latency_ms: Date.now() - t0 });
+}
+
+async function handleRewriteQuery(body: Record<string, unknown>, env: Env): Promise<Response> {
+  const t0 = Date.now();
+  const query = String(body.query || "").trim();
+  const rawHistory = Array.isArray(body.history) ? body.history : [];
+  if (!query || rawHistory.length === 0) {
+    return jsonResp({
+      is_follow_up: false,
+      standalone_query: query,
+      same_case_laws: [],
+      topic_summary: "",
+      latency_ms: Date.now() - t0,
+    });
+  }
+
+  const compactHist = rawHistory
+    .slice(-6)
+    .map((h) => {
+      if (!h || typeof h !== "object") return "";
+      const role = (h as Record<string, unknown>).role === "assistant" ? "HüquqAI" : "İstifadəçi";
+      const content = String((h as Record<string, unknown>).content || "")
+        .replace(/https?:\/\/\S+/g, "")
+        .replace(/[#*`]/g, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 360);
+      return content ? `${role}: ${content}` : "";
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  if (!compactHist) {
+    return jsonResp({
+      is_follow_up: false,
+      standalone_query: query,
+      same_case_laws: [],
+      topic_summary: "",
+      latency_ms: Date.now() - t0,
+    });
+  }
+
+  const sysPrompt = `Sən Azərbaycan qanunvericiliyi üzrə dialoq kontekstini təhlil edən axtarış sorğusu çeviricisisən.
+Tapşırıq: Əvvəlki dialoq tarixçəsini və istifadəçinin YENİ mesajını oxu.
+- Əgər yeni mesaj əvvəlki mövzunun/işin davamıdırsa (məs., boşanmadan sonra "bəs kreditlə alınan ev?", "uşaqlar varsa pay dəyişir?", "iddia müddəti neçə ildir?", "notariat mütləqdir?", "bəs təkrar etsə?", "hara şikayət edim?", "bəs borclar?"), "is_follow_up": true yaz və "standalone_query"-də əvvəlki mövzunun əsas hüquqi kontekstini yeni sualla birləşdirərək tam müstəqil axtarış sorğusu yarat.
+- Əgər yeni mesaj tamamilə fərqli yeni hüquqi mövzudursa (məs., boşanmadan sonra "qırmızı işıqdan keçməyin cəriməsi nə qədərdir?"), "is_follow_up": false yaz və "standalone_query" kimi yalnız yeni sualı saxla.
+- Qanun ID-ləri üçün yalnız bunlar ola bilər: aile, mulki, emek, inzibati_xetalar, yol_hereketi, cinayet, cinayet_prosessual, mulki_prosessual, vergi, menzil, torpaq, istehlakci, gomruk, miqrasiya, konstitusiya.
+YALNIZ ETİBARLI JSON QAYTAR:
+{"is_follow_up": true/false, "standalone_query": "...", "same_case_laws": ["..."], "topic_summary": "..."}`;
+
+  const userPrompt = `ƏVVƏLKİ DİALOQ:\n${compactHist}\n\nYENİ İSTİFADƏÇİ MESAJI:\n${query}`;
+
+  const raw = await callCerebrasEdge(
+    env,
+    [
+      { role: "system", content: sysPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    { maxTokens: 320, temperature: 0.0, jsonMode: true }
+  );
+
+  if (raw) {
+    try {
+      const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+      const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+      const isFollowUp = Boolean(parsed.is_follow_up);
+      const standalone = String(parsed.standalone_query || "").trim() || query;
+      const sameLaws = Array.isArray(parsed.same_case_laws)
+        ? parsed.same_case_laws.map((x) => String(x || "").trim()).filter(Boolean)
+        : [];
+      const topicSummary = String(parsed.topic_summary || "").trim();
+      return jsonResp({
+        is_follow_up: isFollowUp,
+        standalone_query: isFollowUp ? standalone : query,
+        same_case_laws: isFollowUp ? sameLaws : [],
+        topic_summary: isFollowUp ? topicSummary : "",
+        latency_ms: Date.now() - t0,
+      });
+    } catch {
+      // fall through
+    }
+  }
+
+  return jsonResp({
+    is_follow_up: false,
+    standalone_query: query,
+    same_case_laws: [],
+    topic_summary: "",
+    latency_ms: Date.now() - t0,
+  });
+}
+
+async function handleVerifyAnswer(body: Record<string, unknown>, env: Env): Promise<Response> {
+  const t0 = Date.now();
+  const query = String(body.query || "").trim();
+  const context = String(body.context || "").trim();
+  const draftAnswer = String(body.draft_answer || "").trim();
+  if (!query || !context || !draftAnswer) {
+    return jsonResp({ passed: true, insufficient_sources: false, repealed_misuse: false, issues: [], latency_ms: 0 });
+  }
+
+  const sysPrompt = `Sən Azərbaycan qanunvericiliyi üzrə MÜSTƏQİL HÜQUQİ AUDİTORSAN (Zero-Hallucination Fact-Checker).
+Sənə 3 şey verilir: (1) İstifadəçinin sualı, (2) Rəsmi e-qanun mənbələri ([MƏNBƏ 1..N]), (3) Qaralama cavab.
+Aşağıdakı 5 KRİTİK xətanı yoxla və YALNIZ JSON qaytar:
+1. UYDURMA İSTİNAD: Qaralama cavabda [MƏNBƏ 1..N] mətnində SÖZBƏSÖZ olmayan hər hansı maddə, bənd, bölmə nömrəsi (məs., mətndə olmayan "bölmə 10.4" və ya başqa maddə), tarix və ya məhkəmə qərarı yazılıbmı?
+2. YANLIŞ BƏND / CƏRİMƏ QARIŞDIRMASI: İstifadəçinin soruşduğu əsas hal üçün yanlış alt-bəndin cəriməsi/sanksiyası yazılıbmı? (Məs., adi vergi hesabatının gecikməsinə 57.1-in 40 manatı əvəzinə transmilli 57.1-2-nin 10 000 manatını əsas cərimə kimi vermək; ilk dəfə sərxoş idarəetməyə 333.1-in 400 manatı əvəzinə təkrar/ağırlaşdırılmış 333.5 həbsini əsas cərimə kimi vermək.)
+3. MƏNA TƏHRİFİ (POLARITY FLIP): Qanunun təsdiq/inkar şərti tərsinə çevrilibmi? (Məs., "lazımi keyfiyyətli mal"ı "keyfiyyəti uyğun olmadıqda" kimi təhrif etmək və ya "yol verməlidir"i "qadağandır" yazmaq.)
+4. QÜVVƏDƏN DÜŞMÜŞ NORMA: Mənbədə "[QÜVVƏDƏN DÜŞÜB" / "LƏĞV EDİLİB" işarəli bənd qüvvədə olan qayda kimi təqdim olunubmu?
+5. MƏNBƏ ÇATIŞMAZLIĞI: Əgər [MƏNBƏ 1..N] mətnləri istifadəçinin konkret sualına heç bir real hüquqi cavab/norma vermirsə (məs., tamam başqa sahəyə aid təsadüfi maddələrdirsə) və qaralama cavab özündən ümumi fikir/norma uydurubsa -> "insufficient_sources": true yaz!
+
+YALNIZ ETİBARLI JSON QAYTAR:
+{"passed": true/false, "insufficient_sources": true/false, "repealed_misuse": true/false, "issues": ["konkret qısa xəta təsviri (əgər varsa)"]}
+QEYD: Kiçik üslub fərqlərinə görə səhv yazma; yalnız REAL faktiki/normativ/istinad/məna xətası varsa passed: false et.`;
+
+  const userPrompt = `İSTİFADƏÇİNİN SUALI:\n${query}\n\nRƏSMİ MƏNBƏLƏR:\n${context.slice(0, 14500)}\n\nQARALAMA CAVAB:\n${draftAnswer.slice(0, 5000)}`;
+
+  const raw = await callCerebrasEdge(
+    env,
+    [
+      { role: "system", content: sysPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    { maxTokens: 650, temperature: 0.0, jsonMode: true }
+  );
+
+  if (raw) {
+    try {
+      const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+      const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+      const issues = Array.isArray(parsed.issues)
+        ? parsed.issues.map((x) => String(x || "").trim()).filter(Boolean)
+        : [];
+      const insufficient = Boolean(parsed.insufficient_sources);
+      const repealedMisuse = Boolean(parsed.repealed_misuse);
+      const passed = !insufficient && !repealedMisuse && Boolean(parsed.passed) && issues.length === 0;
+      return jsonResp({
+        passed,
+        insufficient_sources: insufficient,
+        repealed_misuse: repealedMisuse,
+        issues,
+        latency_ms: Date.now() - t0,
+      });
+    } catch {
+      // fall through
+    }
+  }
+
+  return jsonResp({ passed: true, insufficient_sources: false, repealed_misuse: false, issues: [], latency_ms: Date.now() - t0 });
 }

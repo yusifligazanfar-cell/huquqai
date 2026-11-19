@@ -264,3 +264,59 @@ export async function fetchRemoteJudicialSearch(
   });
   return Array.isArray(res?.chunks) ? res.chunks : [];
 }
+
+export interface RemoteQueryRewriteResult {
+  is_follow_up: boolean;
+  standalone_query: string;
+  same_case_laws: string[];
+  topic_summary: string;
+}
+
+export async function fetchRemoteQueryRewrite(
+  query: string,
+  history: Array<{ role: string; content: string }>,
+  timeoutMs = 4500
+): Promise<RemoteQueryRewriteResult | null> {
+  if (!query?.trim() || !history || history.length === 0 || !isRemoteRagConfigured()) return null;
+  const res = await fetchRagBackend<RemoteQueryRewriteResult>("/rag/rewrite-query", {
+    method: "POST",
+    timeoutMs,
+    body: {
+      query: query.trim(),
+      history: history.slice(-6),
+    },
+  });
+  if (!res || typeof res.standalone_query !== "string") return null;
+  return res;
+}
+
+export interface RemoteAuditVerifyResult {
+  passed: boolean;
+  insufficient_sources: boolean;
+  repealed_misuse: boolean;
+  issues: string[];
+}
+
+export async function fetchRemoteVerifyAnswer(
+  options: {
+    query: string;
+    context: string;
+    draftAnswer: string;
+  },
+  timeoutMs = 8500
+): Promise<RemoteAuditVerifyResult | null> {
+  if (!options.query?.trim() || !options.context?.trim() || !options.draftAnswer?.trim() || !isRemoteRagConfigured()) {
+    return null;
+  }
+  const res = await fetchRagBackend<RemoteAuditVerifyResult>("/rag/verify", {
+    method: "POST",
+    timeoutMs,
+    body: {
+      query: options.query,
+      context: options.context,
+      draft_answer: options.draftAnswer,
+    },
+  });
+  if (!res || typeof res.passed !== "boolean") return null;
+  return res;
+}

@@ -83,7 +83,11 @@ CHAPTER_RE = re.compile(r"^(?:Fəsil|FƏSİL|Bölmə|BÖLMƏ|Xüsusi hissə|Ümu
 STRUCT_LINE_RE = re.compile(r"^(?:Madd[əe]\s*\d|Fəsil\s|Bölmə\s|\d+[\.\)]\s|\d+\.\d+[\.\)]\s|[a-zəöüğçş]\)\s|[-–•])", re.IGNORECASE)
 CHANGELOG_MARKER_RE = re.compile(
     r"(?:^|\n)\s*(?:İSTİFADƏ\s+OLUNMUŞ\s+MƏNBƏ\s+SƏNƏDLƏRİNİN\s+SİYAHISI|"
-    r"(?:QANUNA|QƏRARA|FƏRMANA|MƏCƏLLƏYƏ|AKTA)?\s*EDİLMİŞ\s+DƏYİŞİKLİK\s+VƏ\s+ƏLAVƏLƏRİN\s+SİYAHISI)",
+    r"(?:QANUNA|QƏRARA|FƏRMANA|MƏCƏLLƏYƏ|AKTA|BÜLLETENƏ|TƏLİMATA|ƏSASNAMƏYƏ|SƏRƏNCAMA|QAYDALARA)?\s*EDİLMİŞ\s+DƏYİŞİKLİK\s+VƏ\s+ƏLAVƏLƏRİN\s+SİYAHISI)",
+    re.IGNORECASE,
+)
+OLD_EDITION_BLOCK_RE = re.compile(
+    r"(?:^|\n)\s*Əvvəlki\s+redaksiyada\s+deyilirdi\s*:[\s\S]*?(?=\n\s*\[\d+\]\s+\d{1,2}\s+[a-zəöüğışç]+\s+\d{4}|\Z)",
     re.IGNORECASE,
 )
 
@@ -518,13 +522,29 @@ def parse_file(filepath: Path):
 
     body_clean = repair_spaced_diacritics(body_raw)
     body_clean = unwrap_soft_newlines(body_clean)
-    title_clean = re.sub(r"\s*\[\d+\]\s*$", "", repair_spaced_diacritics(title)).strip()
+    title_clean = re.sub(
+        r"^(?:\d{1,5}(?:-[A-ZƏÖÜĞŞÇİa-z0-9]+)?\s*[-–—]\s*)+",
+        "",
+        re.sub(r"\s*\[\d+\]\s*$", "", repair_spaced_diacritics(title)),
+    ).strip()
     doc_type, is_repealed, boost = classify_document(doc_id, title_clean, body_clean)
 
-    # Strip trailing historical amendment-changelog footnotes from operative text so BM25 indexes current articles cleanly
+    # Auto-detect completely struck-through repealed acts (>= 70% lines marked [QÜVVƏDƏN DÜŞÜB...])
+    _lines_cnt = max(1, len(body_clean.splitlines()))
+    if _lines_cnt >= 10 and (body_clean.count("[QÜVVƏDƏN DÜŞÜB") / _lines_cnt) >= 0.70:
+        is_repealed = 1
+        boost = -220.0
+
+    # Strip trailing historical amendment-changelog footnotes & "Əvvəlki redaksiyada deyilirdi:" repealed text so BM25 indexes current articles cleanly
     ch_start = find_trailing_changelog_start(body_clean)
     if ch_start is not None:
         body_clean = body_clean[:ch_start].strip()
+    if "əvvəlki redaksiyada" in body_clean.lower():
+        old_pos = body_clean.lower().find("əvvəlki redaksiyada")
+        if old_pos > max(400, int(len(body_clean) * 0.35)):
+            body_clean = body_clean[:old_pos].strip()
+        else:
+            body_clean = OLD_EDITION_BLOCK_RE.sub("", body_clean).strip()
 
     chunks = split_chunks_for_doc(doc_id, title_clean, body_clean)
     article_count = len({c[0] for c in chunks if c[0]})

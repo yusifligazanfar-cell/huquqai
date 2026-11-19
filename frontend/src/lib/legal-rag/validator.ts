@@ -428,6 +428,7 @@ export function validateLegalResponse(
     const patterns = [
       /\bMaddə\s+(\d{1,4}(?:-\d+)?(?:\.\d{1,3})*(?:-\d+)?)\b/gi,
       /\b(\d{1,4}(?:-\d+)?(?:\.\d{1,3})*(?:-\d+)?)\s*[-–]?\s*c[ıiuü]\s*maddə/gi,
+      /\bbölmə\s+(\d{1,2}\.\d{1,2})\b/gi,
     ];
     for (const pat of patterns) {
       let m: RegExpExecArray | null;
@@ -451,7 +452,7 @@ export function validateLegalResponse(
       }
     }
 
-    // Deterministically purge subsections and bullet lines citing completely unretrieved/fabricated articles
+    // Deterministically purge subsections, fabricated "bölmə X.Y" clauses, and bullet lines citing completely unretrieved/fabricated articles
     for (const badArt of ungroundedArticles) {
       const esc = badArt.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       // Strip fabricated "### N. ... Maddə X" subsection
@@ -462,6 +463,15 @@ export function validateLegalResponse(
       // Strip fabricated bullet line citing unretrieved article
       answer = answer.replace(
         new RegExp(`(?:^|\\n)-\\s+[^\\n]*(?:Maddə\\s+${esc}\\b|\\b${esc}[-–]?c[ıiuü]\\s*maddə)[^\\n]*`, "gi"),
+        ""
+      );
+      // Strip fabricated inline section references like "(Ali Məhkəmə qərarı, bölmə 10.4)" or ", bölmə 10.4"
+      answer = answer.replace(
+        new RegExp(`\\s*\\([^)]*\\bbölmə\\s+${esc}\\b[^)]*\\)`, "gi"),
+        ""
+      );
+      answer = answer.replace(
+        new RegExp(`,?\\s*\\bbölmə\\s+${esc}\\b`, "gi"),
         ""
       );
     }

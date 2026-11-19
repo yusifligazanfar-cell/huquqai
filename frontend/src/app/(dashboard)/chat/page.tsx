@@ -529,7 +529,7 @@ function ChatContent() {
             !m.content.startsWith("Məlumatı yoxlayarkən sistem xətası") &&
             !m.content.startsWith("Xəta baş verdi:")
         )
-        .slice(isPetitionMode ? -30 : -6)
+        .slice(isPetitionMode ? -30 : -10)
         .map((m) => ({ role: m.role, content: m.content }));
 
       const lowerQ = userQuery.toLowerCase().trim();
@@ -602,6 +602,8 @@ function ChatContent() {
         content: response.content,
         citations: response.citations,
         sources: (response as any).sources || [],
+        audit_verified: Boolean((response as any).audit_verified),
+        follow_ups: Array.isArray((response as any).follow_ups) ? (response as any).follow_ups : [],
         precedent: null
       }
       
@@ -847,8 +849,18 @@ function ChatContent() {
                                 .replace(/\n{1,}#{1,3}\s*Mənbələr[\s\S]*$/gi, "")
                                 .trim()}
                             />
-                            <div className="flex justify-end mt-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
-                              <TTSButton text={msg.content} />
+                            <div className="flex items-center justify-between gap-2 mt-2">
+                              {msg.audit_verified ? (
+                                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/25 rounded-full px-2.5 py-0.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                  Rəsmi mənbə ilə yoxlanıldı
+                                </span>
+                              ) : (
+                                <span />
+                              )}
+                              <div className="opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity">
+                                <TTSButton text={msg.content} />
+                              </div>
                             </div>
                           </div>
                         )}
@@ -863,6 +875,33 @@ function ChatContent() {
                           : undefined;
                         return <InlineCitation key={`${msg.id}-${i}-${cite}`} title={cite} source={matchedSource} />;
                       })}
+                    </div>
+                  )}
+
+                  {msg.role === "assistant" && Array.isArray(msg.follow_ups) && msg.follow_ups.length > 0 && !msg.content.includes("[ƏRİZƏ]") && (
+                    <div className="mt-2.5 flex flex-col gap-1.5 w-full">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                        Bu mövzu üzrə davam sualları
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {msg.follow_ups.map((fq: string, fIdx: number) => (
+                          <button
+                            key={`${msg.id}-fq-${fIdx}`}
+                            type="button"
+                            disabled={isLoading}
+                            onClick={() => {
+                              const currentHistory = [...messages]
+                              const tempUserMsg = { id: Date.now().toString(), role: "user", content: fq, citations: [] }
+                              setMessages(prev => [...prev, tempUserMsg])
+                              triggerAIResponse(fq, currentHistory)
+                            }}
+                            className="inline-flex items-center gap-1.5 text-left text-xs font-medium px-3 py-1.5 rounded-xl bg-white/90 dark:bg-slate-900/80 hover:bg-emerald-50 dark:hover:bg-emerald-500/15 border border-slate-200 dark:border-white/10 hover:border-emerald-400 dark:hover:border-emerald-500/40 text-slate-800 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors disabled:opacity-50"
+                          >
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold">↳</span>
+                            <span>{fq}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
 

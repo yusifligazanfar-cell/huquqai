@@ -17,6 +17,8 @@ import {
   fetchRemoteShortSummary,
   fetchRemoteRagAnswer,
   fetchRemoteJudicialSearch,
+  fetchRemoteQueryRewrite,
+  fetchRemoteVerifyAnswer,
   isRemoteRagConfigured,
 } from '@/lib/legal-rag'
 import { findCandidateLawsByQuery } from '@/lib/legal-rag/registry'
@@ -112,22 +114,48 @@ function compactHistoryForLlm(
         !h.content.startsWith("Məlumatı yoxlayarkən") &&
         !h.content.startsWith("> **Qeyd:** Hazırda AI sintez provayderi aktiv deyil")
     )
-    .slice(-4);
+    .slice(-6);
 
   return clean.map((h) => {
     if (h.role === "user") {
-      return { role: "user" as const, content: h.content.slice(0, 400) };
+      return { role: "user" as const, content: h.content.slice(0, 450) };
     }
-    // Compress prior assistant essays to concise plain-text topic + short answer so old Markdown/URLs don't pollute JSON output or distract from new topic
+    // Preserve prior assistant topic + cited laws/articles + concise short answer for seamless multi-turn case continuity
     const shortMatch = h.content.match(/##\s*Qısa cavab\s*\n([\s\S]*?)(?:\n##|$)/i);
     const body = (shortMatch ? shortMatch[1] : h.content)
       .replace(/https?:\/\/\S+/g, "")
       .replace(/[#*`]/g, "")
       .replace(/\s+/g, " ")
       .trim()
-      .slice(0, 420);
+      .slice(0, 480);
     return { role: "assistant" as const, content: `[Əvvəlki cavab xülasəsi]: ${body}` };
   });
+}
+
+function buildInsufficientSourceResponse(query: string, reason?: string) {
+  const detail = reason
+    ? `\n\n**Yoxlama qeydi:** ${reason}`
+    : "";
+  return {
+    content:
+      `## Hüquqi sual\n${query}\n\n` +
+      `## Mənbə təsdiqlənmədi — Dəqiq normativ əsas tapılmadı\n` +
+      `HuquqAI hüquqi dəqiqlik prinsipinə əsasən rəsmi qanunvericilik bazasında təsdiqlənməyən maddə, cərimə və ya qaydanı **uydurmur**.\n\n` +
+      `Hazırkı qanunvericilik bazasında bu konkret suala birbaşa tətbiq olunan qüvvədə olan normativ akt və ya maddə təsdiqlənmədi.${detail}\n\n` +
+      `## Nə edə bilərik?\n` +
+      `- Əgər konkret qanunun, Nazirlər Kabineti qərarının, təlimatın və ya maddənin adını bilirsinizsə, yazın — dərhal həmin normativ akt üzrə yoxlayaq.\n` +
+      `- Rəsmi **e-qanun.az** keçidini (məs., \`https://e-qanun.az/framework/...\`) və ya aktın nömrəsini göndərin — birbaşa rəsmi mətn əsasında cavablandıraq.\n` +
+      `- Sualı bir qədər daha konkret hüquqi situasiya ilə ifadə edin (məs., hansı sahə: əmək, ailə, vergi, yol hərəkəti, mülki və s.).`,
+    citations: [],
+    legal_basis: [],
+    sources: [],
+    confidence: 0.0,
+    citation_valid: false,
+    needs_review: true,
+    audit_verified: true,
+    follow_ups: [],
+    precedent: null,
+  };
 }
 
 function buildBasisFromChunks(chunks: StructuredChunk[]) {
@@ -576,12 +604,31 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       }
     }
 
-    // 1. QUERY ANALYSIS
-    const queryAnalysis = analyzeQuery(query, history);
+    // 0. MULTI-TURN CONVERSATIONAL QUERY CONTEXTUALIZER (seamlessly carries case context across follow-ups!)
+    let effectiveSearchQuery = query;
+    let activeCaseContext = "";
+    let rewrittenLaws: string[] = [];
+    if (history && history.length > 0 && isRemoteRagConfigured()) {
+      const rewrite = await fetchRemoteQueryRewrite(query, history, 4200);
+      if (rewrite?.is_follow_up && rewrite.standalone_query && rewrite.standalone_query.length >= 6) {
+        effectiveSearchQuery = rewrite.standalone_query;
+        activeCaseContext = rewrite.topic_summary || rewrite.standalone_query;
+        rewrittenLaws = rewrite.same_case_laws || [];
+      }
+    }
+
+    // 1. QUERY ANALYSIS (uses contextualized standalone query so follow-ups retrieve exact statutes!)
+    const queryAnalysis = analyzeQuery(effectiveSearchQuery, history);
+    for (const rl of rewrittenLaws) {
+      const regEntry = LAW_REGISTRY[rl];
+      if (regEntry && !queryAnalysis.possibleLaws.includes(regEntry.name)) {
+        queryAnalysis.possibleLaws.push(regEntry.name);
+      }
+    }
     const lawMatch = findCandidateLawsByQuery(queryAnalysis.normalizedQuery);
 
     // 2. MULTI-STAGE HYBRID RETRIEVAL & RERANKING (56,983-doc SQLite + SBERT Semantic + RRF)
-    let retrievedChunks = await hybridSearchAsync(queryAnalysis, 18, query, {
+    let retrievedChunks = await hybridSearchAsync(queryAnalysis, 18, effectiveSearchQuery, {
       mode: "hybrid",
     });
 
@@ -596,9 +643,9 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
 
     let llmExpandedTerms: string[] = [];
     if (needsLlmExpansion) {
-      llmExpandedTerms = await expandColloquialLegalQuery(query, passedKey || undefined);
+      llmExpandedTerms = await expandColloquialLegalQuery(effectiveSearchQuery, passedKey || undefined);
       if (llmExpandedTerms.length > 0) {
-        retrievedChunks = await hybridSearchAsync(queryAnalysis, 18, query, {
+        retrievedChunks = await hybridSearchAsync(queryAnalysis, 18, effectiveSearchQuery, {
           mode: "hybrid",
           extraExpandedTerms: llmExpandedTerms,
         });
@@ -610,32 +657,44 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     const targetDocId = urlIdMatch ? urlIdMatch[1] : null;
 
     if (targetDocId) {
-      const liveDoc = await eqanunClient.getDocument(targetDocId);
-      if (liveDoc.api_status === 200 && liveDoc.text) {
+      const localDoc = isSqliteCorpusAvailable()
+        ? getSqliteDocumentById(targetDocId)
+        : isRemoteRagConfigured()
+        ? await fetchRemoteDocumentById(targetDocId, undefined, 5000)
+        : null;
+      if (localDoc?.content) {
         retrievedChunks.unshift({
-          sourceId: `eqanun_live_${targetDocId}`,
+          sourceId: `eqanun_doc_${targetDocId}`,
           lawId: `eqanun_${targetDocId}`,
-          lawName: liveDoc.title,
-          articleNumber: targetDocId,
-          articleTitle: `${liveDoc.title} (Akt № ${targetDocId})`,
-          content: liveDoc.text.substring(0, 10000),
-          sourceFile: `api_live_${targetDocId}`,
-          sourceUrl: `https://www.e-qanun.ai/results/${targetDocId}`,
-          score: 20000
+          lawName: localDoc.title,
+          articleNumber: "",
+          articleTitle: `${localDoc.title} (Akt № ${targetDocId})`,
+          content: localDoc.content.substring(0, 10000),
+          sourceFile: `eqanun_doc_${targetDocId}`,
+          sourceUrl: localDoc.sourceUrl || `https://www.e-qanun.ai/results/${targetDocId}`,
+          score: 20000,
+          documentId: targetDocId,
         });
+      } else {
+        const liveDoc = await eqanunClient.getDocument(targetDocId);
+        if (liveDoc.api_status === 200 && liveDoc.text) {
+          retrievedChunks.unshift({
+            sourceId: `eqanun_live_${targetDocId}`,
+            lawId: `eqanun_${targetDocId}`,
+            lawName: liveDoc.title,
+            articleNumber: targetDocId,
+            articleTitle: `${liveDoc.title} (Akt № ${targetDocId})`,
+            content: liveDoc.text.substring(0, 10000),
+            sourceFile: `api_live_${targetDocId}`,
+            sourceUrl: `https://www.e-qanun.ai/results/${targetDocId}`,
+            score: 20000
+          });
+        }
       }
     }
 
     if (retrievedChunks.length === 0) {
-      return {
-        content: "Təqdim edilmiş qanunvericilik bazasında bu suala kifayət qədər dəqiq hüquqi əsas tapılmadı.",
-        citations: [],
-        legal_basis: [],
-        sources: [],
-        confidence: 0.0,
-        citation_valid: false,
-        needs_review: true
-      }
+      return buildInsufficientSourceResponse(query);
     }
 
     // 2c. PARALLEL BINDING JUDICIAL PRACTICE (Ali Məhkəmə Plenumu / Konstitusiya Məhkəməsi) + COMPANION PROCEDURAL RECALL
@@ -687,7 +746,7 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       isRemoteRagConfigured()
         ? fetchRemoteJudicialSearch(
             {
-              query,
+              query: effectiveSearchQuery,
               expandedQueries: [...(queryAnalysis.keywords || []), ...llmExpandedTerms],
               matchedLaws: topLawIds,
               matchedArticles: topArtNums,
@@ -729,7 +788,7 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       ...(mediationChunk ? [mediationChunk] : []),
       ...judicialChunks.slice(0, 2),
     ];
-    const contextStems = buildSearchStems(query, queryAnalysis, llmExpandedTerms);
+    const contextStems = buildSearchStems(effectiveSearchQuery, queryAnalysis, llmExpandedTerms);
     const extractFocusedExcerpt = (rawContent: string, maxLen: number): string => {
       const cleaned = sanitizeStatutoryExcerpt(rawContent);
       if (cleaned.length <= maxLen) return cleaned;
@@ -773,39 +832,53 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     const hasJudicialInContext = judicialChunks.length > 0;
 
     // 4. UNIFIED HUQUQAI × E-QANUN.AI CLOSED-WORLD PROMPT (zero hardcoded fine/article examples -> zero cross-question bleed!)
-    const systemPrompt = `Sən HuquqAI — Azərbaycan Respublikasının qüvvədə olan qanunvericiliyinə, Ali Məhkəmə Plenumunun və Konstitusiya Məhkəməsinin rəsmi qərarlarına (e-qanun.ai rəsmi bazasına) əsaslanan peşəkar hüquqi təhlil sistemisən.
+    const systemPrompt = `Sən HuquqAI — Azərbaycan Respublikasının qüvvədə olan qanunvericiliyinə, Ali Məhkəmə Plenumunun və Konstitusiya Məhkəməsinin rəsmi qərarlarına (e-qanun.az / e-qanun.ai rəsmi bazasına) əsaslanan peşəkar hüquqi təhlil sistemisən.
 
 MÜTLƏQ VƏ DƏYİŞMƏZ QAYDALAR (ZERO HALLUCINATION):
 1. QAPALI MƏNBƏ PRİNSİPİ: Cavabında YALNIZ aşağıdakı [MƏNBƏ 1..N] mətnlərində SÖZBƏSÖZ mövcud olan qanun adlarını, maddə və bənd nömrələrini, Ali Məhkəmə/Konstitusiya Məhkəməsi mövqelərini, cərimə məbləğlərini, faizləri, müddətləri və prosessual tələbləri (məsələn, ilkin mediasiya sessiyası, notariat forması və s.) yaz.
-2. UYDURMA QADAĞASI: Öz yaddaşından HEÇ VAXT maddə nömrəsi, məhkəmə qərarı, cərimə məbləği və ya müddət uydurma! Əgər [MƏNBƏ 1..N] mətnlərində konkret cərimə/sanksiya maddəsi YOXDURSA, bunu açıq bildir, əsla başqa maddə uydurma!
-3. BƏNDLƏRİ, İSTİSNALARI VƏ MƏHKƏMƏ ŞƏRHLƏRİNİ DƏQİQ OXU:
+2. UYDURMA QADAĞASI VƏ MƏNBƏ YOXDURSA DÜRÜST İMTİNA:
+   - Öz yaddaşından HEÇ VAXT maddə nömrəsi, bölmə nömrəsi, məhkəmə qərarı, cərimə məbləği və ya müddət uydurma!
+   - Əgər aşağıdakı [MƏNBƏ 1..N] mətnləri istifadəçinin konkret sualını ÜMUMİYYƏTLƏ tənzimləmirsə (tamam başqa sahəyə aid sənədlərdirsə və ya konkret normativ akt bazada yoxdursa), UYDURMA — JSON-da "insufficient_sources": true və "missing_reason": "..." qaytar!
+3. QÜVVƏDƏN DÜŞMÜŞ (ÜZƏRİNDƏN XƏTT ÇƏKİLMİŞ) QAYDALAR:
+   - Mənbə mətnində "[QÜVVƏDƏN DÜŞÜB" və ya "LƏĞV EDİLİB]" işarəsi olan hər hansı maddə/bənd ARTİQ QÜVVƏDƏ DEYİL!
+   - Belə bəndləri ƏSLA qüvvədə olan hüquq/istisna/qayda kimi təqdim etmə! Əgər istifadəçi məhz həmin ləğv edilmiş bənd barədə soruşursa, onun qüvvədən düşdüyünü (ləğv edildiyini) açıq bildir.
+4. BƏNDLƏRİ, ƏSAS HAL VS AĞIRLAŞDIRICI HALI VƏ MƏHKƏMƏ ŞƏRHLƏRİNİ DƏQİQ OXU:
    - Hər bənd nömrəsi özündən SONRAKI cümləyə aiddir, əvvəlki cümləyə deyil.
-   - Əsas qayda ilə yanaşı kontekstdəki BÜTÜN mühüm istisnaları (məsələn: şəxsi/ayrıca əmlak, şəxsi əmlakın dəyərinin artırılması, müddətin başlanma anı, sazişin forması, ilkin mediasiya sessiyası, təkrar törətmə və s.) mütləq əhatə et!
-   - "lazımi keyfiyyətli" = qüsursuz/sağlam maldır — əsla "lazımi keyfiyyətli olmayan" kimi təhrif etmə.
-   - Bitişik yazılmış məbləğ və ya müddət sözlərini düzgün oxu (məs., "görə yüz manat" = 100 manat); məbləğ mətndə varsa əsla "göstərilməyib" yazma.
-4. SƏTİRDAXİLİ İSTİNADLAR VƏ MADDƏ YAZILIŞI (E-QANUN.AI STANDARTI):
+   - Sual ümumi / ilk hal barədədirsə, ƏVVƏLCƏ əsas bəndi (məs., adi vergi hesabatı gecikməsi üçün ümumi bənd; ilk dəfə yol hərəkəti pozuntusu üçün 1-ci bənd) əsas cavab kimi yaz; xüsusi transmilli/ağırlaşdırıcı/təkrar bəndləri yalnız ayrıca istisna və ya təkrar hal kimi qeyd et!
+   - Əsas qayda ilə yanaşı kontekstdəki BÜTÜN mühüm istisnaları (şəxsi/ayrıca əmlak, müddətin başlanma anı, sazişin forması, ilkin mediasiya sessiyası, təkrar törətmə və s.) mütləq əhatə et!
+   - "lazımi keyfiyyətli" = qüsursuz/sağlam maldır — əsla "keyfiyyəti uyğun olmadıqda" və ya "lazımi keyfiyyətli olmayan" kimi TƏRSİNƏ çevirmə!
+   - Bitişik yazılmış məbləğ və ya müddət sözlərini düzgün oxu; məbləğ mətndə varsa əsla "göstərilməyib" yazma.
+5. SƏTİRDAXİLİ İSTİNADLAR VƏ MADDƏ YAZILIŞI (E-QANUN.AI STANDARTI):
    - Sətirdaxili [N] istinadını YALNIZ həmin faktın götürüldüyü [MƏNBƏ N]-in DƏQİQ nömrəsinə uyğun yaz (bölmə nömrəsi ilə qarışdırma; mətn içində "(mənbə 6)" deyil, birbaşa [6] yaz!).
-   - Ali Məhkəmə / Konstitusiya Məhkəməsi qərarlarından YALNIZ məhkəmənin öz rəsmi mövqeyini ("Plenum qeyd edir", "QƏRARA ALDI", "hesab edir") yaz — müraciət edənin/şikayətçinin iddiasını məhkəmənin mövqeyi kimi təqdim etmə! Qərarların tarixini və nömrəsini YALNIZ [MƏNBƏ] başlığında göstərilən dəqiq tarixə görə yaz, il təxmin etmə. Kontekstdə suala uyğun məhkəmə qərarı yoxdursa, "## Ali Məhkəmə..." bölməsini ÜMUMİYYƏTLƏ YAZMA.
-   - Maddə və bənd nömrələrini rəsmi yazılışla ("Maddə 330", "Maddə 54 (I hissə)", nöqtə ilə "36.9") yaz — əsla "330-0" və ya "54-I" yazma, təsdiq/inkar mənasını ("yol verməlidir" ≠ "qadağandır") əsla təhrif etmə.
+   - Ali Məhkəmə / Konstitusiya Məhkəməsi qərarlarından YALNIZ məhkəmənin öz rəsmi mövqeyini ("Plenum qeyd edir", "QƏRARA ALDI", "hesab edir") yaz — müraciət edənin/şikayətçinin iddiasını məhkəmənin mövqeyi kimi təqdim etmə! Qərarların tarixini, nömrəsini və bəndini YALNIZ [MƏNBƏ] mətnində sözbəsöz olan kimi yaz, əsla olmayan bölmə nömrəsi uydurma. Kontekstdə suala uyğun məhkəmə qərarı yoxdursa, "## Ali Məhkəmə..." bölməsini ÜMUMİYYƏTLƏ YAZMA.
+   - Maddə və bənd nömrələrini rəsmi yazılışla ("Maddə 330", "Maddə 54 (I hissə)", nöqtə ilə "36.9") yaz — əsla "330-0" və ya "54-I" yazma, təsdiq/inkar mənasını əsla təhrif etmə.
    - Yalnız suala birbaşa aid olan əsas normativ maddələri və (kontekstdə varsa) Ali Məhkəmə/Konstitusiya Məhkəməsi qərarlarını seç, eyni maddəni təkrarlama.
-5. DİL VƏ TAMLIQ:
-   - Saf və səlis hüquqi Azərbaycan dilində yaz (ingilis və ya kiril hərfləri işlətmə). Heç bir cümlə və ya bölmə yarımçıq qalmasın; hər bölmə tam, ətraflı və praktik olsun.
+6. DİL, TAMLIQ VƏ DAVAM SUALLARI:
+   - Saf və səlis hüquqi Azərbaycan dilində yaz (ingilis və ya kiril hərfləri işlətmə). Heç bir cümlə və ya bölmə yarımçıq qalmasın.
    - "## Mənbələr" və ya URL siyahısı YAZMA (sistem aşağıda rəsmi mənbə kartları kimi göstərir).
+   - "follow_ups" massivində istifadəçinin eyni məsələ ilə bağlı növbəti addımda verə biləcəyi 3 qısa, praktik davam sualı təklif et (məs., istisnalar, müddət, prosedur, borc/təkrar hal barədə).
    - İstifadəçi "ərizə yaz / hazırla" deyirsə, boş şablon yazma — əvvəlcə yalnız 1-ci addımı (iddiaçının ad, soyad, ata adı, ünvan, FİN) soruş.
 
 YALNIZ ETİBARLI JSON OBYEKTİ QAYTAR (əlavə izah olmadan):
 {
+  "insufficient_sources": false,
+  "missing_reason": "",
   "cavab": "## Hüquqi sual\n[sual]\n\n## Qısa cavab\n[3-5 tam, axıcı cümlədən ibarət ətraflı yekun abzas — əsas qayda, dəqiq məbləğ/müddət, müddətin başlanma anı, istisnalar və prosessual şərtlər, sətirdaxili [1] [2] istinadları ilə.]\n- [Normativ akt] — Maddə [X]: [əsas qayda/məbləğ/müddət].\n- [Normativ akt] — Maddə [Y]: [istisna / prosessual şərt / əlavə norma].\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[normanın dəqiq məzmunu, şərtləri və tətbiqi]\n\n### 2. [Normativ akt] — Maddə [Y]\n[normanın dəqiq məzmunu, istisnaları və tətbiqi]${hasJudicialInContext ? "\n\n## Ali Məhkəmə və Konstitusiya Məhkəməsinin mövqeyi\n[Kontekstdəki Ali Məhkəmə Plenumu / Konstitusiya Məhkəməsi qərarının konkret hüquqi mövqeyi: iddia müddətinin başlanması, saziş/notariat forması, mediasiya və məhkəmə tətbiqi qaydaları, [N] istinadı ilə.]" : ""}\n\n## Praktik izah və hüquqi risklər\n[3-5 tam cümlə — vətəndaşın atmalı olduğu konkret addımlar, ilkin prosessual şərtlər, sübutlar, istisnalar və diqqət edilməli hüquqi risklər.]\n\n## Vacib məqamlar\n- [Müddət və hesablanma başlanğıcı]\n- [İstisna və ya məhdudiyyət]\n- [Prosessual tələb / sübut / risk]",
   "maddeler": ["Azərbaycan Respublikasının [Normativ akt] — Maddə [X]"],
   "legal_basis": [
     {"law_name": "[Normativ aktın rəsmi adı]", "article_number": "[Maddə nömrəsi və ya məhkəmə qərarı üçün boş string]", "article_title": "[Maddənin və ya qərarın rəsmi başlığı]", "claim": "[Bu normanın tətbiq edildiyi hüquqi nəticə]"}
-  ]
+  ],
+  "follow_ups": ["[Eyni məsələ ilə bağlı qısa davam sualı 1]", "[Davam sualı 2]", "[Davam sualı 3]"]
 }`;
+
+    const caseBanner = activeCaseContext
+      ? `\nAKTİV SÖHBƏT MÖVZUSU (DAVAM SUALI): ${activeCaseContext}\n(İstifadəçinin aşağıdakı yeni sualını bu işin davamı kimi, amma YALNIZ [KONTEX] mənbələrinə əsaslanaraq cavablandır.)\n`
+      : "";
 
     const userPrompt = `KONTEX (Qanunvericilik Mətnləri):
 ${contextText}
-
-ÇOXTURLU SÖHBƏT QAYDASI: Əgər aşağıdakı İSTİFADƏÇİNİN YENİ SORĞUSU yeni hüquqi mövzudursa, əvvəlki suallardakı köhnə maddə və məcəllələri UNUT və YALNIZ bu [KONTEX] mənbələrinə əsaslan. Əvvəlki mövzuya davam sualıdırsa ("bəs təkrar...", "bunun cəriməsi..."), yenə də konkret normanı [KONTEX] mətnindən çıxar.
+${caseBanner}
+ÇOXTURLU SÖHBƏT QAYDASI: Əgər aşağıdakı İSTİFADƏÇİNİN YENİ SORĞUSU yeni hüquqi mövzudursa, əvvəlki suallardakı köhnə maddə və məcəllələri UNUT və YALNIZ bu [KONTEX] mənbələrinə əsaslan. Əvvəlki mövzuya davam sualıdırsa, dialoq davamlılığını qoru və konkret normanı [KONTEX] mətnindən çıxar.
 
 İSTİFADƏÇİNİN SORĞUSU: 
 ${query}`;
@@ -929,30 +1002,94 @@ ${query}`;
       );
     }
 
-    // 6. VALIDATE & ENFORCE ZERO-HALLUCINATION CITATION AUDIT (+ 1-PASS SELF-CORRECTION IF ANY ARTICLE WAS FABRICATED)
-    let validated = validateLegalResponse(parsedJson, allRetrievedChunks, contextChunks);
+    // 6. HONEST ABSTENTION + 2-STAGE ZERO-HALLUCINATION BACKEND AUDIT GATE (BEFORE RETURNING TO USER!)
+    if (!usedLlmFallback && parsedJson?.insufficient_sources === true) {
+      return buildInsufficientSourceResponse(
+        query,
+        typeof parsedJson.missing_reason === "string" ? parsedJson.missing_reason : undefined
+      );
+    }
 
-    if (!usedLlmFallback && validated.ungrounded_articles && validated.ungrounded_articles.length > 0) {
-      const banned = validated.ungrounded_articles.join(", ");
-      console.warn(`[chat.ts] Hallucinated article(s) detected (${banned}); running strict grounded rewrite...`);
+    let validated = validateLegalResponse(parsedJson, allRetrievedChunks, contextChunks);
+    let auditVerified = false;
+    let followUps: string[] = Array.isArray(parsedJson?.follow_ups)
+      ? parsedJson.follow_ups
+          .map((x: unknown) => String(x || "").trim())
+          .filter((s: string) => s.length >= 8 && s.length <= 140)
+          .slice(0, 3)
+      : [];
+
+    // Tier 2 Independent Backend Legal Auditor (checks fabricated articles/sections, wrong sub-clause fines, flipped polarity, repealed misuse, insufficient sources)
+    const auditIssues: string[] = [];
+    if (validated.ungrounded_articles && validated.ungrounded_articles.length > 0) {
+      auditIssues.push(
+        `[MƏNBƏ 1..N] mətnlərində olmayan uydurma maddə/bölmə nömrələri istifadə edilib: ${validated.ungrounded_articles.join(", ")}`
+      );
+    }
+
+    if (!usedLlmFallback && isRemoteRagConfigured()) {
+      const audit = await fetchRemoteVerifyAnswer(
+        {
+          query: effectiveSearchQuery,
+          context: contextText,
+          draftAnswer: validated.answer,
+        },
+        8500
+      );
+      if (audit) {
+        if (audit.insufficient_sources) {
+          return buildInsufficientSourceResponse(
+            query,
+            audit.issues[0] || "Tapılan mənbələr bu konkret suala birbaşa normativ cavab vermir."
+          );
+        }
+        if (audit.passed && auditIssues.length === 0) {
+          auditVerified = true;
+        } else {
+          if (audit.repealed_misuse) {
+            auditIssues.push("Qüvvədən düşmüş ([QÜVVƏDƏN DÜŞÜB]) norma qüvvədə olan qayda kimi təqdim edilib!");
+          }
+          for (const iss of audit.issues || []) {
+            if (iss && !auditIssues.includes(iss)) auditIssues.push(iss);
+          }
+        }
+      }
+    }
+
+    if (!usedLlmFallback && auditIssues.length > 0) {
+      const issueBullets = auditIssues.map((x, idx) => `${idx + 1}. ${x}`).join("\n");
+      console.warn(`[chat.ts] Backend Legal Auditor flagged ${auditIssues.length} issue(s); running targeted repair pass...`);
       try {
         const correctiveRaw = await invokePrimaryLlm(
           [
             ...baseMessages,
             {
               role: "user",
-              content: `KRİTİK XƏTA: Əvvəlki cavabında [MƏNBƏ 1..N] daxilində OLMAYAN bu maddə nömrələrini uydurdun: ${banned}. Həmin uydurma maddələri və onların cərimələrini TAMAMİLƏ SİL! Cavabı YALNIZ [MƏNBƏ 1..N] mətnlərində mövcud olan maddələrə əsasən yenidən etibarlı JSON formatında yaz.`,
+              content: `MÜSTƏQİL HÜQUQİ AUDİT XƏTA HESABATI:\n${issueBullets}\n\nTƏLƏB: Yuxarıdakı BÜTÜN xətaları DƏQİQ DÜZƏLT! Uydurma maddə/bölmə nömrələrini TAMAMİLƏ SİL, qüvvədən düşmüş ([QÜVVƏDƏN DÜŞÜB]) bəndləri ləğv olunmuş kimi qeyd et, əsas hal üçün doğru bəndi və məbləği yaz, "lazımi keyfiyyətli" kimi ifadələrin mənasını əsla tərsinə çevirmə. Əgər [MƏNBƏ 1..N] suala ümumiyyətlə cavab vermirsə, "insufficient_sources": true qaytar. YALNIZ etibarlı JSON yaz.`,
             },
           ],
-          4200
+          4500
         );
         const correctedJson = parseRawLlmJson(correctiveRaw);
+        if (correctedJson?.insufficient_sources === true) {
+          return buildInsufficientSourceResponse(
+            query,
+            typeof correctedJson.missing_reason === "string" ? correctedJson.missing_reason : undefined
+          );
+        }
         const revalidated = validateLegalResponse(correctedJson, allRetrievedChunks, contextChunks);
         if (
-          (revalidated.ungrounded_articles?.length ?? 0) < validated.ungrounded_articles.length ||
-          revalidated.citation_valid
+          (revalidated.ungrounded_articles?.length ?? 0) <= (validated.ungrounded_articles?.length ?? 0) &&
+          revalidated.answer.length >= 120
         ) {
           validated = revalidated;
+          auditVerified = (revalidated.ungrounded_articles?.length ?? 0) === 0;
+          if (Array.isArray(correctedJson?.follow_ups) && correctedJson.follow_ups.length > 0) {
+            followUps = correctedJson.follow_ups
+              .map((x: unknown) => String(x || "").trim())
+              .filter((s: string) => s.length >= 8 && s.length <= 140)
+              .slice(0, 3);
+          }
         }
       } catch (retryErr: any) {
         console.warn("[chat.ts] Self-correction pass failed; keeping deterministically purged answer:", retryErr?.message);
@@ -967,6 +1104,8 @@ ${query}`;
       confidence: usedLlmFallback ? Math.min(validated.confidence, 0.75) : validated.confidence,
       citation_valid: validated.citation_valid,
       needs_review: usedLlmFallback ? true : validated.needs_review,
+      audit_verified: auditVerified && validated.citation_valid,
+      follow_ups: followUps,
       precedent: null
     }
 

@@ -12,7 +12,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Sual qeyd olunmayıb." }, { status: 400 });
     }
 
-    const result = await generateLegalResponse(question);
+    const history = Array.isArray(body.history)
+      ? body.history
+          .filter((h: any) => h && typeof h.role === "string" && typeof h.content === "string")
+          .slice(-8)
+      : [];
+
+    const result = await generateLegalResponse(question, undefined, history);
 
     return NextResponse.json({
       question: question,
@@ -27,6 +33,9 @@ export async function POST(request: NextRequest) {
         source_url: lb.source_url
       })),
       citations: result.citations,
+      citation_valid: result.citation_valid,
+      audit_verified: Boolean((result as any).audit_verified),
+      follow_ups: Array.isArray((result as any).follow_ups) ? (result as any).follow_ups : [],
       precedent: (result as any).precedent || null
     });
   } catch (error: any) {
