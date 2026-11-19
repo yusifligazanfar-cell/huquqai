@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     const origin = new URL(req.url).origin
     const token = createEmailActionToken(email, "reset")
     const resetUrl = `${origin}/login?reset_token=${encodeURIComponent(token)}`
-    const fromAddress = process.env.RESEND_FROM_EMAIL || "HuquqAI <onboarding@resend.dev>"
+    const fromAddress = process.env.RESEND_FROM_EMAIL || "HuquqAI <noreply@huquqai.az>"
 
     const resendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",

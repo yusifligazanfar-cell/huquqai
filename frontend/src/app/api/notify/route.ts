@@ -137,7 +137,7 @@ export async function POST(req: Request) {
 `
 
     const { data, error: sendError } = await resend.emails.send({
-      from: 'HuquqAI <onboarding@resend.dev>',
+      from: process.env.RESEND_FROM_EMAIL || 'HuquqAI <noreply@huquqai.az>',
       to: [clientEmail],
       subject: `✅ Konsultasiyanız təsdiqləndi — ${dateStr ? dateStr : 'Yaxın vaxtda'}`,
       html: emailHtml,

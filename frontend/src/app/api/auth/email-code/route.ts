@@ -50,7 +50,7 @@ export async function POST(req: Request) {
       const sig = signPayload(payloadB64)
       const token = `${payloadB64}.${sig}`
 
-      const fromAddress = process.env.RESEND_FROM_EMAIL || "HuquqAI <onboarding@resend.dev>"
+      const fromAddress = process.env.RESEND_FROM_EMAIL || "HuquqAI <noreply@huquqai.az>"
       const resendRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {

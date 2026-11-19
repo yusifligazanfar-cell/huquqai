@@ -34,7 +34,7 @@ export async function POST(req: Request) {
       try {
         const token = createEmailActionToken(email, "verify")
         const verifyUrl = `${origin}/api/auth/verify?token=${encodeURIComponent(token)}`
-        const fromAddress = process.env.RESEND_FROM_EMAIL || "HuquqAI <onboarding@resend.dev>"
+        const fromAddress = process.env.RESEND_FROM_EMAIL || "HuquqAI <noreply@huquqai.az>"
         const resendRes = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {

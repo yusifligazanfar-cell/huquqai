@@ -101,7 +101,7 @@ export async function PATCH(req: Request) {
         }
 
         const { error: sendError } = await resend.emails.send({
-          from: process.env.RESEND_FROM_EMAIL || "HuquqAI <onboarding@resend.dev>",
+          from: process.env.RESEND_FROM_EMAIL || "HuquqAI <noreply@huquqai.az>",
           to: [targetEmail],
           subject,
           html: `
