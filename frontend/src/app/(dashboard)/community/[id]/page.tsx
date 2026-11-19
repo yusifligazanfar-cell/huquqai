@@ -54,9 +54,18 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       if (!postId) return
       setIsLoading(true)
       try {
-        const res = await fetch(`/api/app/community?id=${encodeURIComponent(postId)}`, {
-          cache: 'no-store',
-        })
+        let alreadyViewed = false
+        try {
+          alreadyViewed = sessionStorage.getItem(`viewed_post_${postId}`) === '1'
+          if (!alreadyViewed) {
+            sessionStorage.setItem(`viewed_post_${postId}`, '1')
+          }
+        } catch {}
+
+        const res = await fetch(
+          `/api/app/community?id=${encodeURIComponent(postId)}${alreadyViewed ? '&noView=1' : ''}`,
+          { cache: 'no-store' }
+        )
         const json = await res.json().catch(() => ({}))
         if (json?.post) {
           setPost(json.post)

@@ -7,7 +7,10 @@ export const dynamic = "force-dynamic"
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const id = searchParams.get("id")
-  const qs = id ? `?id=${encodeURIComponent(id)}` : ""
+  const noView = searchParams.get("noView")
+  const qs = id
+    ? `?id=${encodeURIComponent(id)}${noView === "1" ? "&noView=1" : ""}`
+    : ""
   const { ok, data } = await cfFetch(`/app/community${qs}`)
   if (!ok) return NextResponse.json(id ? { post: null, comments: [] } : { posts: [] })
   return NextResponse.json(data)
