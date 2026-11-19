@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { Resend } from "resend"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
@@ -214,24 +215,118 @@ export async function PATCH(req: Request) {
 
   try {
     const body = await req.json()
-    const { userId, is_verified } = body
-
-    if (!userId || typeof is_verified !== "boolean") {
-      return NextResponse.json({ error: "Yanlış sorğu parametrləri" }, { status: 400 })
+    const { userId, is_verified, action, note } = body as {
+      userId?: string
+      is_verified?: boolean
+      action?: "approve" | "reject" | "request_info"
+      note?: string
     }
 
-    const { data, error } = await supabase
+    if (!userId) {
+      return NextResponse.json({ error: "userId tələb olunur" }, { status: 400 })
+    }
+
+    const resolvedAction: "approve" | "reject" | "request_info" =
+      action || (is_verified ? "approve" : "reject")
+
+    // Fetch target user's profile + email
+    const { data: existingProfile } = await supabase
       .from("profiles")
-      .update({ is_verified })
+      .select("*")
       .eq("id", userId)
-      .select()
       .single()
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    let targetEmail = existingProfile?.email || ""
+    if (!targetEmail && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const { data: authUser } = await supabase.auth.admin.getUserById(userId)
+        targetEmail = authUser?.user?.email || ""
+      } catch {}
     }
 
-    return NextResponse.json({ success: true, profile: data })
+    let updatedProfile = existingProfile
+    if (resolvedAction === "approve" || resolvedAction === "reject") {
+      const nextVerified = resolvedAction === "approve"
+      const { data, error } = await supabase
+        .from("profiles")
+        .update({ is_verified: nextVerified })
+        .eq("id", userId)
+        .select()
+        .single()
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      updatedProfile = data
+    }
+
+    // Send email notification via Resend if configured and email exists
+    let emailSent = false
+    let emailWarning: string | null = null
+    const resendApiKey = process.env.RESEND_API_KEY
+
+    if (resendApiKey && targetEmail) {
+      try {
+        const resend = new Resend(resendApiKey)
+        const fullName = `${existingProfile?.name || ""} ${existingProfile?.surname || ""}`.trim() || "Hörmətli Mütəxəssis"
+        const isJurist = (existingProfile?.license_number || "").startsWith("HÜQ:")
+        const titleRole = isJurist ? "Hüquqşünas" : "Vəkil"
+
+        let subject = ""
+        let heading = ""
+        let bodyText = ""
+
+        if (resolvedAction === "approve") {
+          subject = `HÜQUQ AI — ${titleRole} hesabınız təsdiqləndi və aktivdir`
+          heading = `✅ Təbriklər! ${titleRole} olaraq hesabınız aktivdir`
+          bodyText = `Hörmətli <strong>${fullName}</strong>, müraciətiniz admin tərəfindən yoxlanıldı və təsdiqləndi. Artıq HÜQUQ AI platformasında ${titleRole.toLowerCase()} olaraq hesabınız tam aktivdir — profilinizə daxil olub müştəri müraciətlərini qəbul edə bilərsiniz.`
+        } else if (resolvedAction === "request_info") {
+          subject = `HÜQUQ AI — ${titleRole} qeydiyyatı üçün əlavə doğrulama məlumatı`
+          heading = `📋 Doğrulama məlumatı tələb olunur`
+          bodyText = `Hörmətli <strong>${fullName}</strong>, ${titleRole.toLowerCase()} qeydiyyatınızı tamamlamaq üçün əlavə doğrulama məlumatı tələb olunur.${note ? `<br/><br/><strong>Admin qeydi:</strong> ${note}` : " Zəhmət olmasa vəsiqə / diplom təsdiq sənədinizi cavab olaraq göndərin."}`
+        } else {
+          subject = `HÜQUQ AI — ${titleRole} qeydiyyat müraciətinizin statusu`
+          heading = `❌ Müraciətiniz təsdiqlənmədi`
+          bodyText = `Hörmətli <strong>${fullName}</strong>, təqdim etdiyiniz məlumatlar yoxlanıldı, lakin hazırkı mərhələdə ${titleRole.toLowerCase()} profiliniz təsdiqlənmədi.${note ? `<br/><br/><strong>Səbəb / Qeyd:</strong> ${note}` : ""}`
+        }
+
+        await resend.emails.send({
+          from: process.env.RESEND_FROM_EMAIL || "HuquqAI <noreply@huquqai.az>",
+          to: [targetEmail],
+          subject,
+          html: `
+            <div style="font-family:'Segoe UI',Arial,sans-serif;background:#070b09;padding:32px 16px;color:#fff;">
+              <div style="max-width:540px;margin:0 auto;background:#101915;border:1px solid rgba(16,185,129,0.25);border-radius:16px;overflow:hidden;">
+                <div style="background:linear-gradient(135deg,#059669,#0d9488);padding:24px 32px;text-align:center;">
+                  <h1 style="margin:0;color:#fff;font-size:20px;font-weight:800;">HÜQUQ AI</h1>
+                </div>
+                <div style="padding:28px 32px;">
+                  <h2 style="margin:0 0 12px;color:#fff;font-size:18px;">${heading}</h2>
+                  <p style="margin:0 0 24px;color:#cbd5e1;font-size:14px;line-height:1.65;">${bodyText}</p>
+                  <a href="https://huquqai.az/account" style="display:inline-block;background:linear-gradient(135deg,#059669,#0d9488);color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 24px;border-radius:10px;">
+                    Hesaba Daxil Ol
+                  </a>
+                </div>
+              </div>
+            </div>
+          `,
+        })
+        emailSent = true
+      } catch (mailErr: any) {
+        console.warn("Admin review email send error:", mailErr)
+        emailWarning = mailErr?.message || "E-poçt göndərilmədi"
+      }
+    } else if (!resendApiKey) {
+      emailWarning = "RESEND_API_KEY təyin edilməyib (status bazada yeniləndi)"
+    }
+
+    return NextResponse.json({
+      success: true,
+      action: resolvedAction,
+      profile: updatedProfile,
+      emailSent,
+      emailWarning,
+    })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Yenilənmə zamanı xəta" }, { status: 500 })
   }

@@ -14,11 +14,13 @@ import categoriesData from "@/data/lawyer_categories.json"
 
 export default function LawyerSignupPage() {
   const [step, setStep] = useState<1 | 2>(1)
+  const [practitionerType, setPractitionerType] = useState<"vekil" | "huquqsunas">("vekil")
   
   // Step 1: Onboarding Info
   const [name, setName] = useState("")
   const [surname, setSurname] = useState("")
   const [licenseNumber, setLicenseNumber] = useState("")
+  const [educationDoc, setEducationDoc] = useState("")
   const [experienceYears, setExperienceYears] = useState("")
   const [bio, setBio] = useState("")
   const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([])
@@ -37,17 +39,27 @@ export default function LawyerSignupPage() {
     )
   }
 
+  const getNormalizedLicense = () => {
+    if (practitionerType === "vekil") return licenseNumber.trim()
+    const doc = educationDoc.trim()
+    return doc ? `HÜQ: ${doc}` : "HÜQ: Hüquqşünas"
+  }
+
   const handleStep1Submit = (e: React.FormEvent) => {
     e.preventDefault()
-    // Save to session storage
-    sessionStorage.setItem('pendingLawyerOnboarding', JSON.stringify({
-      name,
-      surname,
-      licenseNumber,
-      experienceYears: parseInt(experienceYears, 10),
-      bio,
+    const payload = JSON.stringify({
+      practitionerType,
+      name: name.trim(),
+      surname: surname.trim(),
+      licenseNumber: getNormalizedLicense(),
+      experienceYears: parseInt(experienceYears, 10) || 0,
+      bio: bio.trim(),
       specialties: selectedSpecialties
-    }))
+    })
+    try {
+      localStorage.setItem('pendingLawyerOnboarding', payload)
+      sessionStorage.setItem('pendingLawyerOnboarding', payload)
+    } catch {}
     setStep(2)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -60,7 +72,18 @@ export default function LawyerSignupPage() {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/lawyer-onboarding%3Frole=lawyer`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/account%3Frole=lawyer`,
+        data: {
+          role: 'lawyer',
+          practitioner_type: practitionerType,
+          name: name.trim(),
+          surname: surname.trim(),
+          full_name: `${name.trim()} ${surname.trim()}`.trim(),
+          license_number: getNormalizedLicense(),
+          experience_years: parseInt(experienceYears, 10) || 0,
+          bio: bio.trim(),
+          specialties: selectedSpecialties,
+        }
       }
     })
 
@@ -68,7 +91,7 @@ export default function LawyerSignupPage() {
       setMessage({ text: error.message, type: 'error' })
     } else {
       setIsOtpSent(true)
-      setMessage({ text: "Qeydiyyat linki e-poçt ünvanınıza göndərildi! Zəhmət olmasa yoxlayın.", type: 'success' })
+      setMessage({ text: "Qeydiyyat linki e-poçt ünvanınıza göndərildi! Linkə kliklədikdən sonra anketiniz admin yoxlamasına göndəriləcək və hesabınıza daxil olacaqsınız.", type: 'success' })
     }
     setLoading(false)
   }
@@ -78,7 +101,7 @@ export default function LawyerSignupPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=/lawyer-onboarding%3Frole=lawyer`,
+        redirectTo: `${window.location.origin}/auth/callback?next=/account%3Frole=lawyer`,
       }
     })
     
@@ -120,6 +143,37 @@ export default function LawyerSignupPage() {
 
             {step === 1 ? (
               <form onSubmit={handleStep1Submit} className="space-y-6">
+                {/* Separate Form Selector: Vəkil vs Hüquqşünas */}
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                    Fəaliyyət Statusunuzu Seçin
+                  </label>
+                  <div className="grid grid-cols-2 gap-3 p-1.5 rounded-2xl bg-slate-100/80 dark:bg-black/30 border border-slate-200/80 dark:border-white/10">
+                    <button
+                      type="button"
+                      onClick={() => setPractitionerType("vekil")}
+                      className={`py-3 px-4 rounded-xl text-sm font-bold transition-all ${
+                        practitionerType === "vekil"
+                          ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/20"
+                          : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                      }`}
+                    >
+                      Vəkil (Kollegiya üzvü)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPractitionerType("huquqsunas")}
+                      className={`py-3 px-4 rounded-xl text-sm font-bold transition-all ${
+                        practitionerType === "huquqsunas"
+                          ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-500/20"
+                          : "text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
+                      }`}
+                    >
+                      Hüquqşünas / Məsləhətçi
+                    </button>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold">Adınız</label>
@@ -132,10 +186,17 @@ export default function LawyerSignupPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-semibold">Lisenziya / Vəsiqə Nömrəsi</label>
-                    <Input required value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} placeholder="Məs: VK-12345 və ya Hüquqşünas" className="h-12 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 rounded-xl" />
-                  </div>
+                  {practitionerType === "vekil" ? (
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold">Vəkillər Kollegiyası Lisenziya Nömrəsi *</label>
+                      <Input required value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} placeholder="Məs: VK-12345" className="h-12 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 rounded-xl" />
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-semibold">Ali Hüquq Təhsili / Diplom № *</label>
+                      <Input required value={educationDoc} onChange={e => setEducationDoc(e.target.value)} placeholder="Məs: BDU Hüquq / Diplom № 04512" className="h-12 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 rounded-xl" />
+                    </div>
+                  )}
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold">İş Təcrübəsi (İl)</label>
                     <Input required type="number" min="0" max="60" value={experienceYears} onChange={e => setExperienceYears(e.target.value)} placeholder="Məs: 10" className="h-12 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 rounded-xl" />

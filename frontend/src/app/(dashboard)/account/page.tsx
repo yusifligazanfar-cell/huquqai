@@ -288,9 +288,25 @@ export default function AccountPage() {
                             <div className="border-b border-slate-200 dark:border-white/10 pb-3 flex items-center justify-between gap-3 flex-wrap">
                               <h4 className="text-sm font-bold text-foreground uppercase tracking-widest">Profil Detalları</h4>
                               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
-                                {role === 'lawyer' ? 'Vəkil / Hüquqşünas' : 'Müştəri / Vətəndaş'}
+                                {role === 'lawyer'
+                                  ? (licenseNumber?.startsWith('HÜQ:') ? 'Hüquqşünas' : 'Vəkil')
+                                  : 'Müştəri / Vətəndaş'}
                               </span>
                             </div>
+
+                            {role === 'lawyer' && (
+                              <div
+                                className={`rounded-2xl border p-4 text-xs sm:text-sm font-medium ${
+                                  user?.isVerified
+                                    ? 'bg-emerald-50 dark:bg-emerald-950/35 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300'
+                                    : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-300'
+                                }`}
+                              >
+                                {user?.isVerified
+                                  ? 'Hesabınız admin tərəfindən təsdiqlənib və aktivdir. Artıq müştərilər sizi kataloqda görə bilər.'
+                                  : 'Anketiniz admin tərəfindən yoxlanılır (təsdiq gözləyir). Təsdiqləndikdən sonra e-poçt ünvanınıza bildiriş göndəriləcək.'}
+                              </div>
+                            )}
 
                             {role === 'lawyer' && (
                               <div className="flex flex-col gap-6 mt-2">

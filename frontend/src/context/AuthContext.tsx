@@ -69,7 +69,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       const meta = session.user.user_metadata
-      
+
+      // Sync any pending lawyer/jurist signup form saved before OAuth/OTP redirect
+      let pendingRaw: string | null = null
+      try {
+        pendingRaw = localStorage.getItem('pendingLawyerOnboarding') || sessionStorage.getItem('pendingLawyerOnboarding')
+      } catch {}
+
+      if (pendingRaw) {
+        try {
+          const pending = JSON.parse(pendingRaw)
+          await supabase.from('profiles').upsert({
+            id: session.user.id,
+            email: session.user.email || '',
+            role: 'lawyer',
+            name: pending.name || meta?.full_name || meta?.name || '',
+            surname: pending.surname || '',
+            license_number: pending.licenseNumber || '',
+            experience_years: Number(pending.experienceYears) || 0,
+            bio: pending.bio || '',
+            specialties: Array.isArray(pending.specialties) ? pending.specialties : [],
+            is_verified: false,
+          })
+          localStorage.removeItem('pendingLawyerOnboarding')
+          sessionStorage.removeItem('pendingLawyerOnboarding')
+        } catch (syncErr) {
+          console.error('Failed to sync pending lawyer onboarding:', syncErr)
+        }
+      }
+
       // Fetch profile from Supabase
       const { data: profileData, error } = await supabase
         .from('profiles')

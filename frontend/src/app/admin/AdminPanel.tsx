@@ -113,6 +113,7 @@ export default function AdminPanel() {
 
   const [loading, setLoading] = useState(false)
   const [errorText, setErrorText] = useState<string | null>(null)
+  const [actionNotice, setActionNotice] = useState<string | null>(null)
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [dailyTrend, setDailyTrend] = useState<DailyTrend[]>([])
   const [users, setUsers] = useState<RealUser[]>([])
@@ -123,6 +124,9 @@ export default function AdminPanel() {
   const [roleFilter, setRoleFilter] = useState<"all" | "user" | "lawyer">("all")
   const [lawyerStatusFilter, setLawyerStatusFilter] = useState<"all" | "verified" | "pending">("all")
   const [verifyingId, setVerifyingId] = useState<string | null>(null)
+  const [noteTargetId, setNoteTargetId] = useState<string | null>(null)
+  const [noteMode, setNoteMode] = useState<"request_info" | "reject">("request_info")
+  const [reviewNote, setReviewNote] = useState("")
 
   const loadOverview = useCallback(async (pass: string) => {
     setLoading(true)
@@ -164,8 +168,14 @@ export default function AdminPanel() {
     }
   }
 
-  async function handleToggleVerify(userId: string, nextVerified: boolean) {
+  async function handleReviewAction(
+    userId: string,
+    action: "approve" | "reject" | "request_info",
+    note?: string
+  ) {
     setVerifyingId(userId)
+    setErrorText(null)
+    setActionNotice(null)
     try {
       const res = await fetch("/api/admin/overview", {
         method: "PATCH",
@@ -173,26 +183,49 @@ export default function AdminPanel() {
           "Content-Type": "application/json",
           "x-admin-password": adminPassword,
         },
-        body: JSON.stringify({ userId, is_verified: nextVerified }),
+        body: JSON.stringify({ userId, action, note }),
       })
       const data = await res.json()
       if (!res.ok || !data.success) {
-        throw new Error(data.error || "Status yenilənmədi")
+        throw new Error(data.error || "Əməliyyat yerinə yetirilmədi")
       }
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, is_verified: nextVerified } : u))
-      )
-      setStats((prev) => {
-        if (!prev) return prev
-        const delta = nextVerified ? 1 : -1
-        return {
-          ...prev,
-          verifiedLawyers: prev.verifiedLawyers + delta,
-          pendingLawyers: prev.pendingLawyers - delta,
+
+      if (action === "approve" || action === "reject") {
+        const nextVerified = action === "approve"
+        const prevUser = users.find((u) => u.id === userId)
+        setUsers((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, is_verified: nextVerified } : u))
+        )
+        if (prevUser && prevUser.is_verified !== nextVerified) {
+          setStats((prev) => {
+            if (!prev) return prev
+            const delta = nextVerified ? 1 : -1
+            return {
+              ...prev,
+              verifiedLawyers: prev.verifiedLawyers + delta,
+              pendingLawyers: prev.pendingLawyers - delta,
+            }
+          })
         }
-      })
+      }
+
+      setNoteTargetId(null)
+      setReviewNote("")
+
+      const label =
+        action === "approve"
+          ? "Vəkil / Hüquqşünas təsdiqləndi."
+          : action === "request_info"
+          ? "Doğrulama məlumatı sorğusu qeydə alındı."
+          : "Müraciət rədd edildi."
+      const mailNote = data.emailSent
+        ? " E-poçt bildirişi göndərildi."
+        : data.emailWarning
+        ? ` (${data.emailWarning})`
+        : ""
+      setActionNotice(`${label}${mailNote}`)
     } catch (err: any) {
-      setErrorText(err?.message || "Təsdiqləmə zamanı xəta")
+      setErrorText(err?.message || "Əməliyyat zamanı xəta")
     } finally {
       setVerifyingId(null)
     }
@@ -372,6 +405,13 @@ export default function AdminPanel() {
           <div className="flex items-center gap-2 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs sm:text-sm text-red-300">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{errorText}</span>
+          </div>
+        )}
+
+        {actionNotice && (
+          <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs sm:text-sm text-emerald-300">
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{actionNotice}</span>
           </div>
         )}
 
@@ -576,9 +616,14 @@ export default function AdminPanel() {
                           {getInitials(lawyer.name, lawyer.surname)}
                         </div>
                         <div className="min-w-0">
-                          <h3 className="text-sm font-extrabold text-white truncate">
-                            {`${lawyer.name} ${lawyer.surname}`.trim() || "Adsız Vəkil"}
-                          </h3>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="text-sm font-extrabold text-white truncate">
+                              {`${lawyer.name} ${lawyer.surname}`.trim() || "Adsız Mütəxəssis"}
+                            </h3>
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-white/10 text-white/80">
+                              {(lawyer.license_number || "").startsWith("HÜQ:") ? "Hüquqşünas" : "Vəkil"}
+                            </span>
+                          </div>
                           <p className="text-xs text-white/55 truncate">{lawyer.email}</p>
                         </div>
                       </div>
@@ -628,28 +673,113 @@ export default function AdminPanel() {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                      <span className="text-xs text-white/50">
-                        Konsultasiyalar: <strong className="text-white">{lawyer.consultations_count}</strong>
-                      </span>
+                    <div className="space-y-3 pt-2 border-t border-white/10">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs text-white/50">
+                          Konsultasiyalar: <strong className="text-white">{lawyer.consultations_count}</strong>
+                        </span>
 
-                      <button
-                        type="button"
-                        disabled={verifyingId === lawyer.id}
-                        onClick={() => handleToggleVerify(lawyer.id, !lawyer.is_verified)}
-                        className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50 ${
-                          lawyer.is_verified
-                            ? "bg-white/10 hover:bg-red-500/20 text-white/80 hover:text-red-300 border border-white/10"
-                            : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-sm shadow-emerald-500/25"
-                        }`}
-                      >
-                        {verifyingId === lawyer.id ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                        )}
-                        <span>{lawyer.is_verified ? "Təsdiqi Ləğv Et" : "Vəkili Təsdiqlə"}</span>
-                      </button>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            disabled={verifyingId === lawyer.id}
+                            onClick={() => {
+                              setNoteTargetId(lawyer.id)
+                              setNoteMode("request_info")
+                              setReviewNote("")
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-white/85 border border-white/10 transition-all"
+                          >
+                            Məlumat İstə
+                          </button>
+
+                          {!lawyer.is_verified ? (
+                            <>
+                              <button
+                                type="button"
+                                disabled={verifyingId === lawyer.id}
+                                onClick={() => {
+                                  setNoteTargetId(lawyer.id)
+                                  setNoteMode("reject")
+                                  setReviewNote("")
+                                }}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-500/15 hover:bg-red-500/25 text-red-300 border border-red-500/25 transition-all"
+                              >
+                                Rədd et
+                              </button>
+                              <button
+                                type="button"
+                                disabled={verifyingId === lawyer.id}
+                                onClick={() => handleReviewAction(lawyer.id, "approve")}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-sm shadow-emerald-500/25 transition-all disabled:opacity-50"
+                              >
+                                {verifyingId === lawyer.id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                )}
+                                <span>Təsdiqlə</span>
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={verifyingId === lawyer.id}
+                              onClick={() => handleReviewAction(lawyer.id, "reject")}
+                              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-red-500/20 text-white/80 hover:text-red-300 border border-white/10 transition-all disabled:opacity-50"
+                            >
+                              {verifyingId === lawyer.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <CheckCircle2 className="w-3.5 h-3.5" />
+                              )}
+                              <span>Təsdiqi Ləğv Et</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {noteTargetId === lawyer.id && (
+                        <div className="rounded-xl bg-black/35 border border-white/10 p-3 space-y-2.5">
+                          <p className="text-xs font-bold text-white/85">
+                            {noteMode === "request_info"
+                              ? "E-poçtla doğrulama məlumatı istə (istəyə bağlı qeyd):"
+                              : "Rədd etmə səbəbi (e-poçta əlavə olunacaq):"}
+                          </p>
+                          <input
+                            type="text"
+                            value={reviewNote}
+                            onChange={(e) => setReviewNote(e.target.value)}
+                            placeholder={
+                              noteMode === "request_info"
+                                ? "Məs: Zəhmət olmasa vəsiqə və ya diplomun şəklini göndərin..."
+                                : "Məs: Təqdim edilən lisenziya nömrəsi təsdiqlənmədi..."
+                            }
+                            className="w-full bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-xs text-white placeholder-white/35 outline-none focus:border-emerald-500"
+                          />
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setNoteTargetId(null)}
+                              className="px-3 py-1.5 rounded-lg text-xs text-white/60 hover:text-white"
+                            >
+                              Ləğv et
+                            </button>
+                            <button
+                              type="button"
+                              disabled={verifyingId === lawyer.id}
+                              onClick={() => handleReviewAction(lawyer.id, noteMode, reviewNote)}
+                              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold text-white ${
+                                noteMode === "request_info"
+                                  ? "bg-emerald-600 hover:bg-emerald-500"
+                                  : "bg-red-600 hover:bg-red-500"
+                              }`}
+                            >
+                              {noteMode === "request_info" ? "Məlumat Sorğusu Göndər" : "Rədd Et və Bildir"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
