@@ -290,8 +290,8 @@ export async function PATCH(req: Request) {
           bodyText = `Hörmətli <strong>${fullName}</strong>, təqdim etdiyiniz məlumatlar yoxlanıldı, lakin hazırkı mərhələdə ${titleRole.toLowerCase()} profiliniz təsdiqlənmədi.${note ? `<br/><br/><strong>Səbəb / Qeyd:</strong> ${note}` : ""}`
         }
 
-        await resend.emails.send({
-          from: process.env.RESEND_FROM_EMAIL || "HuquqAI <noreply@huquqai.az>",
+        const { error: sendError } = await resend.emails.send({
+          from: process.env.RESEND_FROM_EMAIL || "HuquqAI <onboarding@resend.dev>",
           to: [targetEmail],
           subject,
           html: `
@@ -311,19 +311,26 @@ export async function PATCH(req: Request) {
             </div>
           `,
         })
-        emailSent = true
+        if (sendError) {
+          emailWarning = sendError.message || "Resend e-poçt xətası"
+        } else {
+          emailSent = true
+        }
       } catch (mailErr: any) {
         console.warn("Admin review email send error:", mailErr)
         emailWarning = mailErr?.message || "E-poçt göndərilmədi"
       }
     } else if (!resendApiKey) {
-      emailWarning = "RESEND_API_KEY təyin edilməyib (status bazada yeniləndi)"
+      emailWarning = "Vercel-də RESEND_API_KEY əlavə edilməyib"
+    } else if (!targetEmail) {
+      emailWarning = "İstifadəçinin e-poçt ünvanı tapılmadı"
     }
 
     return NextResponse.json({
       success: true,
       action: resolvedAction,
       profile: updatedProfile,
+      targetEmail,
       emailSent,
       emailWarning,
     })

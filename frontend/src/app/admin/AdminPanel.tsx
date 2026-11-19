@@ -114,6 +114,7 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(false)
   const [errorText, setErrorText] = useState<string | null>(null)
   const [actionNotice, setActionNotice] = useState<string | null>(null)
+  const [mailtoFallback, setMailtoFallback] = useState<{ email: string; subject: string; body: string } | null>(null)
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [dailyTrend, setDailyTrend] = useState<DailyTrend[]>([])
   const [users, setUsers] = useState<RealUser[]>([])
@@ -219,11 +220,31 @@ export default function AdminPanel() {
           ? "Doğrulama məlumatı sorğusu qeydə alındı."
           : "Müraciət rədd edildi."
       const mailNote = data.emailSent
-        ? " E-poçt bildirişi göndərildi."
+        ? ` E-poçt bildirişi göndərildi (${data.targetEmail || ""}).`
         : data.emailWarning
         ? ` (${data.emailWarning})`
         : ""
       setActionNotice(`${label}${mailNote}`)
+      if (!data.emailSent && data.targetEmail) {
+        setMailtoFallback({
+          email: data.targetEmail,
+          subject:
+            action === "approve"
+              ? "HÜQUQ AI — Hesabınız təsdiqləndi və aktivdir"
+              : action === "request_info"
+              ? "HÜQUQ AI — Doğrulama məlumatı tələb olunur"
+              : "HÜQUQ AI — Qeydiyyat müraciətinizin statusu",
+          body:
+            note ||
+            (action === "approve"
+              ? "Təbriklər! HÜQUQ AI platformasında hesabınız təsdiqləndi və aktivdir."
+              : action === "request_info"
+              ? "Zəhmət olmasa vəsiqə / diplom təsdiq sənədinizi cavab olaraq göndərin."
+              : "Təəssüf ki, müraciətiniz təsdiqlənmədi."),
+        })
+      } else {
+        setMailtoFallback(null)
+      }
     } catch (err: any) {
       setErrorText(err?.message || "Əməliyyat zamanı xəta")
     } finally {
@@ -409,9 +430,19 @@ export default function AdminPanel() {
         )}
 
         {actionNotice && (
-          <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs sm:text-sm text-emerald-300">
-            <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>{actionNotice}</span>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs sm:text-sm text-emerald-300">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{actionNotice}</span>
+            </div>
+            {mailtoFallback && (
+              <a
+                href={`mailto:${mailtoFallback.email}?subject=${encodeURIComponent(mailtoFallback.subject)}&body=${encodeURIComponent(mailtoFallback.body)}`}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold shrink-0"
+              >
+                E-poçtla göndər ({mailtoFallback.email})
+              </a>
+            )}
           </div>
         )}
 
