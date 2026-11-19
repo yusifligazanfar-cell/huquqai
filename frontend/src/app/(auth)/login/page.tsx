@@ -5,7 +5,7 @@ import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Mail, ArrowRight, Loader2, Scale, ShieldCheck, FileText, Sparkles } from "lucide-react"
+import { Mail, ArrowRight, Loader2, Scale } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -57,87 +57,21 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen w-full grid grid-cols-1 lg:grid-cols-2 bg-white dark:bg-slate-950">
-      {/* LEFT PART: Video / Visual Showcase */}
-      <div className="relative hidden lg:flex flex-col justify-between p-10 xl:p-14 overflow-hidden bg-[#06130f] text-white">
-        {/* Ambient Emerald Motion Backdrop (always active behind video) */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-24 -left-24 w-[480px] h-[480px] rounded-full bg-emerald-600/25 blur-[130px] animate-blob" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[460px] h-[460px] rounded-full bg-teal-500/20 blur-[130px] animate-blob animation-delay-2000" />
-          <div
-            className="absolute inset-0 opacity-[0.07]"
-            style={{
-              backgroundImage: "radial-gradient(#10b981 1px, transparent 1px)",
-              backgroundSize: "28px 28px",
-            }}
-          />
-        </div>
-
-        {/* Video Layer (place custom video at /public/login-video.mp4) */}
+      {/* LEFT PART: Full-bleed Video */}
+      <div className="relative hidden lg:block overflow-hidden bg-[#06130f]">
         {!videoFailed && (
           <video
             autoPlay
             loop
             muted
             playsInline
-            preload="metadata"
+            preload="auto"
             onError={() => setVideoFailed(true)}
-            className="absolute inset-0 w-full h-full object-cover opacity-55"
+            className="absolute inset-0 w-full h-full object-cover"
           >
             <source src="/login-video.mp4" type="video/mp4" />
           </video>
         )}
-
-        {/* Dark Gradient Readability Scrim */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#040d0a] via-[#040d0a]/55 to-[#040d0a]/40 pointer-events-none" />
-
-        {/* Top Brand Badge */}
-        <div className="relative z-10 flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center p-2">
-            <img src="/logo.png" alt="HÜQUQ AI" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <span className="text-lg font-black tracking-tight text-white block leading-none">
-              HÜQUQ AI
-            </span>
-            <span className="text-xs text-emerald-300/80 font-medium">
-              Azərbaycan Hüquq Platforması
-            </span>
-          </div>
-        </div>
-
-        {/* Center / Bottom Showcase Copy */}
-        <div className="relative z-10 max-w-lg space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 border border-emerald-400/25 text-emerald-300 text-xs font-bold backdrop-blur-md">
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Rəsmi e-Qanun &amp; Məhkəmə Təcrübəsi</span>
-          </div>
-
-          <h2 className="text-3xl xl:text-4xl font-black tracking-tight leading-[1.15] text-white">
-            Hüquqi suallarınıza saniyələr içində dəqiq, maddə əsaslı cavablar.
-          </h2>
-
-          <p className="text-sm xl:text-base text-slate-300/90 leading-relaxed">
-            Azərbaycan Respublikasının qüvvədə olan məcəllələri və normativ aktları əsasında süni zəka təhlili, rəsmi sənəd tərtibatı və vəkillərlə birbaşa əlaqə.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <div className="rounded-2xl bg-white/[0.06] backdrop-blur-md border border-white/10 p-3.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400 mb-2" />
-              <p className="text-xs font-bold text-white">Rəsmi Mənbə</p>
-              <p className="text-[11px] text-slate-300/75 mt-0.5">56,983+ sənəd</p>
-            </div>
-            <div className="rounded-2xl bg-white/[0.06] backdrop-blur-md border border-white/10 p-3.5">
-              <FileText className="w-4 h-4 text-emerald-400 mb-2" />
-              <p className="text-xs font-bold text-white">Sənəd Hazırla</p>
-              <p className="text-[11px] text-slate-300/75 mt-0.5">DOCX &amp; A4 PDF</p>
-            </div>
-            <div className="rounded-2xl bg-white/[0.06] backdrop-blur-md border border-white/10 p-3.5">
-              <Scale className="w-4 h-4 text-emerald-400 mb-2" />
-              <p className="text-xs font-bold text-white">Vəkil Dəstəyi</p>
-              <p className="text-[11px] text-slate-300/75 mt-0.5">Birbaşa məsləhət</p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* RIGHT PART: Modern Clean Login Form */}
