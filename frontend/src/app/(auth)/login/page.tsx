@@ -42,6 +42,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [signupVerificationSent, setSignupVerificationSent] = useState(false)
 
   // Lawyer onboarding step (only when accountRole === "lawyer" && authMode === "signup")
   const [lawyerStep, setLawyerStep] = useState<1 | 2>(1)
@@ -203,7 +204,14 @@ export default function LoginPage() {
           setLoading(false)
           return
         }
-        window.location.assign(accountRole === "lawyer" ? "/account?role=lawyer" : "/")
+        setSignupVerificationSent(true)
+        setPassword("")
+        setConfirmPassword("")
+        setMessage({
+          text: `Qeydiyyat tamamlandı! ${email.trim().toLowerCase()} ünvanına təsdiq linki göndərildi. Hesabınızı aktivləşdirmək üçün e-poçtunuzdakı linkə klikləyin.`,
+          type: "success",
+        })
+        setLoading(false)
         return
       } catch {
         setMessage({ text: "Şəbəkə xətası baş verdi.", type: "error" })
@@ -371,6 +379,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => {
                       setAuthMode("login")
+                      setSignupVerificationSent(false)
                       setMessage(null)
                     }}
                     className={`h-10 rounded-lg text-sm font-bold transition-all ${
@@ -385,6 +394,7 @@ export default function LoginPage() {
                     type="button"
                     onClick={() => {
                       setAuthMode("signup")
+                      setSignupVerificationSent(false)
                       setLawyerStep(1)
                       setMessage(null)
                     }}
@@ -619,6 +629,21 @@ export default function LoginPage() {
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </form>
+            ) : signupVerificationSent ? (
+              <div className="space-y-3 pt-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full h-12 rounded-xl font-bold"
+                  onClick={() => {
+                    setSignupVerificationSent(false)
+                    setAuthMode("login")
+                    setMessage(null)
+                  }}
+                >
+                  Daxil Ol səhifəsinə keç
+                </Button>
+              </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-3.5">
                 {authMode === "signup" && accountRole === "citizen" && (

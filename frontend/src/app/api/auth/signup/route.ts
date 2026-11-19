@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { cfFetch } from "@/lib/cloudflare-db"
-import { createEmailActionToken, setSessionCookie } from "@/lib/auth-session"
+import { createEmailActionToken } from "@/lib/auth-session"
 
 export async function POST(req: Request) {
   try {
@@ -26,60 +26,60 @@ export async function POST(req: Request) {
       )
     }
 
-    // Try sending verification email via Resend if configured
-    let emailSent = false
-    let emailWarning = ""
     const resendApiKey = process.env.RESEND_API_KEY
-    if (resendApiKey) {
-      try {
-        const token = createEmailActionToken(email, "verify")
-        const verifyUrl = `${origin}/api/auth/verify?token=${encodeURIComponent(token)}`
-        const fromAddress = process.env.RESEND_FROM_EMAIL || "HuquqAI <noreply@huquqai.az>"
-        const resendRes = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${resendApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromAddress,
-            to: [email],
-            subject: "HÜQUQ AI — E-poçtunuzu təsdiqləyin",
-            html: `
-              <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 24px;">
-                <h2>HÜQUQ AI hesabınızı təsdiqləyin</h2>
-                <p>Qeydiyyatı tamamlamaq üçün aşağıdakı düyməyə klikləyin:</p>
-                <p style="margin: 24px 0;">
-                  <a href="${verifyUrl}" style="background:#059669;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none;font-weight:bold;">
-                    E-poçtu Təsdiqlə
-                  </a>
-                </p>
-              </div>
-            `,
-          }),
-        })
-        if (resendRes.ok) {
-          emailSent = true
-        } else {
-          emailWarning = "Resend domeni təsdiqlənmədiyi üçün təsdiq maili göndərilmədi, hesabınız birbaşa açıldı."
-        }
-      } catch {
-        emailWarning = "Təsdiq maili göndərilmədi, hesabınız birbaşa açıldı."
-      }
+    if (!resendApiKey) {
+      return NextResponse.json(
+        { ok: false, error: "E-poçt xidməti (RESEND_API_KEY) konfiqurasiya edilməyib." },
+        { status: 500 }
+      )
     }
 
-    const res = NextResponse.json({
+    const token = createEmailActionToken(email, "verify")
+    const verifyUrl = `${origin}/api/auth/verify?token=${encodeURIComponent(token)}`
+    const fromAddress = process.env.RESEND_FROM_EMAIL || "HuquqAI <noreply@huquqai.az>"
+    const resendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: [email],
+        subject: "HÜQUQ AI — E-poçtunuzu təsdiqləyin",
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 520px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
+            <h2 style="margin: 0 0 12px; color: #0f172a;">HÜQUQ AI hesabınızı təsdiqləyin</h2>
+            <p style="margin: 0 0 20px; color: #475569; font-size: 14px; line-height: 1.6;">
+              Bu e-poçt ünvanının sizə aid olduğunu təsdiqləmək və hesabınızı aktivləşdirmək üçün aşağıdakı düyməyə klikləyin:
+            </p>
+            <p style="margin: 24px 0; text-align: center;">
+              <a href="${verifyUrl}" style="display:inline-block;background:#059669;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                E-poçtu Təsdiqlə və Daxil Ol
+              </a>
+            </p>
+            <p style="margin: 18px 0 0; color: #64748b; font-size: 12px;">
+              Bu link 1 saat ərzində etibarlıdır. Əgər bu qeydiyyatı siz etməmisinizsə, bu məktuba məhəl qoymayın.
+            </p>
+          </div>
+        `,
+      }),
+    })
+
+    if (!resendRes.ok) {
+      const errText = await resendRes.text().catch(() => "")
+      console.error("[SIGNUP VERIFY EMAIL ERROR]", resendRes.status, errText)
+      return NextResponse.json(
+        { ok: false, error: "Təsdiq maili göndərilə bilmədi. Zəhmət olmasa yenidən cəhd edin." },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({
       ok: true,
-      user: data.user,
-      emailSent,
-      emailWarning,
+      requiresVerification: true,
+      email,
     })
-    setSessionCookie(res, {
-      id: data.user.id,
-      email: data.user.email,
-      role: data.user.role,
-    })
-    return res
   } catch (err: any) {
     return NextResponse.json(
       { ok: false, error: err?.message || "Qeydiyyat xətası." },

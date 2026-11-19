@@ -227,6 +227,13 @@ export async function handleAppDb(request: Request, env: AppDbEnv): Promise<Resp
         return json({ error: "E-poçt və ya şifrə yanlışdır." }, 401);
       }
 
+      if (!row.email_verified) {
+        return json(
+          { error: "E-poçt ünvanınız hələ təsdiqlənməyib. Zəhmət olmasa e-poçtunuza göndərilən təsdiq linkinə klikləyin." },
+          403
+        );
+      }
+
       const nowIso = new Date().toISOString();
       await db.prepare("UPDATE profiles SET last_sign_in_at = ? WHERE id = ?").bind(nowIso, row.id).run();
       const updated = await db.prepare("SELECT * FROM profiles WHERE id = ?").bind(row.id).first<Record<string, any>>();
