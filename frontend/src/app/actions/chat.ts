@@ -666,8 +666,10 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
         cursor += line.length + 1;
       }
       if (bestOffset > maxLen * 0.55) {
-        const start = Math.max(header.length, bestOffset - 220);
-        return `${header}\n...\n${cleaned.slice(start, start + maxLen - header.length - 6)}`;
+        const leadLen = Math.min(720, Math.floor(maxLen * 0.35));
+        const lead = cleaned.slice(0, leadLen);
+        const start = Math.max(leadLen, bestOffset - 220);
+        return `${lead}\n...\n${cleaned.slice(start, start + maxLen - leadLen - 6)}`;
       }
       return cleaned.slice(0, maxLen);
     };
