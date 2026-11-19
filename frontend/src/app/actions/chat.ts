@@ -643,14 +643,43 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       6,
       lawMatch.confidence === "explicit"
     );
+    const contextStems = buildSearchStems(query, queryAnalysis, llmExpandedTerms);
+    const extractFocusedExcerpt = (rawContent: string, maxLen: number): string => {
+      const cleaned = sanitizeStatutoryExcerpt(rawContent);
+      if (cleaned.length <= maxLen) return cleaned;
+      const lines = cleaned.split("\n");
+      const header = lines[0]?.slice(0, 180) || "";
+      let bestOffset = 0;
+      let bestScore = -1;
+      let cursor = 0;
+      for (const line of lines) {
+        const norm = normalizeAz(line);
+        let sc = 0;
+        for (const s of contextStems) {
+          if (norm.includes(s.norm)) sc += s.weight * 2;
+          else if (s.stem.length >= 5 && norm.includes(s.stem)) sc += s.weight;
+        }
+        if (sc > bestScore) {
+          bestScore = sc;
+          bestOffset = cursor;
+        }
+        cursor += line.length + 1;
+      }
+      if (bestOffset > maxLen * 0.55) {
+        const start = Math.max(header.length, bestOffset - 220);
+        return `${header}\n...\n${cleaned.slice(start, start + maxLen - header.length - 6)}`;
+      }
+      return cleaned.slice(0, maxLen);
+    };
+
     const contextText = contextChunks
       .map((c, i) => {
-        const sliceLen = i < 2 ? 2600 : 1250;
-        const cleanBody = sanitizeStatutoryExcerpt(c.content).substring(0, sliceLen);
+        const sliceLen = i < 4 ? 2600 : 1500;
+        const cleanBody = extractFocusedExcerpt(c.content, sliceLen);
         return `[MƏNBƏ ${i + 1}: ${c.articleTitle}] (Rəsmi URL: ${c.sourceUrl})\n${cleanBody}`;
       })
       .join("\n\n---\n\n")
-      .slice(0, 10500);
+      .slice(0, 13000);
 
     // 4. ZERO-EXAMPLE, STRICT CLOSED-WORLD LEGAL PROMPT (e-qanun.ai precision — zero hardcoded statute/fine examples to prevent cross-question bleed!)
     const systemPrompt = `Sən HuquqAI — Azərbaycan Respublikasının qüvvədə olan qanunvericiliyinə (e-qanun.ai rəsmi mətnlərinə) əsaslanan dəqiq hüquqi araşdırma sistemisən.
