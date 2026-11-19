@@ -161,13 +161,15 @@ const GENERIC_PROCEDURAL_TOKENS = new Set([
 
 function sanitizeStatutoryExcerpt(text: string): string {
   return text
+    .replace(/\u00AD/g, '')
     .replace(/\u2011|\u2010|\u2212/g, '-')
     .replace(/\bgörəyüz\b/gi, 'görə yüz')
     .replace(/\bgündənüçay\b/gi, 'gündən üç ay')
     .replace(
       /(?:\s+\d+(?:\.\d+)*(?:-\d+)?\.)?\s*\n?Maddə\s+\d+(?:-\d+)?\.[^\n]*?\b\d+(?:\.\d+)*(?:-\d+)?\n(?![0-9]+\.)[^\n]*(?:\n(?!\d+(?:\.\d+)*(?:-\d+)?\.\s)[a-zəöüğışç\d][^\n]*)?(?=\s+\d+(?:\.\d+)*(?:-\d+)?\.)/gi,
       '\n'
-    );
+    )
+    .replace(/([^\n])\s+(\d{1,4}(?:-\d+)?(?:\.\d{1,2})+(?:-\d+)?\.)\s+/g, '$1\n$2 ');
 }
 
 function cleanClauseNoise(text: string): string {

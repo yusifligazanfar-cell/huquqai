@@ -3,6 +3,7 @@ export interface Env {
   AI: Ai;
   VECTORIZE: VectorizeIndex;
   LEXAZ_RAG_BACKEND_SECRET?: string;
+  CEREBRAS_API_KEY?: string;
 }
 
 interface ContentEntry {
@@ -565,15 +566,15 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
       else if (explicitArts.some((a) => a.includes(".") && c.artNum === a.split(".")[0])) c.score += 420;
     } else if (c.artNum && conceptPriorityArts.length > 0 && isConceptTarget) {
       const idx = conceptPriorityArts.indexOf(c.artNum);
-      if (idx !== -1) c.score += Math.max(95, 250 - idx * 35);
+      if (idx !== -1) c.score += Math.max(110, 320 - idx * 40);
       else {
         const subIdx = conceptPriorityArts.findIndex((a) => c.artNum.startsWith(`${a}.`));
-        if (subIdx !== -1) c.score += Math.max(70, 165 - subIdx * 25);
+        if (subIdx !== -1) c.score += Math.max(85, 210 - subIdx * 30);
         else {
           const baseIdx = conceptPriorityArts.findIndex(
             (a) => a.includes(".") && c.artNum === a.split(".")[0]
           );
-          if (baseIdx !== -1) c.score += Math.max(85, 225 - baseIdx * 30);
+          if (baseIdx !== -1) c.score += Math.max(95, 250 - baseIdx * 30);
         }
       }
     }
@@ -1046,20 +1047,25 @@ TƏLƏBLƏR:
 4. Heç bir başlıq ("Qısa cavab"), nömrəli siyahı və ya əlavə izah yazma. Hər cümlə nöqtə ilə tam bitsin.`;
 
   try {
-    const aiRunner = env.AI as unknown as {
-      run(
-        model: string,
-        input: Record<string, unknown>
-      ): Promise<{ response?: string; choices?: Array<{ message?: { content?: string } }> }>;
-    };
-    const res = await aiRunner.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 820,
+    let rawSummary = await callCerebrasEdge(env, [{ role: "user", content: prompt }], {
+      maxTokens: 820,
       temperature: 0.05,
     });
-    let text = String(
-      res?.response || res?.choices?.[0]?.message?.content || ""
-    )
+    if (!rawSummary) {
+      const aiRunner = env.AI as unknown as {
+        run(
+          model: string,
+          input: Record<string, unknown>
+        ): Promise<{ response?: string; choices?: Array<{ message?: { content?: string } }> }>;
+      };
+      const res = await aiRunner.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+        messages: [{ role: "user", content: prompt }],
+        max_tokens: 820,
+        temperature: 0.05,
+      });
+      rawSummary = String(res?.response || res?.choices?.[0]?.message?.content || "");
+    }
+    let text = String(rawSummary || "")
       .replace(/^#{1,3}\s*Qısa cavab\s*/i, "")
       .replace(/([.!?»"])\s+[-–—]\s+(?=[A-ZƏÖÜĞŞÇ“"«0-9])/g, "$1\n- ")
       .trim();
@@ -1172,20 +1178,31 @@ async function handleGenerateDocument(body: Record<string, unknown>, env: Env): 
   const maxTokens = Math.max(400, Math.min(Number.isFinite(requestedTokens) ? requestedTokens : 2400, 3400));
   const responseFormatJson = Boolean(body.responseFormatJson || body.response_format_json);
 
+  const docMessages: Array<{ role: "system" | "user"; content: string }> = [
+    {
+      role: "system",
+      content:
+        systemPrompt ||
+        "Sən Azərbaycan Respublikasının qanunvericiliyinə uyğun rəsmi hüquqi sənədlər hazırlayan peşəkar hüquqşünas assistantsan. Sənədi tam, rəsmi və hüquqi baxımdan səlis Azərbaycan dilində yaz.",
+    },
+    {
+      role: "user",
+      content: userPrompt.slice(0, 16000),
+    },
+  ];
+
+  const cerebrasDoc = await callCerebrasEdge(env, docMessages, {
+    maxTokens,
+    temperature: 0.15,
+    jsonMode: responseFormatJson,
+  });
+  if (cerebrasDoc) {
+    return jsonResp({ content: cerebrasDoc, provider: "cerebras-edge", latency_ms: Date.now() - t0 });
+  }
+
   try {
     const aiPayload: Record<string, unknown> = {
-      messages: [
-        {
-          role: "system",
-          content:
-            systemPrompt ||
-            "Sən Azərbaycan Respublikasının qanunvericiliyinə uyğun rəsmi hüquqi sənədlər hazırlayan peşəkar hüquqşünas assistantsan. Sənədi tam, rəsmi və hüquqi baxımdan səlis Azərbaycan dilində yaz.",
-        },
-        {
-          role: "user",
-          content: userPrompt.slice(0, 16000),
-        },
-      ],
+      messages: docMessages,
       temperature: 0.15,
       max_tokens: maxTokens,
     };
@@ -1213,6 +1230,55 @@ async function handleGenerateDocument(body: Record<string, unknown>, env: Env): 
       500
     );
   }
+}
+
+async function callCerebrasEdge(
+  env: Env,
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
+  options: { maxTokens: number; temperature: number; jsonMode?: boolean }
+): Promise<string | null> {
+  const apiKey = (env.CEREBRAS_API_KEY || "").trim();
+  if (!apiKey) return null;
+
+  const attempt = async () => {
+    const payload: Record<string, unknown> = {
+      model: "gpt-oss-120b",
+      messages,
+      temperature: options.temperature,
+      max_tokens: options.maxTokens,
+    };
+    if (options.jsonMode) {
+      payload.response_format = { type: "json_object" };
+    }
+    const res = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 429) return { retry: true as const, text: null };
+    if (!res.ok) return { retry: false as const, text: null };
+    const data = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const text = String(data?.choices?.[0]?.message?.content || "").trim();
+    return { retry: false as const, text: text || null };
+  };
+
+  try {
+    const first = await attempt();
+    if (first.text) return first.text;
+    if (first.retry) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const second = await attempt();
+      if (second.text) return second.text;
+    }
+  } catch {
+    // Fall through to Cloudflare Workers AI backup
+  }
+  return null;
 }
 
 async function handleRagAnswer(body: Record<string, unknown>, env: Env): Promise<Response> {
@@ -1247,6 +1313,17 @@ async function handleRagAnswer(body: Record<string, unknown>, env: Env): Promise
   }
   messages.push({ role: "user", content: userPrompt.slice(0, 22000) });
 
+  // Primary: Cerebras gpt-oss-120b (fast ~1-2s, preserves 100% of Cloudflare Workers AI free neurons for bge-m3 & reranker!)
+  const wantsJson = /JSON/i.test(systemPrompt);
+  const cerebrasText = await callCerebrasEdge(env, messages, {
+    maxTokens,
+    temperature,
+    jsonMode: wantsJson,
+  });
+  if (cerebrasText) {
+    return jsonResp({ content: cerebrasText, provider: "cerebras-edge", latency_ms: Date.now() - t0 });
+  }
+
   try {
     const aiRes = (await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
       messages,
@@ -1267,7 +1344,7 @@ async function handleRagAnswer(body: Record<string, unknown>, env: Env): Promise
     if (!content) {
       return jsonResp({ error: "Empty AI answer", content: "", latency_ms: Date.now() - t0 }, 502);
     }
-    return jsonResp({ content, latency_ms: Date.now() - t0 });
+    return jsonResp({ content, provider: "cf-ai", latency_ms: Date.now() - t0 });
   } catch (err) {
     return jsonResp(
       { error: err instanceof Error ? err.message : "RAG answer failed", latency_ms: Date.now() - t0 },
