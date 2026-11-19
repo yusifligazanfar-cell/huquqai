@@ -14,7 +14,6 @@ const montserrat = Montserrat({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
-  weight: ["400", "600"],
   display: "swap",
   preload: false,
 });

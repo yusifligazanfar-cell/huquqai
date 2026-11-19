@@ -91,10 +91,10 @@ export default function LawyerSignupPage() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4 relative overflow-hidden bg-slate-50 dark:bg-slate-950 py-12">
       
-      {/* Dynamic Animated Glass Background Orbs (Gold/Blue Theme for Lawyers) */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-gradient-to-br from-amber-500/30 to-orange-400/30 blur-[120px] mix-blend-multiply dark:mix-blend-screen animate-blob fixed" />
-      <div className="absolute top-[20%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-gradient-to-br from-blue-600/30 to-indigo-500/30 blur-[120px] mix-blend-multiply dark:mix-blend-screen animate-blob animation-delay-2000 fixed" />
-      <div className="absolute bottom-[-20%] left-[20%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-tr from-amber-400/20 to-teal-400/20 blur-[130px] mix-blend-multiply dark:mix-blend-screen animate-blob animation-delay-4000 fixed" />
+      {/* Dynamic Animated Glass Background Orbs (Emerald/Teal Theme) */}
+      <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-gradient-to-br from-emerald-500/25 to-teal-400/25 blur-[120px] mix-blend-multiply dark:mix-blend-screen animate-blob fixed" />
+      <div className="absolute top-[20%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-gradient-to-br from-teal-500/25 to-emerald-400/25 blur-[120px] mix-blend-multiply dark:mix-blend-screen animate-blob animation-delay-2000 fixed" />
+      <div className="absolute bottom-[-20%] left-[20%] w-[60vw] h-[60vw] rounded-full bg-gradient-to-tr from-emerald-400/20 to-teal-400/20 blur-[130px] mix-blend-multiply dark:mix-blend-screen animate-blob animation-delay-4000 fixed" />
       
       {/* Noise Texture Overlay for Premium Feel */}
       <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none mix-blend-overlay fixed" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E")' }}></div>
@@ -107,10 +107,12 @@ export default function LawyerSignupPage() {
           
           <div className="relative z-10">
             <div className="mb-8 text-center">
-              <div className="w-16 h-16 bg-gradient-to-tr from-amber-500 to-orange-400 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-amber-500/30">
+              <div className="w-16 h-16 bg-gradient-to-tr from-emerald-600 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-5 shadow-lg shadow-emerald-500/30">
                 <Scale className="w-8 h-8 text-white" />
               </div>
-              <h1 className="text-3xl font-black tracking-tighter text-black dark:text-white mb-2">Vəkil Kimi Qoşulun</h1>
+              <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-black dark:text-white mb-2">
+                Vəkil və ya Hüquqşünas Kimi Qoşulun
+              </h1>
               <p className="text-slate-600 dark:text-slate-300 font-medium tracking-wide">
                 {step === 1 ? "Müştərilərin sizi tapa bilməsi üçün anketinizi doldurun" : "Davam etmək üçün hesaba daxil olun"}
               </p>
@@ -131,8 +133,8 @@ export default function LawyerSignupPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1.5">
-                    <label className="text-sm font-semibold">Vəkillər Kollegiyası Lisenziya Nömrəsi</label>
-                    <Input required value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} placeholder="Məs: VK-12345" className="h-12 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 rounded-xl" />
+                    <label className="text-sm font-semibold">Lisenziya / Vəsiqə Nömrəsi</label>
+                    <Input required value={licenseNumber} onChange={e => setLicenseNumber(e.target.value)} placeholder="Məs: VK-12345 və ya Hüquqşünas" className="h-12 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 rounded-xl" />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold">İş Təcrübəsi (İl)</label>
@@ -163,8 +165,8 @@ export default function LawyerSignupPage() {
                           onClick={() => toggleSpecialty(category.name_az)}
                           className={`flex flex-col items-center justify-center gap-2 p-3 h-28 rounded-xl border text-center transition-all ${
                             isSelected 
-                              ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-transparent shadow-md shadow-amber-500/20' 
-                              : 'bg-white/50 dark:bg-black/20 border-white/40 dark:border-white/10 hover:border-amber-500/50 hover:bg-amber-50/50 dark:hover:bg-amber-500/10'
+                              ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-transparent shadow-md shadow-emerald-500/20' 
+                              : 'bg-white/50 dark:bg-black/20 border-white/40 dark:border-white/10 hover:border-emerald-500/50 hover:bg-emerald-50/50 dark:hover:bg-emerald-500/10'
                           }`}
                         >
                           <CategoryIcon id={category.id} className={`w-6 h-6 mb-1 ${isSelected ? 'text-white' : 'text-slate-500 dark:text-slate-400'}`} />
@@ -180,7 +182,7 @@ export default function LawyerSignupPage() {
                 </div>
 
                 <div className="pt-4 mt-4 border-t border-slate-200/50 dark:border-white/10">
-                  <Button type="submit" className="w-full h-14 text-base font-semibold rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-lg shadow-amber-500/25 transition-all hover:-translate-y-0.5">
+                  <Button type="submit" className="w-full h-14 text-base font-semibold rounded-xl transition-all hover:-translate-y-0.5">
                     Növbəti Addım <ArrowRight className="h-5 w-5 ml-2" />
                   </Button>
                 </div>
