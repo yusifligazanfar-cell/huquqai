@@ -46,14 +46,6 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
 
-  // Pre-signup email verification state
-  const [emailToken, setEmailToken] = useState("")
-  const [emailCode, setEmailCode] = useState("")
-  const [isCodeSent, setIsCodeSent] = useState(false)
-  const [isEmailVerified, setIsEmailVerified] = useState(false)
-  const [verifiedEmail, setVerifiedEmail] = useState("")
-  const [codeLoading, setCodeLoading] = useState(false)
-
   // Lawyer onboarding step (only when accountRole === "lawyer" && authMode === "signup")
   const [lawyerStep, setLawyerStep] = useState<1 | 2>(1)
   const [practitionerType, setPractitionerType] = useState<"vekil" | "huquqsunas">("vekil")
@@ -89,19 +81,8 @@ export default function LoginPage() {
   const isPasswordStrong =
     pwChecks.minLength && pwChecks.hasUpper && pwChecks.hasDigit && pwChecks.hasSpecial
 
-  const resetEmailVerification = () => {
-    setEmailToken("")
-    setEmailCode("")
-    setIsCodeSent(false)
-    setIsEmailVerified(false)
-    setVerifiedEmail("")
-  }
-
   const handleEmailChange = (val: string) => {
     setEmail(val)
-    if (isEmailVerified && val.trim().toLowerCase() !== verifiedEmail) {
-      resetEmailVerification()
-    }
   }
 
   const toggleSpecialty = (spec: string) => {
@@ -153,73 +134,28 @@ export default function LoginPage() {
     setLawyerStep(2)
   }
 
-  const handleSendVerificationCode = async () => {
-    const cleanEmail = email.trim().toLowerCase()
-    if (!cleanEmail) {
-      setMessage({ text: "Əvvəlcə e-poçt ünvanınızı daxil edin.", type: "error" })
-      return
-    }
-    setCodeLoading(true)
+  const handleResendSignupEmail = async () => {
+    if (!email.trim()) return
+    setLoading(true)
     setMessage(null)
-    try {
-      const res = await fetch("/api/auth/email-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "send", email: cleanEmail }),
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim().toLowerCase(),
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback${
+          accountRole === "lawyer" ? "?next=/account%3Frole=lawyer" : ""
+        }`,
+      },
+    })
+    if (error) {
+      setMessage({ text: error.message, type: "error" })
+    } else {
+      setMessage({
+        text: "Təsdiq linki yenidən e-poçt ünvanınıza göndərildi.",
+        type: "success",
       })
-      const data = await res.json()
-      if (!res.ok || !data.ok) {
-        setMessage({ text: data.error || "Təsdiq kodu göndərilmədi.", type: "error" })
-      } else {
-        setEmailToken(data.token)
-        setIsCodeSent(true)
-        setMessage({
-          text: "6 rəqəmli təsdiq kodu e-poçt ünvanınıza göndərildi. Kodu daxil edib təsdiqləyin.",
-          type: "success",
-        })
-      }
-    } catch {
-      setMessage({ text: "Şəbəkə xətası baş verdi.", type: "error" })
-    } finally {
-      setCodeLoading(false)
     }
-  }
-
-  const handleVerifyEmailCode = async () => {
-    const cleanEmail = email.trim().toLowerCase()
-    if (!emailCode.trim()) {
-      setMessage({ text: "6 rəqəmli təsdiq kodunu daxil edin.", type: "error" })
-      return
-    }
-    setCodeLoading(true)
-    setMessage(null)
-    try {
-      const res = await fetch("/api/auth/email-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "verify",
-          email: cleanEmail,
-          code: emailCode.trim(),
-          token: emailToken,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.ok) {
-        setMessage({ text: data.error || "Təsdiq kodu yanlışdır.", type: "error" })
-      } else {
-        setIsEmailVerified(true)
-        setVerifiedEmail(cleanEmail)
-        setMessage({
-          text: "E-poçt ünvanınız təsdiqləndi! İndi şifrənizi təyin edib qeydiyyatı tamamlaya bilərsiniz.",
-          type: "success",
-        })
-      }
-    } catch {
-      setMessage({ text: "Şəbəkə xətası baş verdi.", type: "error" })
-    } finally {
-      setCodeLoading(false)
-    }
+    setLoading(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -229,14 +165,6 @@ export default function LoginPage() {
 
     if (authMode === "signup") {
       const cleanEmail = email.trim().toLowerCase()
-      if (!isEmailVerified || verifiedEmail !== cleanEmail) {
-        setMessage({
-          text: "Qeydiyyatdan keçməzdən əvvəl e-poçt ünvanınızı 6 rəqəmli kod ilə təsdiqləyin.",
-          type: "error",
-        })
-        setLoading(false)
-        return
-      }
       if (!isPasswordStrong) {
         setMessage({
           text: "Şifrə minimum 8 simvol, 1 böyük hərf, 1 rəqəm və 1 özəl simvol içərməlidir.",
@@ -730,60 +658,17 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                {/* Email + Verify button on signup */}
-                <div className="space-y-2">
-                  <div className="flex gap-2">
-                    <div className="relative flex-1 group/input">
-                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
-                      <Input
-                        type="email"
-                        placeholder="E-poçt ünvanınız"
-                        className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl text-sm"
-                        value={email}
-                        onChange={(e) => handleEmailChange(e.target.value)}
-                        required
-                      />
-                    </div>
-                    {authMode === "signup" && !isEmailVerified && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={handleSendVerificationCode}
-                        disabled={codeLoading || !email.trim()}
-                        className="h-12 px-3.5 rounded-xl font-semibold text-xs shrink-0 border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300"
-                      >
-                        {codeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : isCodeSent ? "Yenidən" : "Kodu göndər"}
-                      </Button>
-                    )}
-                    {authMode === "signup" && isEmailVerified && (
-                      <div className="h-12 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 text-xs font-bold shrink-0">
-                        <ShieldCheck className="w-4 h-4" />
-                        <span>Təsdiqləndi</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {authMode === "signup" && isCodeSent && !isEmailVerified && (
-                    <div className="flex gap-2">
-                      <Input
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={6}
-                        placeholder="E-poçta gələn 6 rəqəmli kod"
-                        className="h-11 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl text-sm tracking-widest font-bold text-center"
-                        value={emailCode}
-                        onChange={(e) => setEmailCode(e.target.value)}
-                      />
-                      <Button
-                        type="button"
-                        onClick={handleVerifyEmailCode}
-                        disabled={codeLoading || emailCode.trim().length < 6}
-                        className="h-11 px-4 rounded-xl text-xs font-bold shrink-0"
-                      >
-                        {codeLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Təsdiqlə"}
-                      </Button>
-                    </div>
-                  )}
+                {/* Email */}
+                <div className="relative group/input">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
+                  <Input
+                    type="email"
+                    placeholder="E-poçt ünvanınız"
+                    className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 rounded-xl text-sm"
+                    value={email}
+                    onChange={(e) => handleEmailChange(e.target.value)}
+                    required
+                  />
                 </div>
 
                 {(authMode === "signup" || loginMethod === "password") && (
@@ -878,10 +763,7 @@ export default function LoginPage() {
                 <Button
                   type="submit"
                   className="w-full h-12 font-bold text-sm sm:text-base rounded-xl transition-all"
-                  disabled={
-                    loading ||
-                    (authMode === "signup" && (!isEmailVerified || !isPasswordStrong))
-                  }
+                  disabled={loading || (authMode === "signup" && !isPasswordStrong)}
                 >
                   {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                   {loading
@@ -905,7 +787,18 @@ export default function LoginPage() {
                 )}
               </form>
             ) : (
-              <div>
+              <div className="space-y-2.5">
+                {authMode === "signup" && (
+                  <Button
+                    type="button"
+                    className="w-full h-12 rounded-xl font-semibold text-sm"
+                    onClick={handleResendSignupEmail}
+                    disabled={loading}
+                  >
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                    Təsdiq linkini yenidən göndər
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-sm"
