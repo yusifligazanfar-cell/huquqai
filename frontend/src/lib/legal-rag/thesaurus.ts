@@ -527,5 +527,71 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
       "cinayet prosessual mecellesi madde 125", "cinayet prosessual mecellesi madde 177"
     ],
     priorityArticles: ["125", "177", "242", "95", "85"]
+  },
+  {
+    id: "criminal_defamation_insult_and_social_media",
+    domain: "Cinayət hüququ",
+    primaryLawId: "cinayet",
+    primaryDocId: "46947",
+    triggerPhrases: [
+      "tehqir", "bohtan", "sosial sebeke", "sosial sebekede", "internetde tehqir",
+      "saxta profil", "saxta hesab", "seref ve leyaqet", "serefini", "leyaqetini",
+      "nalayiq formada", "soyus", "alcaltma", "defamasiya"
+    ],
+    expandedTerms: [
+      "tehqir kutlevi cixislarda internet informasiya ehtiyatinda sexsiyyetin seref ve leyaqetini nalayiq formada qesden alcaltma",
+      "internet informasiya ehtiyatinda saxta istifadeci adlar profil ve ya hesablardan istifade ederek bohtan atma ve ya tehqir etme",
+      "bohtan yalan oldugunu bile-bile seref ve leyaqetini lekeleyen",
+      "xususi ittiham qaydasinda cinayet teqibi",
+      "cinayet mecellesi madde 148", "cinayet mecellesi madde 148-1", "cinayet mecellesi madde 147"
+    ],
+    priorityArticles: ["148", "148.1", "147", "510", "23", "37"]
+  },
+  {
+    id: "criminal_hooliganism_and_public_order",
+    domain: "Cinayət və İnzibati xətalar hüququ",
+    primaryLawId: "cinayet",
+    primaryDocId: "46947",
+    triggerPhrases: [
+      "xuliqanliq", "xirda xuliqanliq", "ictimai qaydani pozan", "ictimai meneviyyati tehqir",
+      "exlaqsiz ifadeler", "cemiyyete aciqca hormetsizlik"
+    ],
+    expandedTerms: [
+      "xuliqanliq ictimai qaydani kobud suretde pozan",
+      "xirda xuliqanliq internet informasiya ehtiyatinda",
+      "cinayet mecellesi madde 221", "inzibati xetalar mecellesi madde 510"
+    ],
+    priorityArticles: ["221", "510"]
+  },
+  {
+    id: "criminal_threat_blackmail_extortion",
+    domain: "Cinayət hüququ",
+    primaryLawId: "cinayet",
+    primaryDocId: "46947",
+    triggerPhrases: [
+      "hede-qorxu", "hede qorxu", "santaj", "oldermekle hedeleme", "zorakiliq tetbiq etmekle hedeleme"
+    ],
+    expandedTerms: [
+      "oldurmekle ve ya saglamliga agir zerer vurmaqla hedeleme",
+      "hede-qorxu ile teleb etme rusvetraya",
+      "cinayet mecellesi madde 134", "cinayet mecellesi madde 182"
+    ],
+    priorityArticles: ["134", "182"]
+  },
+  {
+    id: "criminal_privacy_and_cybercrime",
+    domain: "Cinayət hüququ",
+    primaryLawId: "cinayet",
+    primaryDocId: "46947",
+    triggerPhrases: [
+      "sexsi heyatin toxunulmazligi", "gizli cekilis", "gizli ses yazisi", "hesaba qanunsuz giris",
+      "komputer sistemine qanunsuz daxil olma", "sexsi sirr", "aile heyatinin sirri"
+    ],
+    expandedTerms: [
+      "sexsi heyatin toxunulmazligini pozma sexsi ve aile heyatinin sirri",
+      "komputer sistemine qanunsuz daxil olma",
+      "cinayet mecellesi madde 156", "cinayet mecellesi madde 271"
+    ],
+    priorityArticles: ["156", "271", "272", "273"]
   }
 ];

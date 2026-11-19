@@ -93,7 +93,7 @@ function articleNumbersMatch(chunkArtRaw: string, targetArt: string): boolean {
   if (!targetArt) return true;
   const chunkArt = normalizeArticleToken(chunkArtRaw);
   if (!chunkArt) return false;
-  if (chunkArt === targetArt) return true;
+  if (chunkArt === targetArt || chunkArt.replace(/-/g, '.') === targetArt.replace(/-/g, '.')) return true;
   const baseTarget = targetArt.split(/[.\-]/)[0];
   if (baseTarget && chunkArt === baseTarget) return true;
   if (chunkArt.startsWith(`${targetArt}.`) || chunkArt.startsWith(`${targetArt}-`)) return true;

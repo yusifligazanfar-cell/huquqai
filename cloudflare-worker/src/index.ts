@@ -55,6 +55,9 @@ const AZ_STOP_WORDS = new Set([
   "tesevvur", "edin", "sentyabr", "ayinda", "baki", "seherinde", "fealiyyet", "gosteren",
   "adli", "sirket", "sirketin", "sirkete", "melum", "bildirir", "ehtimal", "bundan",
   "elave", "hemin", "diger", "eslinde", "zamani", "gorerek", "suallar", "sual",
+  "basqa", "ederse", "etdikde", "olarsa", "olduqda", "bilermi", "biler", "olarmi",
+  "dasiya", "dasiyir", "dasiyirmi", "yaranir", "yaranirmi", "dusur", "dusurmu",
+  "sayilir", "sayilirmi", "tutulur", "tutulurmu",
 ]);
 
 const GENERIC_META = new Set([
@@ -62,6 +65,7 @@ const GENERIC_META = new Set([
   "xeta", "xetasi", "xetasinin", "huquq", "huququ", "huququnun", "qayda", "qaydasi",
   "qaydalari", "muddet", "muddeti", "miqdar", "miqdari", "mebleg", "meblegi",
   "sert", "serti", "sertleri", "qeder", "qederdir", "hallar", "hallarda", "esas", "esaslari",
+  "sexs", "sexsi", "sexsin", "sexse", "sexsler", "mesuliyyet", "mesuliyyeti", "mesuliyyete", "mesuliyyetden",
 ]);
 
 const DOC_ID_TO_LAW_ID: Record<string, string> = {
@@ -534,21 +538,32 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
       }
 
       if (se.isRaw) {
-        cand.matchedRaw += 1;
-        cand.score += se.isMeta ? 25 : 85;
-        if (inAt) {
-          cand.inArtTitle += 1;
-          cand.score += 65;
+        if (!se.isMeta) {
+          cand.matchedRaw += 1;
+          cand.score += 95;
+          if (inAt) {
+            cand.inArtTitle += 1;
+            cand.score += 195;
+          }
+        } else {
+          cand.score += 12;
+          if (inAt) {
+            cand.score += 18;
+          }
         }
         if (inT) cand.inTitle += 1;
       } else {
         cand.matchedExp += 1;
         cand.score += 22;
+        if (inAt && !se.isMeta) {
+          cand.score += 65;
+        }
       }
     }
   }
 
   // Apply calibrated statutory priors (global-first like e-qanun.ai; never let a topical keyword lock drown out exact matches in other Codes)
+  const substantiveRawCount = rawStems.filter((s) => !GENERIC_META.has(s)).length;
   const primaryBoost =
     lawConf === "explicit" ? 360 : lawConf === "strong" ? 65 : lawConf === "weak" ? 35 : 0;
   const secondaryBoost =
@@ -593,8 +608,8 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
       }
     }
 
-    if (rawStems.length >= 2 && c.matchedRaw >= rawStems.length) c.score += 130;
-    else if (rawStems.length >= 3 && c.matchedRaw <= 1 && !allTargetedDocs.has(c.docId)) c.score -= 80;
+    if (substantiveRawCount >= 2 && c.matchedRaw >= substantiveRawCount) c.score += 130;
+    else if (substantiveRawCount >= 3 && c.matchedRaw <= 1 && !allTargetedDocs.has(c.docId)) c.score -= 80;
   }
 
   const preTop = Array.from(candidates.values())

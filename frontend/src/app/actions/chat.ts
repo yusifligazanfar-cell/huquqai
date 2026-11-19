@@ -737,10 +737,11 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     const isCriminalEmbezzlementOrOfficialKazus =
       (topLawIds.includes("cinayet") || rewrittenLaws.includes("cinayet") || /(menimse|israf|cinayet terkib|huquqi tovsif|saxta xidmet muqavile|vezife selahiyyet)/i.test(combinedQNorm)) &&
       /(menimse|israf|cinayet terkib|huquqi tovsif|saxta|vezife|direktor|hesab-faktura)/i.test(combinedQNorm);
+    const isDefamationOrInsultQuery =
+      /(tehqir|bohtan|defamasiya|seref ve leyaqet|saxta profil|nalayiq formada)/i.test(combinedQNorm) &&
+      !/(doyul|qetl|oldur|qebir|bayraq|gerb|mehkemeye hormetsizlik)/i.test(combinedQNorm);
     const hasMediationChunk = retrievedChunks.slice(0, 8).some((c) => c.documentId === "41828" || c.lawName.toLowerCase().includes("mediasiya"));
     const hasAile34 = retrievedChunks.slice(0, 8).some((c) => c.lawId === "aile" && (c.articleNumber === "34" || c.articleNumber.startsWith("34.")));
-    const hasCmArt = (art: string) =>
-      retrievedChunks.slice(0, 6).some((c) => c.lawId === "cinayet" && (c.articleNumber === art || c.articleNumber.startsWith(`${art}.`)));
 
     const fetchCompanionArticle = async (
       docId: string,
@@ -756,7 +757,8 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
           : null;
         if (!doc?.content) return null;
         let body = doc.content.slice(0, 3600);
-        let customTitle = `${doc.title} — Maddə ${artNum}`;
+        const displayArt = artNum === "148.1" ? "148-1" : artNum;
+        let customTitle = `${doc.title} — Maddə ${displayArt}`;
         if (mode === "cm177_note") {
           const qeydIdx = doc.content.indexOf("Qeyd:");
           if (qeydIdx >= 0) {
@@ -770,7 +772,7 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
           sourceId: `companion_${docId}_art_${artNum}`,
           lawId,
           lawName: doc.title,
-          articleNumber: artNum,
+          articleNumber: displayArt,
           articleTitle: customTitle,
           content: body,
           sourceFile: `eqanun_doc_${docId}`,
@@ -783,19 +785,50 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       }
     };
 
-    const [judicialChunks, mediationChunk, aile34Chunk, cm179Chunk, cm177NoteChunk, cm178Chunk, cm308Chunk, cm313Chunk] = await Promise.all([
+    const [
+      judicialChunks,
+      mediationChunk,
+      aile34Chunk,
+      cm179Chunk,
+      cm177NoteChunk,
+      cm178Chunk,
+      cm308Chunk,
+      cm313Chunk,
+      cm148Chunk,
+      cm148_1Chunk,
+      cm147Chunk,
+      cpm37Chunk,
+      ixm510Chunk,
+      mm23Chunk,
+    ] = await Promise.all([
       isRemoteRagConfigured()
         ? fetchRemoteJudicialSearch(
             {
               query: effectiveSearchQuery,
               expandedQueries: [...(queryAnalysis.keywords || []), ...llmExpandedTerms],
-              matchedLaws: isCriminalEmbezzlementOrOfficialKazus ? Array.from(new Set(["cinayet", ...topLawIds])) : topLawIds,
-              matchedArticles: isCriminalEmbezzlementOrOfficialKazus ? Array.from(new Set(["179", "313", "308", "178", ...topArtNums])) : topArtNums,
+              matchedLaws: isCriminalEmbezzlementOrOfficialKazus
+                ? Array.from(new Set(["cinayet", ...topLawIds]))
+                : isDefamationOrInsultQuery
+                ? Array.from(new Set(["cinayet", "cinayet_prosessual", "mulki", ...topLawIds]))
+                : topLawIds,
+              matchedArticles: isCriminalEmbezzlementOrOfficialKazus
+                ? Array.from(new Set(["179", "313", "308", "178", ...topArtNums]))
+                : isDefamationOrInsultQuery
+                ? Array.from(new Set(["148", "148.1", "147", "37", "23", ...topArtNums]))
+                : topArtNums,
               matchedPairs: isCriminalEmbezzlementOrOfficialKazus
                 ? [
                     { law: "cinayet", article: "179" },
                     { law: "cinayet", article: "313" },
                     { law: "cinayet", article: "308" },
+                    ...topPairs,
+                  ]
+                : isDefamationOrInsultQuery
+                ? [
+                    { law: "cinayet", article: "148" },
+                    { law: "cinayet", article: "147" },
+                    { law: "cinayet_prosessual", article: "37" },
+                    { law: "mulki", article: "23" },
                     ...topPairs,
                   ]
                 : topPairs,
@@ -825,11 +858,39 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       isCriminalEmbezzlementOrOfficialKazus
         ? fetchCompanionArticle("46947", "313", "cinayet")
         : Promise.resolve(null),
+      isDefamationOrInsultQuery
+        ? fetchCompanionArticle("46947", "148", "cinayet")
+        : Promise.resolve(null),
+      isDefamationOrInsultQuery
+        ? fetchCompanionArticle("46947", "148.1", "cinayet")
+        : Promise.resolve(null),
+      isDefamationOrInsultQuery
+        ? fetchCompanionArticle("46947", "147", "cinayet")
+        : Promise.resolve(null),
+      isDefamationOrInsultQuery
+        ? fetchCompanionArticle("46950", "37", "cinayet_prosessual")
+        : Promise.resolve(null),
+      isDefamationOrInsultQuery
+        ? fetchCompanionArticle("46960", "510", "inzibati_xetalar")
+        : Promise.resolve(null),
+      isDefamationOrInsultQuery
+        ? fetchCompanionArticle("46944", "23", "mulki")
+        : Promise.resolve(null),
     ]);
 
-    const cmCompanionChunks = [cm179Chunk, cm177NoteChunk, cm178Chunk, cm308Chunk, cm313Chunk].filter(
-      (c): c is StructuredChunk => Boolean(c)
-    );
+    const cmCompanionChunks = [
+      cm179Chunk,
+      cm177NoteChunk,
+      cm178Chunk,
+      cm308Chunk,
+      cm313Chunk,
+      cm148Chunk,
+      cm148_1Chunk,
+      cm147Chunk,
+      cpm37Chunk,
+      ixm510Chunk,
+      mm23Chunk,
+    ].filter((c): c is StructuredChunk => Boolean(c));
     const companionKeys = new Set(cmCompanionChunks.map((c) => `${c.lawId}::${c.articleNumber}`));
     const dedupedRetrievedChunks =
       cmCompanionChunks.length > 0
