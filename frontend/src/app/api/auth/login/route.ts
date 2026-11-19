@@ -7,10 +7,11 @@ export async function POST(req: Request) {
     const body = await req.json()
     const email = String(body?.email || "").trim().toLowerCase()
     const password = String(body?.password || "")
+    const role = body?.role === "lawyer" ? "lawyer" : "client"
 
     const { ok, status, data } = await cfFetch<{ user?: any; error?: string }>("/app/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, role }),
     })
 
     if (!ok || !data?.user) {

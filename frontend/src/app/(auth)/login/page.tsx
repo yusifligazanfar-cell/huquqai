@@ -78,6 +78,11 @@ export default function LoginPage() {
         text: "Google girişi üçün Vercel-də GOOGLE_CLIENT_ID və GOOGLE_CLIENT_SECRET təyin edilməlidir.",
         type: "error",
       })
+    } else if (errParam === "not_registered_as_lawyer") {
+      setMessage({
+        text: "Bu hesab Vəkil / Hüquqşünas kimi qeydiyyatdan keçməyib. Əvvəlcə Vəkil / Hüquqşünas kimi qeydiyyatdan keçin.",
+        type: "error",
+      })
     } else if (errParam?.startsWith("google_")) {
       setMessage({
         text: "Google ilə giriş zamanı xəta baş verdi. Yenidən cəhd edin.",
@@ -240,6 +245,7 @@ export default function LoginPage() {
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           password,
+          role: accountRole === "lawyer" ? "lawyer" : "client",
         }),
       })
       const data = await res.json()

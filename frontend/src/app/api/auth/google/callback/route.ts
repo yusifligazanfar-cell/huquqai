@@ -76,7 +76,7 @@ export async function GET(req: Request) {
     return NextResponse.redirect(new URL("/login?error=google_email_missing", url.origin))
   }
 
-  const { ok, data } = await cfFetch<{ user?: any }>("/app/auth/oauth", {
+  const { ok, status, data } = await cfFetch<{ user?: any; error?: string }>("/app/auth/oauth", {
     method: "POST",
     body: JSON.stringify({
       email: gUser.email,
@@ -84,10 +84,16 @@ export async function GET(req: Request) {
       surname: gUser.family_name || "",
       avatar_url: gUser.picture || "",
       role: state.role,
+      mode: state.mode,
     }),
   })
 
   if (!ok || !data?.user) {
+    if (status === 403 && state.role === "lawyer") {
+      return NextResponse.redirect(
+        new URL("/login?role=lawyer&error=not_registered_as_lawyer", url.origin)
+      )
+    }
     return NextResponse.redirect(new URL("/login?error=google_db_failed", url.origin))
   }
 

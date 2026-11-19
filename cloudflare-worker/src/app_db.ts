@@ -206,7 +206,11 @@ export async function handleAppDb(request: Request, env: AppDbEnv): Promise<Resp
     }
 
     if (path === "/app/auth/login" && request.method === "POST") {
-      const body = (await request.json().catch(() => ({}))) as { email?: string; password?: string };
+      const body = (await request.json().catch(() => ({}))) as {
+        email?: string;
+        password?: string;
+        role?: string;
+      };
       const email = String(body.email || "").trim().toLowerCase();
       const password = String(body.password || "");
       if (!email || !password) {
@@ -225,6 +229,13 @@ export async function handleAppDb(request: Request, env: AppDbEnv): Promise<Resp
       const valid = await verifyPassword(password, String(row.password_hash));
       if (!valid) {
         return json({ error: "E-poçt və ya şifrə yanlışdır." }, 401);
+      }
+
+      if (body.role === "lawyer" && row.role !== "lawyer") {
+        return json(
+          { error: "Bu hesab Vəkil / Hüquqşünas kimi qeydiyyatdan keçməyib. Əvvəlcə Vəkil / Hüquqşünas kimi qeydiyyatdan keçin." },
+          403
+        );
       }
 
       if (!row.email_verified) {
@@ -311,6 +322,15 @@ export async function handleAppDb(request: Request, env: AppDbEnv): Promise<Resp
         .prepare("SELECT * FROM profiles WHERE lower(email) = ?")
         .bind(email)
         .first<Record<string, any>>();
+
+      if (p.role === "lawyer" && p.mode === "login") {
+        if (!existing || existing.role !== "lawyer") {
+          return json(
+            { error: "Bu Google hesabı Vəkil / Hüquqşünas kimi qeydiyyatdan keçməyib." },
+            403
+          );
+        }
+      }
 
       const nowIso = new Date().toISOString();
       const id = existing?.id ? String(existing.id) : crypto.randomUUID();
