@@ -42,9 +42,12 @@ export default function LawyerBookingWidget({
     unavailableDates.includes(`WEEKDAY:${d.getDay()}`)
 
   const firstAvailableDay = days.find((d) => !isDayUnavailable(d)) || days[0]
-  const activeTimeSlots = timeSlots.filter((t) => !unavailableDates.includes(`SLOT_OFF:${t}`))
-
   const [selectedDate, setSelectedDate] = useState<Date>(firstAvailableDay)
+  const activeTimeSlots = timeSlots.filter(
+    (t) =>
+      !unavailableDates.includes(`SLOT_OFF:${t}`) &&
+      !unavailableDates.includes(`WEEKDAY_SLOT_OFF:${selectedDate.getDay()}:${t}`)
+  )
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [description, setDescription] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
