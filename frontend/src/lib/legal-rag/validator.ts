@@ -163,6 +163,7 @@ export function validateLegalResponse(
   const verifiedLegalBasis: LegalBasisItem[] = [];
   const verifiedSources: VerifiedSource[] = [];
   const validArticleTitles: string[] = [];
+  const seenEntryKeys = new Set<string>();
 
   const retrievedLawSet = new Set<string>();
   const retrievedUrlByLawName = new Map<string, string>();
@@ -225,6 +226,11 @@ export function validateLegalResponse(
       "https://www.e-qanun.ai";
 
     const cleanRawTitle = cleanTitleNoise(rawTitle || "");
+    const resolvedArt = artNum || retrievedMatch?.articleNumber || "";
+    const entryKey = `${normalizeLawBase(resolvedLawName)}::${normalizeArticleToken(resolvedArt) || "doc"}`;
+    if (seenEntryKeys.has(entryKey)) return;
+    seenEntryKeys.add(entryKey);
+
     const titleStr = artNum
       ? `${displayLawName} — Maddə ${artNum}`
       : cleanTitleNoise(retrievedMatch?.articleTitle || cleanRawTitle || displayLawName);
@@ -234,7 +240,7 @@ export function validateLegalResponse(
         retrievedMatch?.sourceId ||
         `law_${matchedReg?.frameworkId || "eqanun"}_art_${artNum || "doc"}`,
       law_name: resolvedLawName,
-      article_number: artNum || retrievedMatch?.articleNumber || "",
+      article_number: resolvedArt,
       article_title: cleanTitleNoise(retrievedMatch?.articleTitle || titleStr),
       part_number: partNumber,
       subpart_identifier: subpartIdentifier,
