@@ -259,9 +259,9 @@ export default function AccountPage() {
                 </button>
               </div>
 
-              <div className="px-5 sm:px-8 pb-6 relative flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 sm:-mt-14 z-20">
-                <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 sm:gap-5">
-                  <div className="relative group shrink-0">
+              <div className="px-5 sm:px-8 pt-4 pb-6 relative flex flex-col sm:flex-row sm:items-center justify-between gap-4 z-20">
+                <div className="flex flex-col sm:flex-row items-center sm:items-center gap-4 sm:gap-5">
+                  <div className="relative group shrink-0 -mt-16 sm:-mt-20">
                     <input
                       type="file"
                       accept="image/*"
