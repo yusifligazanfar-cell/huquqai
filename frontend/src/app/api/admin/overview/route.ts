@@ -234,7 +234,7 @@ export async function PATCH(req: Request) {
       .from("profiles")
       .select("*")
       .eq("id", userId)
-      .single()
+      .maybeSingle()
 
     let targetEmail = existingProfile?.email || ""
     if (!targetEmail && process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -246,16 +246,32 @@ export async function PATCH(req: Request) {
 
     let updatedProfile = existingProfile
     if (resolvedAction === "approve" || resolvedAction === "reject") {
+      if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+        return NextResponse.json(
+          {
+            error:
+              "Təsdiqləmə üçün Vercel mühitində SUPABASE_SERVICE_ROLE_KEY təyin edilməyib (RLS icazəsi lazımdır).",
+          },
+          { status: 500 }
+        )
+      }
+
       const nextVerified = resolvedAction === "approve"
       const { data, error } = await supabase
         .from("profiles")
         .update({ is_verified: nextVerified })
         .eq("id", userId)
         .select()
-        .single()
+        .maybeSingle()
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+      if (!data) {
+        return NextResponse.json(
+          { error: "Profil yenilənmədi (RLS və ya istifadəçi tapılmadı)." },
+          { status: 500 }
+        )
       }
       updatedProfile = data
     }
