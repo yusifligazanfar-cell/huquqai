@@ -746,6 +746,8 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       /(emek muqaviles|is muqaviles|isden cixar|isden azad|isden qovul)/i.test(combinedQNorm) &&
       /(legv|xitam|cixar|azad|qovul)/i.test(combinedQNorm) &&
       !/\b69\b|\boz erizesi\b/.test(combinedQNorm);
+    const isWorkerResignationQuery =
+      /(oz erizesi|isden cixanda|isden cixsa|isden cixmaq)/i.test(combinedQNorm);
     const isTheftOrPropertyLossQuery =
       /(ogurlan|ogurluq|ogurlayib|xirda talama|cibgir)/i.test(combinedQNorm) &&
       !/(menimse|israf|saxta xidmet)/i.test(combinedQNorm);
@@ -921,7 +923,7 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       isLaborTerminationQuery
         ? fetchCompanionArticle("46943", "68", "emek")
         : Promise.resolve(null),
-      isLaborTerminationQuery
+      (isLaborTerminationQuery || isWorkerResignationQuery)
         ? fetchCompanionArticle("46943", "69", "emek")
         : Promise.resolve(null),
       isLaborTerminationQuery

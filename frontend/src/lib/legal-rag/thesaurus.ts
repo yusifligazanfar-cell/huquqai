@@ -50,7 +50,7 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     primaryLawId: "emek",
     primaryDocId: "46943",
     triggerPhrases: [
-      "isden cixarma", "isden cixarilma", "isden cixmaq", "oz erizesi", "xeberdarliq etmeden",
+      "isden cixarma", "isden cixarilma", "isden cixmaq", "isden cixanda", "isden cixsa", "oz erizesi", "xeberdarliq etmeden",
       "xeberdarliqsiz", "is muqavilesine xitam", "muqavilenin legvi", "isden azad", "isden qovulma", "is yerinden cixarilma",
       "emek muqavilesine xitam", "emek muqavilesi legv", "emek muqavilesinin legv", "emek muqavilesi xitam"
     ],
