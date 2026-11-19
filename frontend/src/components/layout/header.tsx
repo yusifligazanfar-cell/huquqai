@@ -34,8 +34,11 @@ export function Header() {
     : "Qeydiyyatsız"
   const initials = displayName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()
 
+  const isPendingLawyer = isLoaded && isLoggedIn && user?.role === "lawyer" && !user?.isVerified
+
   return (
-    <header className="sticky top-2 md:top-4 z-40 mx-1 sm:mx-2 md:mx-8 mb-2.5 sm:mb-4 md:mb-6 flex h-14 md:h-16 items-center justify-between gap-2 rounded-2xl border border-slate-200 dark:border-white/5 bg-white/85 dark:bg-background/70 px-2.5 sm:px-4 md:px-6 shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-2xl transition-all">
+    <>
+      <header className="sticky top-2 md:top-4 z-40 mx-1 sm:mx-2 md:mx-8 mb-2.5 sm:mb-4 md:mb-6 flex h-14 md:h-16 items-center justify-between gap-2 rounded-2xl border border-slate-200 dark:border-white/5 bg-white/85 dark:bg-background/70 px-2.5 sm:px-4 md:px-6 shadow-[0_8px_30px_rgb(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.12)] backdrop-blur-2xl transition-all">
       <div className="flex items-center gap-2 md:gap-4 min-w-0">
         <SidebarTrigger
           aria-label="Menyunu aç"
@@ -82,5 +85,24 @@ export function Header() {
         )}
       </div>
     </header>
+    {isPendingLawyer && (
+      <div className="mx-1 sm:mx-2 md:mx-8 mb-4 rounded-2xl border-2 border-amber-400/70 dark:border-amber-600/60 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 dark:from-amber-950/60 dark:via-orange-950/40 dark:to-amber-950/60 px-4 py-3 shadow-md shadow-amber-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex items-start sm:items-center gap-3">
+          <span className="p-2 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
+            <Clock className="w-4 h-4" />
+          </span>
+          <p className="text-xs sm:text-sm font-semibold text-amber-950 dark:text-amber-200 leading-snug">
+            <span className="font-extrabold">Qonaq rejimi (Təsdiq gözləyir):</span> Anketiniz admin tərəfindən yoxlanılır. Təsdiqlənənə qədər Vəkillər Kataloqunda görünmürsünüz.
+          </p>
+        </div>
+        <Link
+          href="/account"
+          className="text-xs font-bold text-amber-800 dark:text-amber-300 underline underline-offset-2 shrink-0 self-end sm:self-center"
+        >
+          Profilimə bax &rarr;
+        </Link>
+      </div>
+    )}
+    </>
   )
 }

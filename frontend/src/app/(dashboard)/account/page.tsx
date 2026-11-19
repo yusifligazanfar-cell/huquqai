@@ -235,6 +235,22 @@ export default function AccountPage() {
       <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 pt-6 flex-1 z-10">
         {isLoggedIn ? (
           <div className="space-y-6">
+            {role === "lawyer" && !user?.isVerified && (
+              <div className="rounded-2xl border-2 border-amber-400/80 dark:border-amber-600/70 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 dark:from-amber-950/60 dark:via-orange-950/40 dark:to-amber-950/60 p-4 sm:p-5 shadow-lg shadow-amber-500/10 flex items-start gap-3.5">
+                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
+                  <Shield className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <h2 className="text-sm sm:text-base font-extrabold text-amber-950 dark:text-amber-200">
+                    Qonaq rejimi — Admin təsdiqi gözlənilir
+                  </h2>
+                  <p className="text-xs sm:text-sm font-medium text-amber-900/90 dark:text-amber-200/85 leading-relaxed">
+                    Anketiniz admin tərəfindən yoxlanılır. Təsdiqlənənə qədər Vəkillər Kataloqunda görünmürsünüz və müştərilərdən randevu qəbul edə bilmirsiniz. Təsdiqdən sonra e-poçtunuza bildiriş göndəriləcək.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Hero Profile Card */}
             <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 shadow-lg shadow-slate-200/40 dark:shadow-black/30">
               <div className="h-36 sm:h-44 w-full relative overflow-hidden bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-900">
