@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState, use } from "react"
-import { createClient } from "@/utils/supabase/client"
 import { formatDistanceToNow } from "date-fns"
 import { az } from "date-fns/locale"
 import Link from "next/link"
@@ -49,44 +48,23 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const [isSubmitting, setIsSubmitting] = useState(false)
   
   const { user, supabaseUser } = useAuth()
-  const supabase = createClient()
 
   useEffect(() => {
     const fetchPostAndComments = async () => {
       if (!postId) return
       setIsLoading(true)
-      
-      // Fetch post
-      const { data: postData } = await supabase
-        .from('community_posts')
-        .select(`*, profiles:user_id (name, avatar_url, role)`)
-        .eq('id', postId)
-        .single()
-        
-      if (postData) {
-        setPost({
-          ...postData,
-          profiles: Array.isArray(postData.profiles) ? postData.profiles[0] : postData.profiles
-        } as any)
-        
-        // Increment view count via RPC to bypass RLS
-        await supabase.rpc('increment_view_count', { row_id: postId })
-      }
-
-      // Fetch comments
-      const { data: commentsData } = await supabase
-        .from('community_comments')
-        .select(`*, profiles:user_id (name, avatar_url, role)`)
-        .eq('post_id', postId)
-        .order('created_at', { ascending: true })
-
-      if (commentsData) {
-        setComments(commentsData.map((c: any) => ({
-          ...c,
-          profiles: Array.isArray(c.profiles) ? c.profiles[0] : c.profiles
-        })) as any)
-      }
-      
+      try {
+        const res = await fetch(`/api/app/community?id=${encodeURIComponent(postId)}`, {
+          cache: 'no-store',
+        })
+        const json = await res.json().catch(() => ({}))
+        if (json?.post) {
+          setPost(json.post)
+        }
+        if (Array.isArray(json?.comments)) {
+          setComments(json.comments)
+        }
+      } catch {}
       setIsLoading(false)
     }
 
@@ -98,51 +76,46 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     if (!newComment.trim() || !supabaseUser || !postId) return
 
     setIsSubmitting(true)
-    
-    // Note: The trigger handle_community_reputation handles is_lawyer_reply flag and scoring on backend
-    const { data, error } = await supabase
-      .from('community_comments')
-      .insert({
-        post_id: postId,
-        user_id: supabaseUser.id,
-        content: newComment
-      })
-      .select(`*, profiles:user_id (name, avatar_url, role)`)
-      .single()
 
-    if (!error && data) {
+    const res = await fetch('/api/app/community/comments', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        post_id: postId,
+        content: newComment,
+      }),
+    })
+    const json = await res.json().catch(() => ({}))
+
+    if (res.ok && json?.comment) {
       setNewComment("")
-      const formattedComment = {
-        ...data,
-        profiles: Array.isArray(data.profiles) ? data.profiles[0] : data.profiles
-      }
-      setComments(prev => [...prev, formattedComment as any])
-      
-      // Notify post author
+      setComments(prev => [...prev, json.comment])
+
       if (post && supabaseUser.id !== post.user_id) {
         fetch('/api/notify-comment', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            postId: post.id, 
-            commenterName: user?.name || supabaseUser.email 
+          body: JSON.stringify({
+            postId: post.id,
+            commenterName: user?.name || supabaseUser.email
           })
-        }).catch(err => console.error("Failed to trigger notification:", err))
+        }).catch(() => {})
       }
     } else {
-      console.error("Failed to add comment", error)
+      console.error("Failed to add comment", json?.error)
     }
-    
+
     setIsSubmitting(false)
   }
 
   const handleDeleteComment = async (commentId: string) => {
     if (!confirm("Bu cavabı silmək istədiyinizə əminsiniz?")) return
-    const { error } = await supabase.from('community_comments').delete().eq('id', commentId)
-    if (!error) {
+    const res = await fetch(`/api/app/community/comments?id=${encodeURIComponent(commentId)}`, {
+      method: 'DELETE',
+    })
+    if (res.ok) {
       setComments(comments.filter(c => c.id !== commentId))
     } else {
-      console.error(error)
       alert("Silinərkən xəta baş verdi.")
     }
   }
@@ -176,11 +149,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             <button 
               onClick={async () => {
                 if (!confirm("Bu postu silmək istədiyinizə əminsiniz?")) return;
-                const { error } = await supabase.from('community_posts').delete().eq('id', post.id);
-                if (!error) {
+                const res = await fetch(`/api/app/community?id=${encodeURIComponent(post.id)}`, { method: 'DELETE' });
+                if (res.ok) {
                   window.location.href = '/community';
                 } else {
-                  console.error(error);
                   alert("Post silinərkən xəta baş verdi.");
                 }
               }}

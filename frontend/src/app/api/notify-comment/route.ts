@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { createClient } from '@/utils/supabase/server'
+import { cfFetch } from '@/lib/cloudflare-db'
 
 export async function POST(req: Request) {
   try {
@@ -16,22 +16,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'postId required' }, { status: 400 })
     }
 
-    const supabase = await createClient()
-    const { data: post, error } = await supabase
-      .from('community_posts')
-      .select(`
-        *,
-        author:profiles!user_id(id, name, email)
-      `)
-      .eq('id', postId)
-      .single()
+    const { ok, data: cfData } = await cfFetch<{ post?: any }>(
+      `/app/community?id=${encodeURIComponent(postId)}`
+    )
+    const post = cfData?.post
 
-    if (error || !post) {
+    if (!ok || !post) {
       return NextResponse.json({ error: 'Post not found' }, { status: 404 })
     }
 
-    const authorEmail = post.author?.email
-    const authorName = post.author?.name || 'İstifadəçi'
+    const authorEmail = post.profiles?.email
+    const authorName = post.profiles?.name || 'İstifadəçi'
 
     if (!authorEmail) {
       console.warn('[NOTIFY-COMMENT] Author email not found, skipping email send')

@@ -1,5 +1,5 @@
-import { createClient } from "@/utils/supabase/server"
 import { cfFetch } from "@/lib/cloudflare-db"
+import { getServerSession } from "@/lib/auth-session"
 import { Shield, MapPin, Briefcase, Star, Clock, FileText, Share2, Bookmark, GraduationCap, Building2, HelpCircle } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -8,22 +8,10 @@ import ReviewSection from "./ReviewSection"
 import { Button } from "@/components/ui/button"
 
 export default async function LawyerProfilePage({ params }: { params: Promise<{ id: string }> }) {
-  const supabase = await createClient()
   const { id } = await params
 
-  let lawyer: any = null
   const d1Res = await cfFetch<{ lawyer?: any }>(`/app/lawyers/${encodeURIComponent(id)}`)
-  if (d1Res.ok && d1Res.data?.lawyer) {
-    lawyer = d1Res.data.lawyer
-  } else {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', id)
-      .eq('role', 'lawyer')
-      .single()
-    lawyer = data
-  }
+  const lawyer = d1Res.ok ? d1Res.data?.lawyer : null
 
   if (!lawyer) {
     return notFound()
@@ -32,20 +20,15 @@ export default async function LawyerProfilePage({ params }: { params: Promise<{ 
   const initials = (lawyer.name || "V").split(" ").map((n: string) => n[0]).join("").substring(0, 2).toUpperCase()
   const specialties = lawyer.specialties || []
   
-  // Fetch reviews
-  const { data: reviews } = await supabase
-    .from('reviews')
-    .select('*, client:profiles!client_id(name, avatar_url)')
-    .eq('lawyer_id', id)
-    .order('created_at', { ascending: false })
+  const reviewsRes = await cfFetch<{ reviews?: any[] }>(`/app/reviews?lawyerId=${encodeURIComponent(id)}`)
+  const reviews = reviewsRes.ok ? (reviewsRes.data?.reviews || []) : []
     
   const averageRating = reviews && reviews.length > 0 
-    ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)
+    ? (reviews.reduce((acc: number, r: any) => acc + r.rating, 0) / reviews.length).toFixed(1)
     : "5.0"
 
-  // Check if current user is the same as the lawyer
-  const { data: { session } } = await supabase.auth.getSession()
-  const isSelf = session?.user?.id === lawyer.id
+  const session = await getServerSession()
+  const isSelf = session?.userId === lawyer.id
 
   if (!lawyer.is_verified && !isSelf) {
     return notFound()

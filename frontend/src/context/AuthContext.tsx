@@ -1,8 +1,12 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect } from 'react'
-import { createClient } from '@/utils/supabase/client'
-import { User, Session } from '@supabase/supabase-js'
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react"
+
+export interface AuthUserSummary {
+  id: string
+  email: string
+  user_metadata?: Record<string, any>
+}
 
 export interface UserProfile {
   name: string
@@ -28,226 +32,126 @@ interface AuthContextType {
   isLoggedIn: boolean
   isLoaded: boolean
   user: UserProfile | null
-  supabaseUser: User | null
+  supabaseUser: AuthUserSummary | null
   logout: () => Promise<void>
   updateProfile: (profile: Partial<UserProfile>) => Promise<void>
+  refreshSession: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+function mapDbProfileToUserProfile(dbProfile: Record<string, any>): UserProfile {
+  return {
+    name: dbProfile.name || "İstifadəçi",
+    surname: dbProfile.surname || "",
+    email: dbProfile.email || "",
+    avatar: dbProfile.avatar_url || "",
+    coverImage: dbProfile.cover_url || "",
+    bio: dbProfile.bio || "",
+    role: dbProfile.role || "client",
+    specialties: Array.isArray(dbProfile.specialties) ? dbProfile.specialties : [],
+    hourlyRate: Number(dbProfile.hourly_rate || 0),
+    isVerified: Boolean(dbProfile.is_verified),
+    licenseNumber: dbProfile.license_number || "",
+    experienceYears: Number(dbProfile.experience_years || 0),
+    certificates: Array.isArray(dbProfile.certificates) ? dbProfile.certificates : [],
+    education: Array.isArray(dbProfile.education) ? dbProfile.education : [],
+    workplaces: Array.isArray(dbProfile.workplaces) ? dbProfile.workplaces : [],
+    faqs: Array.isArray(dbProfile.faqs) ? dbProfile.faqs : [],
+    unavailableDates: Array.isArray(dbProfile.unavailable_dates) ? dbProfile.unavailable_dates : [],
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [user, setUser] = useState<UserProfile | null>(null)
-  const [supabaseUser, setSupabaseUser] = useState<User | null>(null)
+  const [supabaseUser, setSupabaseUser] = useState<AuthUserSummary | null>(null)
   const [isLoaded, setIsLoaded] = useState(false)
-  
-  const supabase = createClient()
 
-  useEffect(() => {
-    supabase.auth.getSession().then((res: any) => {
-      handleSession(res?.data?.session || null)
-    })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
-      handleSession(session)
-    })
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
-
-  const handleSession = async (session: Session | null) => {
-    if (session?.user) {
-      setSupabaseUser(session.user)
-      setIsLoggedIn(true)
-      
-      // If user profile is already populated for this same user, avoid re-fetching
-      if (user && supabaseUser?.id === session.user.id) {
+  const refreshSession = useCallback(async () => {
+    try {
+      const res = await fetch("/api/auth/session", { cache: "no-store" })
+      const data = await res.json().catch(() => ({}))
+      const dbUser = data?.user
+      if (!dbUser?.id) {
+        setSupabaseUser(null)
+        setIsLoggedIn(false)
+        setUser(null)
         setIsLoaded(true)
         return
       }
-      
-      const meta = session.user.user_metadata
 
-      // Sync any pending lawyer/jurist signup form saved before OAuth/OTP redirect
-      let pendingRaw: string | null = null
-      try {
-        pendingRaw = localStorage.getItem('pendingLawyerOnboarding') || sessionStorage.getItem('pendingLawyerOnboarding')
-      } catch {}
-
-      if (pendingRaw) {
-        try {
-          const pending = JSON.parse(pendingRaw)
-          await supabase.from('profiles').upsert({
-            id: session.user.id,
-            email: session.user.email || '',
-            role: 'lawyer',
-            name: pending.name || meta?.full_name || meta?.name || '',
-            surname: pending.surname || '',
-            license_number: pending.licenseNumber || '',
-            experience_years: Number(pending.experienceYears) || 0,
-            bio: pending.bio || '',
-            specialties: Array.isArray(pending.specialties) ? pending.specialties : [],
-            workplaces: Array.isArray(pending.workplaces) ? pending.workplaces : [],
-            education: Array.isArray(pending.education) ? pending.education : [],
-            hourly_rate: Number(pending.hourlyRate) || 0,
-            is_verified: false,
-          })
-          localStorage.removeItem('pendingLawyerOnboarding')
-          sessionStorage.removeItem('pendingLawyerOnboarding')
-        } catch (syncErr) {
-          console.error('Failed to sync pending lawyer onboarding:', syncErr)
-        }
-      }
-
-      // Fetch profile from Supabase
-      const { data: profileData, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single()
-
-      // Sync & read authoritative verification/schedule state from Cloudflare D1
-      let d1Profile: any = null
-      try {
-        const syncPayload = profileData
-          ? {
-              ...profileData,
-              email: session.user.email || profileData.email || '',
-              touch_login: true,
-            }
-          : {
-              id: session.user.id,
-              email: session.user.email || '',
-              name: meta?.full_name || meta?.name || session.user.email?.split('@')[0] || 'İstifadəçi',
-              avatar_url: meta?.avatar_url || meta?.picture || '',
-              role: 'client',
-              touch_login: true,
-            }
-        const d1Res = await fetch('/api/app/profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(syncPayload),
-        })
-        if (d1Res.ok) {
-          const d1Json = await d1Res.json()
-          d1Profile = d1Json?.profile || null
-        }
-      } catch (d1Err) {
-        console.warn('Cloudflare D1 profile sync skipped:', d1Err)
-      }
-
-      const merged = d1Profile || profileData
-      if (merged) {
-        setUser({
-          name: merged.name || meta?.full_name || meta?.name || session.user.email?.split('@')[0] || 'İstifadəçi',
-          email: session.user.email || '',
-          avatar: merged.avatar_url || meta?.avatar_url || meta?.picture || '',
-          coverImage: merged.cover_url || '',
-          bio: merged.bio || '',
-          role: merged.role || 'client',
-          specialties: merged.specialties || [],
-          hourlyRate: merged.hourly_rate || 0,
-          isVerified: Boolean(merged.is_verified),
-          surname: merged.surname || '',
-          licenseNumber: merged.license_number || '',
-          experienceYears: merged.experience_years || 0,
-          certificates: merged.certificates || [],
-          education: merged.education || [],
-          workplaces: merged.workplaces || [],
-          faqs: merged.faqs || [],
-          unavailableDates: merged.unavailable_dates || []
-        })
-      } else {
-        // Fallback if profile row is not yet created by trigger
-        const defaultName = meta?.full_name || meta?.name || session.user.email?.split('@')[0] || 'İstifadəçi';
-        const defaultAvatar = meta?.avatar_url || meta?.picture || '';
-        
-        // Try to create the missing profile row to fix foreign key issues
-        try {
-          await supabase.from('profiles').insert({
-            id: session.user.id,
-            name: defaultName,
-            avatar_url: defaultAvatar,
-            role: 'client'
-          });
-        } catch (insertError) {
-          console.error("Failed to insert missing profile:", insertError);
-        }
-
-        setUser({
-          name: defaultName,
-          email: session.user.email || '',
-          avatar: defaultAvatar,
-          role: 'client'
-        })
-      }
-    } else {
+      setSupabaseUser({
+        id: dbUser.id,
+        email: dbUser.email || "",
+        user_metadata: {
+          role: dbUser.role || "client",
+          name: dbUser.name || "",
+          surname: dbUser.surname || "",
+          full_name: `${dbUser.name || ""} ${dbUser.surname || ""}`.trim(),
+        },
+      })
+      setIsLoggedIn(true)
+      setUser(mapDbProfileToUserProfile(dbUser))
+    } catch {
       setSupabaseUser(null)
-      setUser(null)
       setIsLoggedIn(false)
+      setUser(null)
+    } finally {
+      setIsLoaded(true)
     }
-    setIsLoaded(true)
-  }
+  }, [])
+
+  useEffect(() => {
+    refreshSession()
+  }, [refreshSession])
 
   const logout = async () => {
-    await supabase.auth.signOut()
-    setSupabaseUser(null)
+    try {
+      await fetch("/api/auth/session", { method: "DELETE" })
+      localStorage.removeItem("pendingLawyerOnboarding")
+      sessionStorage.removeItem("pendingLawyerOnboarding")
+    } catch {}
     setUser(null)
+    setSupabaseUser(null)
     setIsLoggedIn(false)
   }
 
-  const updateProfile = async (updates: Partial<UserProfile>) => {
-    if (!user || !supabaseUser) return
-    const updatedUser = { ...user, ...updates }
-    setUser(updatedUser)
-    
-    // Update DB
-    const dbUpdates = {
-      name: updates.name,
-      avatar_url: updates.avatar,
-      cover_url: updates.coverImage,
-      bio: updates.bio,
-      role: updates.role,
-      specialties: updates.specialties,
-      hourly_rate: updates.hourlyRate,
-      surname: updates.surname,
-      license_number: updates.licenseNumber,
-      experience_years: updates.experienceYears,
-      certificates: updates.certificates,
-      education: updates.education,
-      workplaces: updates.workplaces,
-      faqs: updates.faqs,
-      unavailable_dates: updates.unavailableDates,
-      updated_at: new Date().toISOString()
-    }
-    
-    // Remove undefined fields
-    Object.keys(dbUpdates).forEach(key => (dbUpdates as any)[key] === undefined && delete (dbUpdates as any)[key])
-    
-    await supabase
-      .from('profiles')
-      .update(dbUpdates)
-      .eq('id', supabaseUser.id)
+  const updateProfile = async (newProfile: Partial<UserProfile>) => {
+    setUser((prev) => (prev ? { ...prev, ...newProfile } : null))
 
-    try {
-      await fetch('/api/app/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: supabaseUser.id,
-          email: supabaseUser.email || '',
-          ...dbUpdates,
-        }),
+    if (supabaseUser?.id) {
+      const cfPayload: Record<string, any> = {
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+      }
+      if (newProfile.name !== undefined) cfPayload.name = newProfile.name
+      if (newProfile.surname !== undefined) cfPayload.surname = newProfile.surname
+      if (newProfile.bio !== undefined) cfPayload.bio = newProfile.bio
+      if (newProfile.avatar !== undefined) cfPayload.avatar_url = newProfile.avatar
+      if (newProfile.coverImage !== undefined) cfPayload.cover_url = newProfile.coverImage
+      if (newProfile.role !== undefined) cfPayload.role = newProfile.role
+      if (newProfile.specialties !== undefined) cfPayload.specialties = newProfile.specialties
+      if (newProfile.hourlyRate !== undefined) cfPayload.hourly_rate = newProfile.hourlyRate
+      if (newProfile.licenseNumber !== undefined) cfPayload.license_number = newProfile.licenseNumber
+      if (newProfile.experienceYears !== undefined) cfPayload.experience_years = newProfile.experienceYears
+      if (newProfile.education !== undefined) cfPayload.education = newProfile.education
+      if (newProfile.workplaces !== undefined) cfPayload.workplaces = newProfile.workplaces
+      if (newProfile.faqs !== undefined) cfPayload.faqs = newProfile.faqs
+      if (newProfile.unavailableDates !== undefined) cfPayload.unavailable_dates = newProfile.unavailableDates
+
+      await fetch("/api/app/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cfPayload),
       })
-    } catch (d1Err) {
-      console.warn('Cloudflare D1 profile update skipped:', d1Err)
     }
   }
 
   return (
-    <AuthContext.Provider value={{ isLoggedIn, isLoaded, user, supabaseUser, logout, updateProfile }}>
+    <AuthContext.Provider
+      value={{ isLoggedIn, isLoaded, user, supabaseUser, logout, updateProfile, refreshSession }}
+    >
       {children}
     </AuthContext.Provider>
   )
@@ -256,8 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
+    throw new Error("useAuth must be used within an AuthProvider")
   }
   return context
 }
-

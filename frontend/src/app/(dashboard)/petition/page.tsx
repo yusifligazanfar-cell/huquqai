@@ -6,7 +6,6 @@ import { Clock, FileText, MessageSquare, Sparkles } from "lucide-react"
 import { DocumentHubGrid } from "@/components/documents/DocumentHubGrid"
 import { DocumentResultSheet } from "@/components/documents/DocumentResultSheet"
 import { useAuth } from "@/context/AuthContext"
-import { createClient } from "@/utils/supabase/client"
 
 interface SavedPetition {
   id: string
@@ -26,45 +25,30 @@ export default function PetitionHubPage() {
 
     const loadSaved = async () => {
       try {
-        const supabase = createClient()
-        const { data: convs } = await supabase
-          .from("conversations")
-          .select("id, title, created_at")
-          .eq("user_id", supabaseUser.id)
-          .eq("type", "petition")
-          .order("created_at", { ascending: false })
-          .limit(6)
+        const res = await fetch("/api/app/conversations", { cache: "no-store" })
+        const json = await res.json().catch(() => ({}))
+        const convList = ((json?.conversations || []) as { id: string; title: string | null; mode?: string; created_at: string }[])
+          .filter((c) => c.mode === "petition")
+          .slice(0, 6)
 
-        if (!convs || convs.length === 0 || cancelled) return
+        if (convList.length === 0 || cancelled) return
 
-        const convList = convs as { id: string; title: string | null; created_at: string }[]
-        const ids = convList.map((c) => c.id)
-        const { data: msgs } = await supabase
-          .from("messages")
-          .select("conversation_id, role, content, created_at")
-          .in("conversation_id", ids)
-          .eq("role", "assistant")
-          .order("created_at", { ascending: false })
-
-        if (cancelled) return
-
-        const byConv = new Map<string, string>()
-        for (const m of (msgs || []) as { conversation_id: string; content: string | null }[]) {
-          if (!byConv.has(m.conversation_id) && m.content?.trim()) {
-            byConv.set(m.conversation_id, m.content)
+        const list: SavedPetition[] = []
+        for (const c of convList) {
+          const mRes = await fetch(`/api/app/conversations?id=${encodeURIComponent(c.id)}`, { cache: "no-store" })
+          const mJson = await mRes.json().catch(() => ({}))
+          const assistantMsg = (mJson?.messages || []).find((m: any) => m.role === "assistant" && m.content?.trim())
+          if (assistantMsg?.content) {
+            list.push({
+              id: c.id,
+              title: c.title || "Hüquqi Sənəd",
+              created_at: c.created_at,
+              content: assistantMsg.content,
+            })
           }
         }
 
-        const list: SavedPetition[] = convList
-          .filter((c) => byConv.has(c.id))
-          .map((c) => ({
-            id: c.id,
-            title: c.title || "Hüquqi Sənəd",
-            created_at: c.created_at,
-            content: byConv.get(c.id) || "",
-          }))
-
-        setSavedDocs(list)
+        if (!cancelled) setSavedDocs(list)
       } catch (err) {
         console.warn("Saved documents fetch failed:", err)
       }

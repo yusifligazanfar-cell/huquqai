@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@/utils/supabase/client"
 import { formatDistanceToNow } from "date-fns"
 import { az } from "date-fns/locale"
 import Link from "next/link"
@@ -39,35 +38,23 @@ export default function CommunityPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   
   const { user, supabaseUser } = useAuth()
-  const supabase = createClient()
 
   const fetchPosts = async () => {
     setIsLoading(true)
-    
-    // We need to fetch posts, join with profiles for author info
-    // And also get comment counts. Supabase JS doesn't easily do relation counts in one query without a view,
-    // but we can try to fetch them and manually count or use a clever select.
-    const { data, error } = await supabase
-      .from('community_posts')
-      .select(`
-        *,
-        profiles:user_id (name, avatar_url, role),
-        community_comments (id)
-      `)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error("Error fetching posts:", error)
-    } else if (data) {
+    try {
+      const res = await fetch('/api/app/community', { cache: 'no-store' })
+      const json = await res.json().catch(() => ({}))
+      const data = json?.posts || []
       const formattedPosts = data.map((post: any) => ({
         ...post,
+        views_count: post.views_count || 0,
         _count: { comments: post.community_comments?.length || 0 },
         profiles: Array.isArray(post.profiles) ? post.profiles[0] : post.profiles
       })) as any
-      
       setPosts(formattedPosts)
+    } catch (error) {
+      console.error("Error fetching posts:", error)
     }
-    
     setIsLoading(false)
   }
 
@@ -80,25 +67,25 @@ export default function CommunityPage() {
     if (!newTitle.trim() || !newContent.trim() || !supabaseUser) return
 
     setIsSubmitting(true)
-    
-    const { error } = await supabase
-      .from('community_posts')
-      .insert({
-        user_id: supabaseUser.id,
+    const res = await fetch('/api/app/community', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         title: newTitle,
         content: newContent,
         category: 'Ümumi'
-      })
+      }),
+    })
 
-    if (!error) {
+    if (res.ok) {
       setNewTitle("")
       setNewContent("")
       setIsDialogOpen(false)
       fetchPosts()
     } else {
-      console.error("Failed to create post", error)
+      console.error("Failed to create post")
     }
-    
+
     setIsSubmitting(false)
   }
 

@@ -7,7 +7,6 @@ import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { createClient } from "@/utils/supabase/client"
 import { CategoryIcon } from "@/components/ui/category-icon"
 import categoriesData from "@/data/lawyer_categories.json"
 import LawyerProfileTab from "@/components/account/LawyerProfileTab"
@@ -52,30 +51,36 @@ export default function AccountPage() {
     if (!file || !user) return
 
     try {
-      const supabase = createClient()
-      const fileExt = file.name.split('.').pop()
-      const fileName = `${user.email}-${type}-${Math.random()}.${fileExt}`
-      const filePath = `${fileName}`
+      const dataUrl = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onerror = () => reject(new Error('File read error'))
+        reader.onload = () => {
+          const img = new Image()
+          img.onerror = () => reject(new Error('Image decode error'))
+          img.onload = () => {
+            const maxDim = type === 'avatar' ? 400 : 1200
+            const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+            const canvas = document.createElement('canvas')
+            canvas.width = Math.max(1, Math.round(img.width * scale))
+            canvas.height = Math.max(1, Math.round(img.height * scale))
+            const ctx = canvas.getContext('2d')
+            if (!ctx) return reject(new Error('Canvas unavailable'))
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+            resolve(canvas.toDataURL('image/jpeg', 0.8))
+          }
+          img.src = String(reader.result)
+        }
+        reader.readAsDataURL(file)
+      })
 
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file)
-
-      if (uploadError) {
-        throw uploadError
-      }
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath)
-
-      // Update profile
       if (type === 'avatar') {
-        await updateProfile({ avatar: publicUrl })
+        await updateProfile({ avatar: dataUrl })
       } else {
-        await updateProfile({ coverImage: publicUrl })
+        await updateProfile({ coverImage: dataUrl })
       }
     } catch (error) {
       console.error('Error uploading image:', error)
-      alert('Şəkil yüklənərkən xəta baş verdi. Zəhmət olmasa daha kiçik ölçülü şəkil seçin və ya internetinizi yoxlayın.')
+      alert('Şəkil yüklənərkən xəta baş verdi. Zəhmət olmasa daha kiçik ölçülü şəkil seçin.')
     }
   }
 

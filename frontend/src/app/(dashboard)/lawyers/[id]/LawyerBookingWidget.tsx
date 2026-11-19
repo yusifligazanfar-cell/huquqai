@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Loader2, Calendar, Clock, CheckCircle2, Lock } from "lucide-react"
-import { createClient } from "@/utils/supabase/client"
+import { useAuth } from "@/context/AuthContext"
 import { useRouter } from "next/navigation"
 
 const generateDays = () => {
@@ -49,43 +49,33 @@ export default function LawyerBookingWidget({
   const [description, setDescription] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
+  const { isLoggedIn, isLoaded, supabaseUser } = useAuth()
+  const isAuthenticated = isLoaded ? isLoggedIn : null
 
   // Booked slots: { "2026-07-29": ["10:00", "13:00"], ... }
   const [bookedSlots, setBookedSlots] = useState<Record<string, string[]>>({})
   const [loadingSlots, setLoadingSlots] = useState(true)
 
   const router = useRouter()
-  const supabase = createClient()
-
-  useEffect(() => {
-    supabase.auth.getSession().then((res: any) => {
-      setIsAuthenticated(Boolean(res?.data?.session?.user))
-    })
-  }, [supabase])
 
   // Fetch booked time slots for this lawyer
   useEffect(() => {
     const fetchBooked = async () => {
       setLoadingSlots(true)
-      const { data } = await supabase
-        .from('consultations')
-        .select('preferred_date, preferred_time, problem_description, status')
-        .eq('lawyer_id', lawyerId)
-        .in('status', ['Gözləyir', 'pending', 'Qəbul edildi'])
-
-      if (data) {
+      try {
+        const res = await fetch(`/api/app/consultations?lawyerId=${encodeURIComponent(lawyerId)}`, {
+          cache: 'no-store',
+        })
+        const json = await res.json().catch(() => ({}))
+        const data = json?.consultations || []
         const map: Record<string, string[]> = {}
         data.forEach((c: any) => {
           let date = c.preferred_date
           let time = c.preferred_time
 
-          // Fallback: parse from problem_description if columns are empty
           if ((!date || !time) && c.problem_description) {
-            // Format: "Təklif edilən vaxt: 29 İyul 2026 - Saat: 13:00"
             const timeMatch = c.problem_description.match(/Saat:\s*(\d{2}:\d{2})/)
             if (timeMatch) time = timeMatch[1]
-            // We can't reliably parse az date back to YYYY-MM-DD, skip date if missing
           }
 
           if (date && time) {
@@ -94,7 +84,7 @@ export default function LawyerBookingWidget({
           }
         })
         setBookedSlots(map)
-      }
+      } catch {}
       setLoadingSlots(false)
     }
 
@@ -118,8 +108,7 @@ export default function LawyerBookingWidget({
 
     setIsSubmitting(true)
 
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user) {
+    if (!isLoggedIn || !supabaseUser) {
       alert("Konsultasiya almaq üçün sistemə daxil olmalısınız.")
       window.location.href = `/login?next=/lawyers/${lawyerId}`
       return
@@ -128,41 +117,36 @@ export default function LawyerBookingWidget({
     const formattedDate = `${selectedDate.getDate()} ${azMonths[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`
     const finalDescription = `Təklif edilən vaxt: ${formattedDate} - Saat: ${selectedTime}\n\nProblemin təsviri:\n${description}`
 
-    const [sbRes, d1Res] = await Promise.all([
-      supabase
-        .from('consultations')
-        .insert({
-          client_id: session.user.id,
-          lawyer_id: lawyerId,
-          problem_description: finalDescription,
-          preferred_date: selectedDateKey,
-          preferred_time: selectedTime,
-          status: 'Gözləyir'
-        }),
-      fetch('/api/app/consultations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          client_id: session.user.id,
-          lawyer_id: lawyerId,
-          problem_description: finalDescription,
-          preferred_date: selectedDateKey,
-          preferred_time: selectedTime,
-        }),
-      }).then(r => r.json()).catch(() => null),
-    ])
+    const d1Res = await fetch('/api/app/consultations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        client_id: supabaseUser.id,
+        lawyer_id: lawyerId,
+        problem_description: finalDescription,
+        preferred_date: selectedDateKey,
+        preferred_time: selectedTime,
+      }),
+    })
+    const d1Json = await d1Res.json().catch(() => ({}))
 
     setIsSubmitting(false)
 
-    if (sbRes.error && !d1Res?.success) {
-      console.error(sbRes.error)
-      alert("Xəta baş verdi: " + sbRes.error.message)
+    if (!d1Res.ok || !d1Json?.success) {
+      alert("Xəta baş verdi: " + (d1Json?.error || "Baza xətası"))
     } else {
-      // Locally mark this slot as booked immediately
       setBookedSlots(prev => ({
         ...prev,
         [selectedDateKey]: [...(prev[selectedDateKey] || []), selectedTime!]
       }))
+
+      if (d1Json?.consultation?.id) {
+        fetch('/api/notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ consultationId: d1Json.consultation.id })
+        }).catch(() => {})
+      }
 
       setSuccess(true)
       setSelectedTime(null)

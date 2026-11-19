@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
@@ -15,7 +14,6 @@ export default function ConsultationActionButtons({
 }) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [feedback, setFeedback] = useState<string | null>(null)
-  const supabase = createClient()
   const router = useRouter()
 
   if (status !== 'Gözləyir' && status !== 'pending') return null
@@ -27,13 +25,13 @@ export default function ConsultationActionButtons({
     setIsUpdating(true)
     setFeedback(null)
 
-    // 1. Update status in DB
-    const { error } = await supabase
-      .from("consultations")
-      .update({ status: newStatus })
-      .eq("id", consultationId)
+    const res = await fetch("/api/app/consultations", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: consultationId, status: newStatus }),
+    })
 
-    if (error) {
+    if (!res.ok) {
       setFeedback("Xəta baş verdi!")
       setIsUpdating(false)
       return

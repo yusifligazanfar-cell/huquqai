@@ -1,11 +1,7 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
 import { Resend } from "resend"
 import { cfFetch } from "@/lib/cloudflare-db"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey
 const EXPECTED_ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "123"
 
 function isAuthorized(req: Request) {
@@ -19,30 +15,6 @@ export async function GET(req: Request) {
   }
 
   try {
-    // One-way sync: pull any existing Supabase profiles/posts not yet in Cloudflare D1
-    if (supabaseUrl && supabaseServiceKey) {
-      try {
-        const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-          auth: { autoRefreshToken: false, persistSession: false },
-        })
-        const [profilesRes, postsRes] = await Promise.all([
-          supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-          supabase.from("community_posts").select("id, user_id, title, content, category, created_at"),
-        ])
-        if ((profilesRes.data && profilesRes.data.length > 0) || (postsRes.data && postsRes.data.length > 0)) {
-          await cfFetch("/app/admin/import", {
-            method: "POST",
-            body: JSON.stringify({
-              profiles: profilesRes.data || [],
-              community_posts: postsRes.data || [],
-            }),
-          })
-        }
-      } catch (syncErr) {
-        console.warn("Supabase->D1 sync skipped:", syncErr)
-      }
-    }
-
     const res = await cfFetch("/app/admin/overview")
     if (!res.ok) {
       return NextResponse.json({ error: (res.data as any)?.error || "D1 xətası" }, { status: res.status })

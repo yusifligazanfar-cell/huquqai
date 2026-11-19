@@ -3,11 +3,10 @@
 import { useState } from "react"
 import { Star, MessageSquare } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { createClient } from "@/utils/supabase/client"
 import { useAuth } from "@/context/AuthContext"
 
 export default function ReviewSection({ lawyerId, initialReviews }: { lawyerId: string, initialReviews: any[] }) {
-  const { user, supabaseUser, isLoggedIn } = useAuth()
+  const { supabaseUser, isLoggedIn } = useAuth()
   const [reviews, setReviews] = useState(initialReviews)
   const [rating, setRating] = useState(5)
   const [comment, setComment] = useState("")
@@ -20,40 +19,32 @@ export default function ReviewSection({ lawyerId, initialReviews }: { lawyerId: 
     if (supabaseUser.id === lawyerId) return alert("Özünüzə rəy yaza bilməzsiniz.")
 
     setIsSubmitting(true)
-    const supabase = createClient()
-    
-    const { data, error } = await supabase
-      .from('reviews')
-      .insert({
-        lawyer_id: lawyerId,
-        client_id: supabaseUser.id,
-        rating,
-        comment
+    try {
+      const res = await fetch('/api/app/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lawyer_id: lawyerId, rating, comment }),
       })
-      .select('*, client:profiles!client_id(name, avatar_url)')
-      .single()
-
-    setIsSubmitting(false)
-
-    if (error) {
-      console.error(error)
-      alert("Xəta baş verdi: " + error.message + " | Zəhmət olmasa bu xətanı mənə deyin.")
+      const json = await res.json()
+      if (!res.ok || !json.review) {
+        alert("Xəta baş verdi: " + (json.error || "Rəy göndərilə bilmədi"))
+      } else {
+        setReviews([json.review, ...reviews])
+        setComment("")
+        setRating(5)
+        alert("Rəyiniz uğurla əlavə edildi!")
+      }
+    } catch {
+      alert("Şəbəkə xətası baş verdi.")
+    } finally {
       setIsSubmitting(false)
-      return
-    } else if (data) {
-      setReviews([data, ...reviews])
-      setComment("")
-      setRating(5)
-      alert("Rəyiniz uğurla əlavə edildi!")
     }
   }
 
   const handleDelete = async (reviewId: string) => {
     if (!confirm("Bu rəyi silmək istədiyinizə əminsiniz?")) return
-    const supabase = createClient()
-    const { error } = await supabase.from('reviews').delete().eq('id', reviewId)
-    if (error) {
-      console.error(error)
+    const res = await fetch(`/api/app/reviews?id=${encodeURIComponent(reviewId)}`, { method: 'DELETE' })
+    if (!res.ok) {
       alert("Silinərkən xəta baş verdi.")
     } else {
       setReviews(reviews.filter((r: any) => r.id !== reviewId))

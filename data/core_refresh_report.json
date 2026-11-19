@@ -1,0 +1,835 @@
+[
+  {
+    "doc_id": "897",
+    "ok": true,
+    "title": "00 - Azərbaycan Respublikasının Konstitusiyası",
+    "chars": 110021,
+    "whole_repealed": 0,
+    "inline_repealed": 5,
+    "status_repealed": false,
+    "samples": [],
+    "file": "eqanun_doc_897_Azərbaycan_Respublikasının_Konstitusiyası.txt"
+  },
+  {
+    "doc_id": "46944",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Mülki Məcəlləsi",
+    "chars": 1295800,
+    "whole_repealed": 532,
+    "inline_repealed": 74,
+    "status_repealed": false,
+    "samples": [
+      "28.6. On səkkiz yaşına çatanadək nikaha girməyə qanunun yol verdiyi halda, on səkkiz yaşına çatmamış fiziki şəxs nikaha ",
+      "28.7. Nikah etibarsız sayıldıqda məhkəmə yetkinlik yaşına çatmayan ərin (arvadın) tam fəaliyyət qabiliyyətini məhkəmə tə",
+      "Maddə 62. Kreditorların tələblərinin ödənilməsi",
+      "62.1. Hüquqi şəxs ləğv edilərkən onun kreditorlarının tələbləri aşağıdakı növbə ilə ödənilir:",
+      "62.1.1. birinci növbədə ləğv edilən hüquqi şəxsin əmlakının girov qoyulması ilə təmin edilmiş öhdəliklər üzrə kreditorla",
+      "62.1.2. ikinci növbədə müvafiq vədəli ödənişlərin kapitallaşdırılması yolu ilə o, fiziki şəxslərin tələbləri ödənilir ki"
+    ],
+    "file": "eqanun_doc_46944_Azərbaycan_Respublikasının_Mülki_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46960",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının İnzibati Xətalar Məcəlləsi",
+    "chars": 852543,
+    "whole_repealed": 142,
+    "inline_repealed": 86,
+    "status_repealed": false,
+    "samples": [
+      "25.3. İnzibati xətalara görə Azərbaycan Respublikasının diplomatik nümayəndəlikləri və konsulluqları tərəfindən tətbiq e",
+      "57.5.3. bu Məcəllənin 97.4-cü maddəsində nəzərdə tutulmuş halda nəqliyyat vasitəsinin istifadəçisinə verildiyi vaxtdan.",
+      "57.6.1. nəqliyyat vasitəsinin istifadəçisinin elektron kabinetində olan mobil telefon nömrəsinə inzibati xəta haqqında b",
+      "57.6.2. nəqliyyat vasitəsinin istifadəçisi bu Məcəllənin 125.2.1-ci maddəsində nəzərdə tutulan qaydada onun elektron kab",
+      "57.7. Bu Məcəllənin 127-4-cü maddəsində nəzərdə tutulmuş qaydada müvafiq informasiya sistemləri (ehtiyatları) vasitəsilə",
+      "57.7.1. inzibati xəta törətmiş şəxsin elektron kabinetində olan mobil telefon nömrəsinə inzibati xəta haqqında bu Məcəll"
+    ],
+    "file": "eqanun_doc_46960_Azərbaycan_Respublikasının_İnzibati_Xətalar_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46943",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Əmək Məcəlləsi",
+    "chars": 382662,
+    "whole_repealed": 36,
+    "inline_repealed": 81,
+    "status_repealed": false,
+    "samples": [
+      "5-1. Əmək müqaviləsi bildirişi - bu Məcəllənin 7-ci maddəsinin 2-1-ci hissəsi ilə müəyyən edilmiş hallar istisna olmaqla",
+      "h) əmək müqaviləsi bildirişini elektron informasiya sisteminə gücləndirilmiş elektron imza vasitəsi ilə daxil etmək (bu ",
+      "ğ) əmək müqaviləsi elektron sənəd formasında bağlanılan işçilər, bu Məcəllənin 7-ci maddəsinin 2-1-ci hissəsi ilə müəyyə",
+      "h) işçinin iş yerinin əsas və ya əlavə iş yeri olması barədə qeyd.",
+      "2. Əmək müqaviləsi kollektiv qaydada da bağlanıla bilər. Müvafiq işlərin görülməsi, xidmətlərin göstərilməsi (tikinti-tə",
+      "3. Kollektiv əmək müqaviləsi bağlanılan hallarda işəgötürən kollektivin hər bir üzvü qarşısında bu Məcəllə və əmək müqav"
+    ],
+    "file": "eqanun_doc_46943_Azərbaycan_Respublikasının_Əmək_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46946",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Ailə Məcəlləsi",
+    "chars": 200334,
+    "whole_repealed": 18,
+    "inline_repealed": 15,
+    "status_repealed": false,
+    "samples": [
+      "10.2. Üzürlü səbəblər olduqda, nikaha daxil olmaq istəyən və nikah yaşına çatmamış şəxslərin yaşadıqları ərazinin müvafi",
+      "17.2.3. ər (arvad) cinayət törətməyə görə ən azı 3 il müddətinə azadlıqdan məhrum olunduqda.",
+      "17.3. Nikahın pozulması və bu barədə şəhadətnamənin verilməsi ərizə verildiyi gündən 1 ay keçdikdən sonra müvafiq icra h",
+      "27.2. Yetkinlik yaşına çatmayan ərin (arvadın) mənafeyi tələb etdikdə, eləcə də nikahın etibarsız sayılması barədə onun ",
+      "84.2.4. 18 yaşından yuxarı I dərəcə əlilliyi olan ümumi uşağa qulluq edən və ehtiyacı olan ər və ya arvad.",
+      "115.2. Müvafiq icra hakimiyyəti orqanı belə məlumatları aldıqdan sonra üç gün müddətində uşağın həyat şəraitini müəyyən "
+    ],
+    "file": "eqanun_doc_46946_Azərbaycan_Respublikasının_Ailə_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46945",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Mülki Prosessual Məcəlləsi",
+    "chars": 457127,
+    "whole_repealed": 284,
+    "inline_repealed": 51,
+    "status_repealed": false,
+    "samples": [
+      "4.4. İqtisadi mübahisələr ilə bağlı iddia ərizələri, ərizələr, şikayətlər və digər sənədlər məhkəməyə yazılı formada və ",
+      "10.9. İşdə iştirak edən şəxslər və açıq məhkəmə iclasında olan digər şəxslər yerlərindən məhkəmə baxışının gedişatına da",
+      "10-1.4. “Elektron məhkəmə” informasiya sisteminin tətbiq olunduğu məhkəmələrdə mülki işlər üzrə məhkəmə icraatı, o cümlə",
+      "19.2. Aşağıdakı hallarda hakim işə baxılmasında iştirak edə bilməz və ona etiraz edilə bilər:",
+      "19.2.1. O, əvvəllər tərəflərdən birinin nümayəndəsi, yaxud vəkili olmuşsa və ya işdə şahid, ekspert, mütəxəssis, tərcümə",
+      "19.2.2. O, tərəflərdən biridirsə və ya tərəflərdən birinin və yaxud onun nümayəndəsinin və ya vəkilinin qohumudursa və y"
+    ],
+    "file": "eqanun_doc_46945_Azərbaycan_Respublikasının_Mülki_Prosessual_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46947",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Cinayət Məcəlləsi",
+    "chars": 486540,
+    "whole_repealed": 117,
+    "inline_repealed": 233,
+    "status_repealed": false,
+    "samples": [
+      "42.0.8. əmlak müsadirəsi;",
+      "42.0.10. azadlığın məhdudlaşdırılması;",
+      "Maddə 51. Əmlak müsadirəsi",
+      "51.1. Əmlak müsadirəsi məhkumun cinayət törədərkən istifadə etdiyi alət və vasitələrin, cinayətin predmetlərinin, habelə",
+      "51.2. Əmlak müsadirəsi yalnız bu Məcəllənin Xüsusi hissəsinin müvafiq maddələrində nəzərdə tutulmuş hallarda təyin olunu",
+      "51.3. Cinayət yolu ilə əldə edilmiş əmlak və ya cinayətin predmeti istifadə edildiyi, özgəninkiləşdirildiyi və ya başqa "
+    ],
+    "file": "eqanun_doc_46947_Azərbaycan_Respublikasının_Cinayət_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46950",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Cinayət-Prosessual Məcəlləsi",
+    "chars": 1067014,
+    "whole_repealed": 283,
+    "inline_repealed": 115,
+    "status_repealed": false,
+    "samples": [
+      "7.0.15. andlı iclasçı — Azərbaycan Respublikasının qanunvericiliyi ilə müəyyən edilmiş qaydada andlı iclasçılar siyahısı",
+      "7.0.16. andlı iclasçılar kollegiyası — bu Məcəllədə nəzərdə tutulmuş hallarda və qaydada cinayət işlərinə baxılması üçün",
+      "7.0.17. andlı iclasçıların aparıcısı — verdikt çıxarılması üçün müşavirə otağına gedənədək andlı iclasçıların öz tərkibi",
+      "7.0.44. verdikt — məhkəmə baxışı nəticəsində təqsirləndirilən şəxsin təqsirliliyi və ya təqsirsizliyi məsələsi barəsində",
+      "10.4. Azərbaycan Respublikası Ali Məhkəməsi Plenumunun məhkəmə təcrübəsinə dair məsələlər üzrə izahları cinayət prosesin",
+      "Maddə 24. Cinayət mühakimə icraatının xalqın nümayəndələrinin iştirakı ilə həyata keçirilməsi"
+    ],
+    "file": "eqanun_doc_46950_Azərbaycan_Respublikasının_Cinayət-Prosessual_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46948",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Vergi Məcəlləsi",
+    "chars": 741711,
+    "whole_repealed": 267,
+    "inline_repealed": 177,
+    "status_repealed": false,
+    "samples": [
+      "Azərbaycan Respublikasına gətirilən mallar üçün həmin malların hansı ölkədən gətirilməsindən asılı olaraq bu Məcəlləyə v",
+      "8.1.3. yerli əhəmiyyətli tikinti materialları üzrə mədən vergisi;",
+      "13.2.26. Opsion - qiymətli kağızlar, mallar və ya pul vəsaitləri gələcəkdə müəyyən şərtlərlə bu cür opsionun bağlanması ",
+      "13.2.43. İdman oyunları ilə əlaqədar aparılan mərc oyunları - idman yarışlarının nəticələrinin və ya yarışlardakı hadisə",
+      "13.2.44. İdman oyunları ilə əlaqədar aparılan mərc oyunlarının operatoru - idman oyunları ilə əlaqədar aparılan mərc oyu",
+      "13.2.45. İdman oyunları ilə əlaqədar aparılan mərc oyunlarının satıcısı - idman oyunları ilə əlaqədar aparılan mərc oyun"
+    ],
+    "file": "eqanun_doc_46948_Azərbaycan_Respublikasının_Vergi_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46956",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının İnzibati Prosessual Məcəlləsi",
+    "chars": 137944,
+    "whole_repealed": 11,
+    "inline_repealed": 8,
+    "status_repealed": false,
+    "samples": [
+      "38.3.1. müvafiq icra hakimiyyəti orqanının yaratdığı qurumun şikayət üzrə qəbul etdiyi qərardan (verdiyi yazılı cavabdan",
+      "38.3.2. müvafiq icra hakimiyyəti orqanının yaratdığı qurumun qərarından (yazılı cavabından) müvafiq icra hakimiyyəti orq",
+      "86.1.4. dövlət rüsumunun ödənilməsini;",
+      "95.1.3. dövlət rüsumunun ödənilməsini;",
+      "98.2. Müəyyən hüquqi mübahisəyə baxılarkən, Ali Məhkəmənin İnzibati kollegiyasının müvafiq məhkəmə tərkibinin həmin koll",
+      "98.3. İşə baxan müvafiq məhkəmə tərkibi mübahisəli hüquqi məsələni baxılması və həll olunması üçün Palataya göndərir. Bu"
+    ],
+    "file": "eqanun_doc_46956_Azərbaycan_Respublikasının_İnzibati_Prosessual_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46955",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Mənzil Məcəlləsi",
+    "chars": 196718,
+    "whole_repealed": 0,
+    "inline_repealed": 4,
+    "status_repealed": false,
+    "samples": [],
+    "file": "eqanun_doc_46955_Azərbaycan_Respublikasının_Mənzil_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46942",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Torpaq Məcəlləsi",
+    "chars": 146864,
+    "whole_repealed": 50,
+    "inline_repealed": 28,
+    "status_repealed": false,
+    "samples": [
+      "Maddə 61. Çoxmənzilli yaşayış evlərinə aid torpaq sahələri",
+      "1. Dövlət və bələdiyyə mülkiyyətində olan (yaxud qismən özəlləşdirilmiş) çoxmənzilli yaşayış evlərinə aid torpaq sahələr",
+      "2. Tam olaraq özəlləşdirilmiş çoxmənzilli yaşayış evlərinin, habelə onlara aid olan qeyri-yaşayış binalarının torpaq sah",
+      "3. Çoxmənzilli yaşayış evlərinə aid torpaq sahələrinin təyinatından kənar məqsədlər üçün istifadəsinə, habelə xüsusi mül",
+      "3. Torpaq sahəsinin istifadəyə və ya icarəyə verilməsi (satılması) barədə müvafiq qərar qəbul edildikdən sonra həmin sah",
+      "3. Torpaqdan (o cümlədən, icarə şərtləri ilə verilmiş torpaqdan) müvəqqəti istifadə hüququ müvafiq icra hakimiyyəti orqa"
+    ],
+    "file": "eqanun_doc_46942_Azərbaycan_Respublikasının_Torpaq_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46957",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Gömrük Məcəlləsi",
+    "chars": 406737,
+    "whole_repealed": 67,
+    "inline_repealed": 21,
+    "status_repealed": false,
+    "samples": [
+      "8.0.22. beynəlxalq avtomobil daşımalarını yerinə yetirən nəqliyyat vasitələrinə dövlət sərhədinin buraxılış məntəqələrin",
+      "Maddə 24. Gömrük brokeri fəaliyyətini həyata keçirmək üçün verilmiş lisenziyanın fəaliyyətinin dayandırılması və ləğv ed",
+      "Gömrük brokeri fəaliyyətini həyata keçirmək üçün verilmiş lisenziyanın fəaliyyətinin dayandırılması və ləğv edilməsi müv",
+      "Maddə 29. Gömrük daşıyıcısı fəaliyyətini həyata keçirmək üçün lisenziyanın verilməsi, onun fəaliyyətinin dayandırılması ",
+      "Gömrük daşıyıcısı fəaliyyətini həyata keçirmək üçün lisenziyanın verilməsi, eləcə də onun fəaliyyətinin dayandırılması v",
+      "Maddə 30. Gömrük daşıyıcısı fəaliyyətini həyata keçirmək üçün lisenziyanın verilməsinə görə dövlət rüsumu"
+    ],
+    "file": "eqanun_doc_46957_Azərbaycan_Respublikasının_Gömrük_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46959",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Miqrasiya Məcəlləsi",
+    "chars": 216286,
+    "whole_repealed": 7,
+    "inline_repealed": 11,
+    "status_repealed": false,
+    "samples": [
+      "33.4. Turistlərə elektron vizaların verilməsi qaydası bu Məcəllənin 38-ci maddəsi ilə müəyyən edilir.",
+      "38.5. “ASAN Viza” sistemi elektron viza alınması üçün daxil olmuş elektron müraciəti real vaxt rejimində “Giriş-çıxış və",
+      "53.1.4. ailə tərkibi haqqında (ailə üzvlərinin adı, soyadı, təvəllüdü, məşğuliyyəti, yaşadığı və ya olduğu yer göstərilm",
+      "53.1.5. nikah haqqında şəhadətnamənin notariat qaydasında təsdiq olunmuş surəti;",
+      "53.1.8. əcnəbilərin və vətəndaşlığı olmayan şəxslərin peşə ixtisası olduğu təqdirdə, bunu təsdiq edən sənədlərin notaria",
+      "65.0.5. Azərbaycan Respublikasının ərazisində başqa əsaslarla olan əcnəbinin və vətəndaşlığı olmayan şəxsin Azərbaycan R"
+    ],
+    "file": "eqanun_doc_46959_Azərbaycan_Respublikasının_Miqrasiya_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46958",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Şəhərsalma və Tikinti Məcəlləsi",
+    "chars": 151504,
+    "whole_repealed": 3,
+    "inline_repealed": 19,
+    "status_repealed": false,
+    "samples": [
+      "52.1. Bu Məcəllənin 51-ci maddəsində sadalanan peşə sahələrinə rəhbərliyi və həmin peşə sahələrinə aid işləri müvafiq pe",
+      "80.1-1. İnsanların yaşaması və toplanması, habelə istehsalat fəaliyyətinin həyata keçirilməsi üçün nəzərdə tutulmayan ye",
+      "103.2. Tikintiyə icazə verən müvafiq icra hakimiyyəti orqanı və ya müvafiq icra hakimiyyəti orqanının yaratdığı qurum (r"
+    ],
+    "file": "eqanun_doc_46958_Azərbaycan_Respublikasının_Şəhərsalma_və_Tikinti_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46953",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Seçki Məcəlləsi",
+    "chars": 450646,
+    "whole_repealed": 66,
+    "inline_repealed": 128,
+    "status_repealed": false,
+    "samples": [
+      "58.5. Namizədin qeydə alınması üçün müvafiq seçki komissiyasına seçki sənədləri təqdim edilərkən, eyni zamanda, qeydiyya",
+      "60.5. Namizəd qeydə alınmazsa, qeydiyyatdan imtina haqqında qərarın surətini aldıqdan sonra 3 gün müddətində namizəd, na",
+      "69.9. Qeydə alınmış namizədlərin və referendum üzrə təşviqat qruplarının seçki fondlarına dövlət tərəfindən ayrılmış vəs",
+      "90.6. Qeydə alınmış namizədə, namizədi qeydə alınmış siyasi partiyaya, siyasi partiyaların blokuna müvafiq seçki komissi",
+      "100.2.4. seçki bülleteninin qoyulması üçün zərfləri almış seçicilərin sayı;",
+      "100.2.10. daşınmaz seçki qutularında olan seçki bülleteninin qoyulması üçün zərflərin sayı (müəyyənləşdirilmiş formada o"
+    ],
+    "file": "eqanun_doc_46953_Azərbaycan_Respublikasının_Seçki_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46951",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Cəzaların İcrası Məcəlləsi",
+    "chars": 209337,
+    "whole_repealed": 95,
+    "inline_repealed": 23,
+    "status_repealed": false,
+    "samples": [
+      "VIII fəsil",
+      "Azadlığın məhdudlaşdırılması növündə cəzanın İcrası",
+      "Maddə 52. Azadlığın məhdudlaşdırılması növündə cəzanın icrası yeri",
+      "52.1. Azadlığın məhdudlaşdırılması növündə cəzaya məhkum olunmuş şəxslər cəzanı bir qayda olaraq yaşayış yerinə yaxın ər",
+      "52.2. Cəzaları azadlığın məhdudlaşdırılması cəza növü ilə əvəz edilmiş məhkumlar cəzanı çəkmək üçün digər xüsusi müəssis",
+      "52.3. Azadlığın məhdudlaşdırılması növündə cəzanı icra edən xüsusi müəssisənin müdiriyyəti cəza çəkmək üçün göndərilən ş"
+    ],
+    "file": "eqanun_doc_46951_Azərbaycan_Respublikasının_Cəzaların_İcrası_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46940",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Su Məcəlləsi",
+    "chars": 83654,
+    "whole_repealed": 11,
+    "inline_repealed": 5,
+    "status_repealed": false,
+    "samples": [
+      "Maddə 19. Su obyektlərinin istifadəsi və mühafizəsi sahəsində Naxçıvan Muxtar Respublikasının vəzifələri",
+      "Su obyektlərinin istifadəsi və mühafizəsi sahəsində Naxçıvan Muxtar Respublikasının vəzifələri aşağıdakılardır:",
+      "su obyektlərinin istifadəsi, bərpası və mühafizəsi sahəsində proqramları hazırlamaq, təsdiq etmək və həyata keçirmək, on",
+      "su obyektlərinin istifadəsi və mühafizəsi üzərində dövlət nəzarətini həyata keçirmək;",
+      "qanunvericiliklə müəyyən olunmuş qaydada su obyektlərindən istifadəni məhdudlaşdırmaq, dayandırmaq və qadağan etmək;",
+      "sel sularına qarşı, suların zərərli təsirinin qarşısının alınması və nəticələrinin ləğv edilməsi, habelə təbii fəlakət v"
+    ],
+    "file": "eqanun_doc_46940_Azərbaycan_Respublikasının_Su_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46941",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Meşə Məcəlləsi",
+    "chars": 61466,
+    "whole_repealed": 15,
+    "inline_repealed": 3,
+    "status_repealed": false,
+    "samples": [
+      "İcazədə görülən işlərin adı, müddəti və yerinə yetirilmə şərtləri, ətraf mühitin mühafizəsi barədə tələblər göstərilir.",
+      "Maddə 75. Kənd təsərrüfatı təyinatlı torpaqlarda yerləşən ağac-kol bitkiləri",
+      "Kənd təsərrüfatı təyinatlı torpaqlarda yerləşən ağac-kol bitkiləri torpaqqoruyucu, sutənzimləyici və meşə bitkilərinə xa",
+      "Bu torpaqlarda yerləşən ağac-kol bitkilərində aparılan qırmalar bu bitkilərin vəziyyətinin yaxşılaşdırılmasını və funksi",
+      "Kənd təsərrüfatı təyinatlı torpaqlardan meşə salınması, ağac-kol bitkilərinə qulluq edilməsi, onların istifadəsi, mühafi",
+      "Maddə 76. Dəmir yoluna aid torpaqlarda yerləşən ağac-kol bitkiləri"
+    ],
+    "file": "eqanun_doc_46941_Azərbaycan_Respublikasının_Meşə_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "46952",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Ticarət Gəmiçiliyi Məcəlləsi",
+    "chars": 273083,
+    "whole_repealed": 27,
+    "inline_repealed": 2,
+    "status_repealed": false,
+    "samples": [
+      "Maddə 5-1. Ticarət gəmiçiliyi sahəsində lisenziyalaşdırma",
+      "5-1.1. Ticarət gəmiçiliyi sahəsində aşağıdakı fəaliyyət növləri xüsusi razılıq (lisenziya) əsasında həyata keçirilir:",
+      "5-1.1.1. su nəqliyyatı ilə yük daşınması;",
+      "5-1.1.2. su nəqliyyatı ilə sərnişin daşınması.",
+      "18.1.3. gəminin üzgüçülüyə yararlığı haqqında şəhadətnamə;",
+      "18.1.10. zibillə çirkləndirmənin qarşısının alınması haqqında şəhadətnamə;"
+    ],
+    "file": "eqanun_doc_46952_Azərbaycan_Respublikasının_Ticarət_Gəmiçiliyi_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "56187",
+    "ok": true,
+    "title": "Azərbaycan Respublikasının Rəqabət Məcəlləsi",
+    "chars": 189465,
+    "whole_repealed": 0,
+    "inline_repealed": 0,
+    "status_repealed": false,
+    "samples": [],
+    "file": "eqanun_doc_56187_Azərbaycan_Respublikasının_Rəqabət_Məcəlləsi.txt"
+  },
+  {
+    "doc_id": "3423",
+    "ok": true,
+    "title": "517-IQ - Yol hərəkəti haqqında",
+    "chars": 309915,
+    "whole_repealed": 15,
+    "inline_repealed": 441,
+    "status_repealed": false,
+    "samples": [
+      "11) yolu və təhkim zolağını zibilləyə bilən materialların və yüklərin müvafiq qaydada qablaşdırılmadan aparılması;",
+      "III. Sürücülük vəsiqəsini almaq üçün yol hərəkəti qaydaları üzrə nəzəri və nəqliyyat vasitələri idarəetmə məsələləri üzr",
+      "Mülkiyyət və təşkilati-hüquqi formalarından asılı olmayaraq, yol hərəkəti təşkilinin perspektiv proqramlarını, kompleks ",
+      "4) lazım olarsa, nəqliyyat vasitəsinin idarə edilməsi hüququnu təsdiq edən sənədi;",
+      "3) nəqliyyat vasitəsinin istismarının qadağan edilməsinə səbəb olan nasazlıqların aradan qaldırılması barədə təminatlı t",
+      "5) Avtonəqliyyat vasitəsi sahiblərinin mülki məsuliyyətinin icbari sığortasının və sərnişin daşımaları xidmətini həyata "
+    ],
+    "file": "eqanun_doc_3423_Yol_hərəkəti_haqqında.txt"
+  },
+  {
+    "doc_id": "9479",
+    "ok": true,
+    "title": "1113 - İstehlakçıların hüquqlarının müdafiəsi haqqında",
+    "chars": 52496,
+    "whole_repealed": 28,
+    "inline_repealed": 2,
+    "status_repealed": false,
+    "samples": [
+      "Maddə 25. İstehlakçıların hüquqlarının müdafiəsini həyata keçirən dövlət icra hakimiyyəti orqanları tərəfindən tətbiq ed",
+      "1. Azərbaycan Respublikasında istehlakçıların hüquqlarının müdafiəsini həyata keçirən dövlət icra hakimiyyəti orqanları ",
+      "bu qanunun 7-ci maddəsinin birinci bəndində müəyyən edilmiş istehlakçıların hüquqlarının yerinə yetirilməsindən imtina e",
+      "istehlakçıların hüquqlarının pozulmasının aradan qaldırılması haqqında müvafiq dövlət orqanının icrası məcburi olan göst",
+      "normativ sənədlərin tələblərinə cavab verməyən malların istehsalına, satılmasına, işlərin yerinə yetirilməsinə, xidmətlə",
+      "məcburi sertifikatlaşdırılmalı, lakin sertifikatlaşdırılmamış malların satılması, işlərin yerinə yetirilməsi, xidmətləri"
+    ],
+    "file": "eqanun_doc_9479_İstehlakçıların_hüquqlarının_müdafiəsi_haqqında.txt"
+  },
+  {
+    "doc_id": "41828",
+    "ok": true,
+    "title": "1555-VQ - Mediasiya haqqında",
+    "chars": 56866,
+    "whole_repealed": 5,
+    "inline_repealed": 9,
+    "status_repealed": false,
+    "samples": [
+      "21.7. Bu Qanunun 21.8-ci maddəsində nəzərdə tutulmuş hal istisna olmaqla, bu Qanunun 21.6-cı maddəsinə uyğun olaraq gönd",
+      "21.9.3. tərəflər arasında mediasiyaya dair qeyd-şərt olduğu halda bu Qanunun 21.6-cı maddəsində nəzərdə tutulmuş təklifi",
+      "21.9.4. bu Qanunun 21.8-ci maddəsində nəzərdə tutulmuş hallarda tərəf həmin maddədə nəzərdə tutulmuş arayışı məhkəməyə e",
+      "21.10. Tərəfin mediasiyaya dair qeyd-şərtə və ya “mediasiya prosesinin tətbiqi barədə müqavilə”nin şərtlərinə zidd olara",
+      "29.4. Tərəfin ilkin mediasiya sessiyasında üzrsüz səbəbdən iştirak etməməsi qanunla nəzərdə tutulmuş məsuliyyətə səbəb o"
+    ],
+    "file": "eqanun_doc_41828_Mediasiya_haqqında.txt"
+  },
+  {
+    "doc_id": "11566",
+    "ok": true,
+    "title": "54-IIIQ - Əmək pensiyaları haqqında",
+    "chars": 88120,
+    "whole_repealed": 49,
+    "inline_repealed": 39,
+    "status_repealed": false,
+    "samples": [
+      "1.0.11. əmək pensiyasının baza hissəsi - əmək pensiyalarının birinci pilləsi olmaqla əmək pensiyaçılarının sosial müdafi",
+      "4.2.1. baza hissəsindən;",
+      "4.3.1. baza hissəsindən;",
+      "6.1. Əmək pensiyasının baza hissəsi və bu Qanunun 19-cu maddəsi ilə müəyyən olunan baza hissəsinə əlavələr məcburi dövlə",
+      "10.1. Yaşa görə əmək pensiyasının baza hissəsinin məbləği müvafiq icra hakimiyyəti orqanı tərəfindən müəyyən edilir.",
+      "Bu Qanuna uyğun olaraq təyin edilmiş yaşa görə əmək pensiyasının sığorta hissəsinin məbləği əmək pensiyasının minimum mə"
+    ],
+    "file": "eqanun_doc_11566_Əmək_pensiyaları_haqqında.txt"
+  },
+  {
+    "doc_id": "11508",
+    "ok": true,
+    "title": "55-IIIQ - Sosial müavinətlər haqqında",
+    "chars": 23204,
+    "whole_repealed": 10,
+    "inline_repealed": 30,
+    "status_repealed": false,
+    "samples": [
+      "4.0.1.4. sağlamlıq imkanları məhdud 18 yaşınadək uşaqlara müavinət;",
+      "4.0.1.11. “Məşğulluq haqqında” Azərbaycan Respublikasının Qanununa uyğun olaraq, işsizlik müavinətil",
+      "7.0.4. sağlamlıq imkanları məhdud 18 yaşınadək uşaqlara müavinət-müvafiq icra hakimiyyəti orqanı tərəfindən təsdiq edilm",
+      "7.0.10-1. işsizlik müavinəti - şəxs “Məşğulluq haqqında” Azərbaycan Respublikasının Qanunu ilə müəyyən edilmiş qaydada i",
+      "9.1.3. sağlamlıq imkanları məhdud 18 yaşınadək uşaqlara müavinət - 18 yaşınadək uşaqların müvafiq icra hakimiyyəti orqan",
+      "9.4. İşsizlik müavinətinin ödənilməsi müddəti “Məşğulluq haqqında” Azərbaycan Respublikasının Qanunu ilə müəyyən edilir."
+    ],
+    "file": "eqanun_doc_11508_Sosial_müavinətlər_haqqında.txt"
+  },
+  {
+    "doc_id": "22228",
+    "ok": true,
+    "title": "165-IVQ - İcbari sığortalar haqqında",
+    "chars": 117016,
+    "whole_repealed": 36,
+    "inline_repealed": 31,
+    "status_repealed": false,
+    "samples": [
+      "9.2. İcbari sığorta müqaviləsi sığortaçı tərəfindən müvafiq sığorta şəhadətnaməsinin sığortalıya və ya sığorta olunana v",
+      "9.5. Sığorta müqaviləsinə uyğun olaraq sığorta hadisəsi üzrə sığorta ödənişi verildikdə, bu Qanunun Xüsusi bölməsində ba",
+      "11.3. Sığorta vasitəçiləri bu Qanunun Xüsusi bölməsində nəzərdə tutulan icbari sığorta növləri üzrə sığortalılardan nağd",
+      "17.1.2. sığorta şəhadətnaməsinin surəti;",
+      "21.2. Bu Qanunun Xüsusi hissəsində icbari sığorta növləri üzrə sığorta ödənişinin verilməsindən imtinanın digər əsasları",
+      "23.1.5. sığorta ödənişi verilərkən, müvafiq hallarda icbari sığorta şəhadətnaməsinin geri alınması üçün həmin şəhadətnam"
+    ],
+    "file": "eqanun_doc_22228_İcbari_sığortalar_haqqında.txt"
+  },
+  {
+    "doc_id": "80",
+    "ok": true,
+    "title": "725-IQ - Tibbi sığorta haqqında",
+    "chars": 62609,
+    "whole_repealed": 53,
+    "inline_repealed": 32,
+    "status_repealed": false,
+    "samples": [
+      "1.1.2. xidmətlər zərfinin baza hissəsi – sığortaolunanlara xidmətlər zərfinə uyğun olaraq göstərilən ilkin səhiyyə xidmə",
+      "1.1.3. xidmətlər zərfinin əlavə hissəsi – sığortaolunanlara xidmətlər zərfinə uyğun olaraq göstərilən ixtisaslaşdırılmış",
+      "1.1.11. sığorta ili – icbari tibbi sığorta üzrə sığorta haqqının ödənildiyi ilin yanvar ayının 1-dən dekabr ayının 31-də",
+      "1.1.12. tibb təchizatçısı – “Özəl tibb fəaliyyəti haqqında” Azərbaycan Respublikasının Qanununa əsasən özəl tibb fəaliyy",
+      "4.4. Könüllü tibbi sığorta müqaviləsinin forması və bağlanma qaydası müvafiq icra hakimiyyəti orqanı tərəfindən müəyyən ",
+      "İcbari tibbi sığorta sistemi dövlət büdcəsindən, sığortalının (mülkiyyət formasından asılı olmayaraq hüquqi şəxslərin və"
+    ],
+    "file": "eqanun_doc_80_Tibbi_sığorta_haqqında.txt"
+  },
+  {
+    "doc_id": "3813",
+    "ok": true,
+    "title": "250-IQ - Sosial sığorta haqqında",
+    "chars": 41857,
+    "whole_repealed": 40,
+    "inline_repealed": 10,
+    "status_repealed": false,
+    "samples": [
+      "Sosial sığorta hadisəsi elə bir haldır ki, onun baş verməsi ilə sığortaolunanın sığorta təşkilatından sığorta ödəməsi al",
+      "işsiz olmaq (qanunvericiliklə müəyyən olunmuş dövr üçün).",
+      "işsizlik müavinəti.",
+      "Müvafiq Dövlət Proqramına uyğun olaraq işsizlik müavinətləri məcburi dövlət sosial sığorta haqları hesabına maliyyələşdi",
+      "Azərbaycan Respublikasının qanunvericiliyi ilə sosial sığorta üzrə təminatın başqa növləri də müəyyən edilə bilər.",
+      "Sığortaçı — Azərbaycan Respublikasının qanunvericiliyi ilə müəyyən edilmiş qaydada məcburi dövlət sosial sığortası və ya"
+    ],
+    "file": "eqanun_doc_3813_Sosial_sığorta_haqqında.txt"
+  },
+  {
+    "doc_id": "36310",
+    "ok": true,
+    "title": "765-VQ - İşsizlikdən sığorta haqqında",
+    "chars": 31081,
+    "whole_repealed": 2,
+    "inline_repealed": 7,
+    "status_repealed": false,
+    "samples": [
+      "6.2.1. sığortaedən kimi sığortaçıda qeydiyyata durmaq;",
+      "6.2.7. Azərbaycan Respublikasının Mülki Məcəlləsi ilə müəyyən edilmiş hallarda özünün yenidən təşkil olunması və ya ləğv"
+    ],
+    "file": "eqanun_doc_36310_İşsizlikdən_sığorta_haqqında.txt"
+  },
+  {
+    "doc_id": "107",
+    "ok": true,
+    "title": "762-IQ - Notariat haqqında",
+    "chars": 101641,
+    "whole_repealed": 74,
+    "inline_repealed": 10,
+    "status_repealed": false,
+    "samples": [
+      "İcbari təlimdən azad edilmiş şəxslər şəhadətnamə almaq üçün notariat fəaliyyəti üzrə peşə hazırlığına dair müsahibədən k",
+      "Haqqında mənfi qərar çıxarılmış şəxsin şəhadətnamə verilməsi barədə təkrar ərizəsi əsasında ondan yenidən imtahan qəbul ",
+      "Peşə hazırlığına dair müsahibədən keçməmiş şəxslər 3 il ərzində şəhadətnamə almaq üçün notarius vakansiyası olduğu halda",
+      "4) Azərbaycan Respublikasının qanunvericiliyində nəzərdə tutulan hallarda vərəsəlik və ya bağışlama qaydasında ayrı-ayrı",
+      "Dövlət notariusları tərəfindən notariat hərəkətlərinin aparılmasına görə dövlət rüsumu tutularkən onun 15 faizi dərhal d",
+      "Maddə 31. Əlavə xidmət haqqı"
+    ],
+    "file": "eqanun_doc_107_Notariat_haqqında.txt"
+  },
+  {
+    "doc_id": "1406",
+    "ok": true,
+    "title": "243-IIQ - İcra haqqında",
+    "chars": 124802,
+    "whole_repealed": 22,
+    "inline_repealed": 25,
+    "status_repealed": false,
+    "samples": [
+      "12.2. Aşağıdakı icra sənədləri dərhal icra olunmalıdır:",
+      "12.2.1. alimentlərin, əmək haqqının, habelə bu ödəmələr üzrə bütün borc məbləğlərinin tutulması haqqında;",
+      "12.2.2. qanunsuz işdən çıxarılmış və ya başqa işə keçirilmiş işçinin işə və ya əvvəlki vəzifəyə bərpası haqqında.",
+      "18.1.1. icra məmuru icra sənədinin verilməsi üçün əsas olmuş qərarın, habelə qanuna əsasən icra sənədi sayılan sənədin i",
+      "18.1.6. tələbkarın müvafiq xahişi olduqda.",
+      "19.3. Digər orqanın icra sənədi üzrə icraatın dayandırılmasına səbəb olmuş hallar aradan qaldırıldıqda, icraatın təzələn"
+    ],
+    "file": "eqanun_doc_1406_İcra_haqqında.txt"
+  },
+  {
+    "doc_id": "2860",
+    "ok": true,
+    "title": "223-IIQ - Dövlət rüsumu haqqında",
+    "chars": 127362,
+    "whole_repealed": 209,
+    "inline_repealed": 24,
+    "status_repealed": false,
+    "samples": [
+      "2.0.13. Baytarlıq şəhadətnaməsinin, sertifikatının və baytarlıq preparatlarının qeydiyyat şəhadətnaməsinin verilməsi;",
+      "2.0.13-1. qida təhlükəsizliyi sertifikatının verilməsi;",
+      "2.0.13-2. heyvanların, heyvan mənşəli məhsulların və xammalın baytarlıq normalarına cavab verməsini təsdiq edən eksperti",
+      "2.0.13-3. qida məhsulları sahəsində fəaliyyət göstərən subyektlərin qida təhlükəsizliyi qeydiyyatına alınması;",
+      "2.0.14. Pestisidlərə, bioloji preparatlara və aqrokimyəvi maddələrə qeydiyyat şəhadətnaməsinin, idxal karantin icazəsini",
+      "2.0.18. xarici ölkələrin ali təhsil müəssisələrinin diplomlarının tanınması;"
+    ],
+    "file": "eqanun_doc_2860_Dövlət_rüsumu_haqqında.txt"
+  },
+  {
+    "doc_id": "11254",
+    "ok": true,
+    "title": "1036-IIQ - İnzibati icraat haqqında",
+    "chars": 83716,
+    "whole_repealed": 0,
+    "inline_repealed": 2,
+    "status_repealed": false,
+    "samples": [],
+    "file": "eqanun_doc_11254_İnzibati_icraat_haqqında.txt"
+  },
+  {
+    "doc_id": "5825",
+    "ok": true,
+    "title": "590-IIQ - Banklar haqqında",
+    "chars": 237849,
+    "whole_repealed": 71,
+    "inline_repealed": 61,
+    "status_repealed": false,
+    "samples": [
+      "Banka aidiyyəti olan şəxs adından hərəkət edən şəxslər - aralarında bağladıqları müqavilə əsasında banka aidiyyəti olan ",
+      "2.1. Azərbaycan Respublikasının bank sistemi maliyyə bazarlarına nəzarət orqanından, Azərbaycan Respublikasının Mərkəzi ",
+      "2.2. Mərkəzi Bank dövlətin mərkəzi bankıdır və onun fəaliyyəti Azərbaycan Respublikasının Konstitusiyası, “Azərbaycan Re",
+      "14.2.7. bankın yerli filialının fəaliyyət göstərəcəyi yer maliyyə bazarlarına nəzarət orqanının bank fəaliyyətinin həyat",
+      "16.4. Bu Qanunun 16.1.9-cu, 16.1.15-ci, 16.1.16-cı, 16.1.17-ci, 16.1.18-ci və 16.2.7-ci maddələrində göstərilən əsaslard",
+      "32.1.9. qiymətli kağızlar bazarında peşəkar fəaliyyət;"
+    ],
+    "file": "eqanun_doc_5825_Banklar_haqqında.txt"
+  },
+  {
+    "doc_id": "9902",
+    "ok": true,
+    "title": "883-IIQ - İpoteka haqqında",
+    "chars": 65328,
+    "whole_repealed": 53,
+    "inline_repealed": 15,
+    "status_repealed": false,
+    "samples": [
+      "1.0.9. ilkin satış qiyməti – bu Qanunun tələblərinə uyğun olaraq ipoteka predmetinin bazar dəyərinin müəyyənləşdirilməsi",
+      "14.1.3. ipoteka predmeti deyişdirildikdə;",
+      "20.6. Oğurluq nəticəsində və ya verilmə qeydlərini yazmış şəxsin iradəsindən asılı olmayaraq başqa şəkildə onun sahibliy",
+      "Maddə 33. İpoteka predmetinə tutmanın yönəldilməsi əsasları",
+      "Borclu əsas öhdəliyi icra etmədikdə və ya lazımınca icra etmədikdə ipoteka saxlayanın tələbinin ödənilməsi üçün ipoteka ",
+      "34.1.2. əsas öhdəlik üzrə faizlərin ödənilməsi müddətlərinin ardıcıl olaraq iki dəfə pozulması;"
+    ],
+    "file": "eqanun_doc_9902_İpoteka_haqqında.txt"
+  },
+  {
+    "doc_id": "5456",
+    "ok": true,
+    "title": "713-IIQ - Daşınmaz əmlakın dövlət reyestri haqqında",
+    "chars": 46000,
+    "whole_repealed": 13,
+    "inline_repealed": 21,
+    "status_repealed": false,
+    "samples": [
+      "2.1. Daşınmaz əmlaka mülkiyyət və digər əşya hüquqlarının dövlət qeydiyyatı (bundan sonra - hüquqların dövlət qeydiyyatı",
+      "5.2. Bu Qanunun 5.1-ci maddəsində nəzərdə tutulmuş hallarda dövlət reyestrindən arayışı əldə etmək üçün qeydiyyat orqanı",
+      "5.2-1. Bu Qanunun 5.1-ci maddəsində nəzərdə tutulmuş hallarda daşınmaz əmlakın dövlət reyestrindən arayışın alınması üçü",
+      "6.3. Daşınmaz əmlaka mülkiyyət və digər əşya hüquqlarının dövlət qeydiyyatına alınması ilə bağlı sənədlərin verilməsinə ",
+      "10.4. Hüquqların dövlət qeydiyyatı üçün sənədlərin qəbulu, yoxlanılması və verilməsinin prosedur qaydaları müvafiq icra ",
+      "13.3. Ərizə jurnalında aşağıdakılar barədə məlumat göstərilir:"
+    ],
+    "file": "eqanun_doc_5456_Daşınmaz_əmlakın_dövlət_reyestri_haqqında.txt"
+  },
+  {
+    "doc_id": "31281",
+    "ok": true,
+    "title": "1308-IVQ - Vətəndaşların müraciətləri haqqında",
+    "chars": 28512,
+    "whole_repealed": 1,
+    "inline_repealed": 0,
+    "status_repealed": false,
+    "samples": [
+      "7.3. Müraciətə baxan subyektlərin müraciətlərin qəbul edilməsi və cavablandırılması işini habelə elektron formada həyata"
+    ],
+    "file": "eqanun_doc_31281_Vətəndaşların_müraciətləri_haqqında.txt"
+  },
+  {
+    "doc_id": "19675",
+    "ok": true,
+    "title": "998-IIIQ - Fərdi məlumatlar haqqında",
+    "chars": 37901,
+    "whole_repealed": 0,
+    "inline_repealed": 1,
+    "status_repealed": false,
+    "samples": [],
+    "file": "eqanun_doc_19675_Fərdi_məlumatlar_haqqında.txt"
+  },
+  {
+    "doc_id": "39846",
+    "ok": true,
+    "title": "1196-VQ - Məşğulluq haqqında",
+    "chars": 69965,
+    "whole_repealed": 10,
+    "inline_repealed": 17,
+    "status_repealed": false,
+    "samples": [
+      "4.4.5. bu Qanunun 4.1.3-cü maddəsində göstərilən ailə kəndli təsərrüfatının üzvləri barədə - onların uçotunu aparan yerl",
+      "4.4.6. bu Qanunun 4.1.4-cü maddəsində göstərilən məşğul şəxslər barədə - onların seçilməsi, təyin və ya təsdiq edilməsin",
+      "4.4.7. bu Qanunun 4.1.5-ci maddəsində göstərilən məşğul şəxslər barədə - onları işə (xidmətə) qəbul edən orqanlar tərəfi",
+      "4.4.9. bu Qanunun 4.1.7-ci maddəsində göstərilən məşğul şəxslər barədə - müvafiq icra hakimiyyəti orqanının müəyyən etdi",
+      "4.5. Bu Qanunun 4.1.3-cü maddəsində göstərilən, bu Qanun qüvvəyə minənədək mülkiyyətində kənd təsərrüfatına yararlı torp",
+      "4.6. Müvafiq icra hakimiyyəti orqanının müəyyən etdiyi orqan (qurum) məşğul şəxslər barəsində bu Qanunun 4.4.2-ci, 4.4.4"
+    ],
+    "file": "eqanun_doc_39846_Məşğulluq_haqqında.txt"
+  },
+  {
+    "doc_id": "4481",
+    "ok": true,
+    "title": "926-IQ - Dövlət qulluğu haqqında",
+    "chars": 22701,
+    "whole_repealed": 662,
+    "inline_repealed": 0,
+    "status_repealed": false,
+    "samples": [
+      "Dövlət qulluğu haqqında",
+      "Azərbaycan Respublİkasının Qanunu",
+      "Bu Qanun Azərbaycan Respublikası Konstitusiyasının 94-cü maddəsinin I hissəsinin 19-cu bəndinə uyğun olaraq Azərbaycan R",
+      "I fəsil",
+      "Ümumİ müddəalar",
+      "Maddə 1. Əsas anlayışlar"
+    ],
+    "file": "eqanun_doc_4481_Dövlət_qulluğu_haqqında.txt"
+  },
+  {
+    "doc_id": "23021",
+    "ok": true,
+    "title": "274-IVQ - Hərbi vəzifə və hərbi xidmət haqqında",
+    "chars": 86051,
+    "whole_repealed": 6,
+    "inline_repealed": 16,
+    "status_repealed": false,
+    "samples": [
+      "Maddə 11. Ali təhsil müəssisələri tələbələrinin zabitlər hazırlanan xüsusi proqram üzrə hərbi hazırlığı",
+      "11.1. Ali təhsil müəssisələrində xüsusi proqram üzrə zabitlərin hazırlanması qaydası və müvafiq hərbi ixtisasların siyah",
+      "11.2. Əyani təhsilalma formasında təhsil alan tələbələrin xüsusi proqram üzrə hərbi hazırlığı ali təhsil müəssisəsində t",
+      "11.3. Zabitlər hazırlanan xüsusi proqram üzrə hərbi hazırlığı sağlamlıq vəziyyətinə görə zabitlərin hərbi xidmətinə yara",
+      "11.4. Tələbələrin hərbi hazırlığına ümumi rəhbərliyi müvafiq icra hakimiyyəti orqanı həyata keçirir.",
+      "44.2. Ehtiyatda olmağın son yaş həddi qadın zabitlər üçün – 50 yaş, gizirlər (miçmanlar) və müddətdən artıq həqiqi hərbi"
+    ],
+    "file": "eqanun_doc_23021_Hərbi_vəzifə_və_hərbi_xidmət_haqqında.txt"
+  },
+  {
+    "doc_id": "3933",
+    "ok": true,
+    "title": "310-IQ - Məhkəmələr və hakimlər haqqında",
+    "chars": 101120,
+    "whole_repealed": 104,
+    "inline_repealed": 96,
+    "status_repealed": false,
+    "samples": [
+      "Ağır cinayətlərə dair işlər üzrə Azərbaycan Respublikasının hərbi məhkəməsi (bundan sonra — Ağır cinayətlərə dair işlər ",
+      "Beynəlxalq müqavilələrdən irəli gələn mübahisələrə dair Azərbaycan Respublikasının iqtisad məhkəməsi (bundan sonra — Bey",
+      "Rayon (şəhər) məhkəməsinə bir hakim təyin olunmuşsa, o, həmin məhkəmənin sədrinin səlahiyyətlərini həyata keçirir.",
+      "Maddə 24. Rayon (şəhər) məhkəməsi sədrinin və ya hakiminin əvəz edilməsi",
+      "Rayon (şəhər) məhkəməsinin sədri vəzifələrini yerinə yetirə bilmədikdə onun vəzifələrinin icrası Azərbaycan Respublikası",
+      "Tək tərkibli rayon (şəhər) məhkəməsinin hakimi vəzifələrini yerinə yetirə bilmədikdə onun vəzifələrinin icrası müvafiq i"
+    ],
+    "file": "eqanun_doc_3933_Məhkəmələr_və_hakimlər_haqqında.txt"
+  },
+  {
+    "doc_id": "2937",
+    "ok": true,
+    "title": "727-IQ - Polis haqqında",
+    "chars": 62830,
+    "whole_repealed": 7,
+    "inline_repealed": 7,
+    "status_repealed": false,
+    "samples": [
+      "9) qanunla müəyyənləşdirmiş hallarda və qaydada təyin olunmuş tərbiyəvi xarakterli məcburi tədbirlərdən yayınan yetkinli",
+      "IV. Cinayət və ya inzibati xəta törədilməsi ilə əlaqədar tutulmuş və ya həbsə alınmış şəxsin, onun məsələsinə tezliklə m",
+      "8) Azərbaycan Respublikasının qanunları ilə müəyyənləşdirilmiş tutulma və ya həbsəalma müddətlərinə riayət etməli, bu mü",
+      "9) 3 saatdan artıq müddətə tutulmuş və ya həbsə alınmış şəxs barədə onun tutulmasından və ya həbsə alınmasından 24 saat ",
+      "IV. Bu maddənin II hissəsinin əsasında mənzilə orada yaşayanların iradəsi ziddinə daxilolma faktı barəsində 24 saat ərzi",
+      "6) mənzilə orada yaşayanların iradəsi ziddinə hər bir daxilolma faktı barəsində 24 saat ərzində hakimə yazılı məlumat ve"
+    ],
+    "file": "eqanun_doc_2937_Polis_haqqında.txt"
+  },
+  {
+    "doc_id": "257",
+    "ok": true,
+    "title": "783-IQ - Vəkillər və vəkillik fəaliyyəti haqqında",
+    "chars": 49221,
+    "whole_repealed": 15,
+    "inline_repealed": 7,
+    "status_repealed": false,
+    "samples": [
+      "IV. Vəkillik fəaliyyəti vəkillərin müxtəlif məhkəmə instansiyalarına buraxılma dərəcələrinə uyğun olaraq həyata keçirili",
+      "Vəkil, bu Qanunun 20-ci maddəsində göstərilən və Azərbaycan Respublikasının digər qanunları ilə nəzərdə tutulmuş hallar ",
+      "II. Aşağıdakı məsələlər Vəkillər Kollegiyası üzvlərinin Ümumi yığıncağı (konfransı tərəfindən həll edilə bilər:",
+      "Vəkillər Kollegiyasının Nizamnaməsini qəbul edir və ona əlavələr və dəyişikliklər edir;",
+      "Vəkillər Kollegiyasının Rəyasət Heyəti üzvlərini, sədrini və sədr müavinlərini seçir;",
+      "İntizam Komissiyasını yaradır və onun Əsasnaməsini qəbul edir;"
+    ],
+    "file": "eqanun_doc_257_Vəkillər_və_vəkillik_fəaliyyəti_haqqında.txt"
+  },
+  {
+    "doc_id": "18343",
+    "ok": true,
+    "title": "833-IIIQ - Təhsil haqqında",
+    "chars": 108040,
+    "whole_repealed": 22,
+    "inline_repealed": 18,
+    "status_repealed": false,
+    "samples": [
+      "1.0.54. müvafiq icra hakimiyyəti orqanının müəyyən etdiyi elmi təşkilat – magistr təhsil proqramı əsasında təhsil proses",
+      "19.12. Valideynlərin və ya uşaqların digər qanuni nümayəndələrinin arzusu ilə təhsil müəssisəsi xüsusi istedadlı uşaqlar",
+      "19.16. Ümumi orta təhsil səviyyəsində yekun qiymətləndirmə aparılır və təhsili başa vuran təhsilalanlara müvafiq dövlət ",
+      "22.5-1. Bu Qanunla magistratura səviyyəsi üzrə təhsil fəaliyyətini həyata keçirən ali təhsil müəssisələri üçün müəyyən e",
+      "22.7. Xüsusi qabiliyyət tələb edən və öz xüsusiyyətləri ilə fərqlənən mədəniyyət, musiqi, incəsənət, idman, memarlıq, di",
+      "Maddə 23. Doktorantura"
+    ],
+    "file": "eqanun_doc_18343_Təhsil_haqqında.txt"
+  },
+  {
+    "doc_id": "30348",
+    "ok": true,
+    "title": "1281-IVQ - Reklam haqqında",
+    "chars": 60721,
+    "whole_repealed": 1,
+    "inline_repealed": 8,
+    "status_repealed": false,
+    "samples": [
+      "34.4. Reklam yayımına icazə (razılıq) verilməsi qaydalarını müvafiq icra hakimiyyəti orqanı təsdiq edir."
+    ],
+    "file": "eqanun_doc_30348_Reklam_haqqında.txt"
+  },
+  {
+    "doc_id": "10406",
+    "ok": true,
+    "title": "908-IIQ - Elektron ticarət haqqında",
+    "chars": 20512,
+    "whole_repealed": 0,
+    "inline_repealed": 0,
+    "status_repealed": false,
+    "samples": [],
+    "file": "eqanun_doc_10406_Elektron_ticarət_haqqında.txt"
+  },
+  {
+    "doc_id": "7039",
+    "ok": true,
+    "title": "114 - İcarə haqqında",
+    "chars": 12705,
+    "whole_repealed": 0,
+    "inline_repealed": 0,
+    "status_repealed": false,
+    "samples": [],
+    "file": "eqanun_doc_7039_İcarə_haqqında.txt"
+  },
+  {
+    "doc_id": "7739",
+    "ok": true,
+    "title": "305 - Vətəndaşların pensiya təminatı haqqında",
+    "chars": 6228,
+    "whole_repealed": 560,
+    "inline_repealed": 31,
+    "status_repealed": false,
+    "samples": [
+      "Vətəndaşların pensiya təminatı haqqında",
+      "AZƏRBAYCAN RESPUBLİKASININ QANUNU",
+      "Bu Qanun vətəndaşlar qocaldıqda, əmək qabiliyyətini tamamilə və ya qismən itirdikdə, habelə ailə başçısını itirdikdə onl",
+      "Qanunla Azərbaycan Respublikası vətəndaşlarının, eləcə də digər dövlətlərin Azərbaycan Respublikası ərazisində daimi yaş",
+      "Qanunla fəhlələrin, qulluqçuların, kolxozçuların, fərdi əmək fəaliyyəti və sahibkarlıqla məşğul olan şəxslərin və digər ",
+      "Qanun dolanacaq xərcləri dəyişdikcə pensiya məbləğlərinin də müntəzəm surətdə dəyişdirilməsi yolu ilə pensiyaçıların sos"
+    ],
+    "file": "eqanun_doc_7739_Vətəndaşların_pensiya_təminatı_haqqında.txt"
+  }
+]

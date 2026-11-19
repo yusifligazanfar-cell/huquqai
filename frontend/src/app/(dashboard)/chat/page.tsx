@@ -12,7 +12,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { generateLegalResponse, getDocumentByTitle } from "@/app/actions/chat"
 import { generatePetitionResponse, generateStructuredLegalDocument } from "@/app/actions/petition"
 import { useAuth } from "@/context/AuthContext"
-import { createClient } from '@/utils/supabase/client'
 import { useSearchParams } from 'next/navigation'
 import { CORE_DOCUMENT_TYPES, DOCUMENT_TYPE_MAP, type DocumentTypeId, type LegalDocumentFormInput } from "@/lib/legal-documents"
 import { DocumentCreatorForm } from "@/components/documents/DocumentCreatorForm"
@@ -319,30 +318,19 @@ function ChatContent() {
       }
       loadedTargetIdRef.current = targetId
 
-      const supabase = createClient()
-      
-      const { data: convs } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('user_id', supabaseUser.id)
-        .eq('type', 'chat')
-        .eq('id', targetId);
-
-      if (convs && convs.length > 0) {
-        const cid = convs[0].id
-        setConversationId(cid)
-        const { data: msgs } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('conversation_id', cid)
-          .order('created_at', { ascending: true })
-          
-        if (msgs && msgs.length > 0) {
-          setMessages(msgs)
+      try {
+        const res = await fetch(`/api/app/conversations?id=${encodeURIComponent(targetId)}`, {
+          cache: 'no-store',
+        })
+        const json = await res.json().catch(() => ({}))
+        if (json?.conversation?.id) {
+          setConversationId(json.conversation.id)
+          setMessages(Array.isArray(json.messages) ? json.messages : [])
         } else {
           setMessages([])
+          setConversationId(null)
         }
-      } else {
+      } catch {
         setMessages([])
         setConversationId(null)
       }
@@ -460,11 +448,17 @@ function ChatContent() {
 
       if (supabaseUser && conversationId) {
         try {
-          const supabase = createClient()
-          await supabase.from("messages").insert([
-            { conversation_id: conversationId, role: "user", content: userSummary },
-            { conversation_id: conversationId, role: "assistant", content: res.text },
-          ])
+          await fetch('/api/app/conversations/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              conversation_id: conversationId,
+              items: [
+                { role: 'user', content: userSummary },
+                { role: 'assistant', content: res.text },
+              ],
+            }),
+          })
         } catch (dbErr) {
           console.warn("Chat modal document DB save skipped:", dbErr)
         }
@@ -479,27 +473,28 @@ function ChatContent() {
 
   const triggerAIResponse = async (userQuery: string, currentHistory: any[]) => {
     setIsLoading(true)
-    const supabase = createClient()
     let cid = conversationId
 
     try {
       // Persist conversation/message non-fatally so transient DB errors never block answering
       if (!cid && supabaseUser) {
         try {
-          const { data: convData } = await supabase
-            .from('conversations')
-            .insert({ user_id: supabaseUser.id, type: 'chat', title: userQuery.substring(0, 50) })
-            .select('id')
-            .single()
-
-          if (convData) {
-            cid = convData.id
+          const cRes = await fetch('/api/app/conversations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: userQuery.substring(0, 50), mode: 'chat' }),
+          })
+          const cJson = await cRes.json().catch(() => ({}))
+          if (cJson?.conversation?.id) {
+            cid = cJson.conversation.id
             setConversationId(cid)
-            await supabase.from('messages').insert({
-              conversation_id: cid,
-              role: 'user',
-              content: userQuery,
-              citations: []
+            await fetch('/api/app/conversations/messages', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                conversation_id: cid,
+                items: [{ role: 'user', content: userQuery }],
+              }),
             })
             window.dispatchEvent(new Event("chatHistoryUpdated"))
           }
@@ -508,11 +503,13 @@ function ChatContent() {
         }
       } else if (cid && supabaseUser) {
         try {
-          await supabase.from('messages').insert({
-            conversation_id: cid,
-            role: 'user',
-            content: userQuery,
-            citations: []
+          await fetch('/api/app/conversations/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              conversation_id: cid,
+              items: [{ role: 'user', content: userQuery }],
+            }),
           })
         } catch (dbErr) {
           console.warn("User message insert warning:", dbErr)
@@ -629,11 +626,13 @@ function ChatContent() {
       
       if (cid) {
         try {
-          await supabase.from('messages').insert({
-            conversation_id: cid,
-            role: 'assistant',
-            content: response.content,
-            citations: response.citations
+          await fetch('/api/app/conversations/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              conversation_id: cid,
+              items: [{ role: 'assistant', content: response.content }],
+            }),
           })
         } catch (dbErr) {
           console.warn("Assistant message insert warning:", dbErr)

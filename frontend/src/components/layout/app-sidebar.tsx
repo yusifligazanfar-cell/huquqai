@@ -5,7 +5,6 @@ import { Scale, MessageSquare, Search, LayoutDashboard, Settings, ChevronRight, 
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { createClient } from "@/utils/supabase/client"
 import { useAuth } from "@/context/AuthContext"
 
 import {
@@ -50,74 +49,38 @@ export function AppSidebar() {
     }
 
     const fetchAndCleanupChats = async () => {
-      const supabase = createClient()
-      
-      const { data, error } = await supabase
-        .from('conversations')
-        .select('id, title, updated_at')
-        .eq('user_id', supabaseUser.id)
-        .eq('type', 'chat')
-        .order('updated_at', { ascending: false })
-        
-      if (error || !data) return
-      
-      setRecentChats(data.slice(0, 5))
-      
-      if (data.length > 5) {
-        const idsToDelete = data.slice(5).map((c: any) => c.id)
-        await supabase
-          .from('conversations')
-          .delete()
-          .in('id', idsToDelete)
-      }
+      try {
+        const res = await fetch('/api/app/conversations', { cache: 'no-store' })
+        const json = await res.json().catch(() => ({}))
+        const data = (json?.conversations || []).filter((c: any) => !c.mode || c.mode === 'chat')
+        setRecentChats(data.slice(0, 5))
+      } catch {}
     }
-    
+
     const fetchPendingConsultations = async () => {
       if (user?.role !== 'lawyer') return
-      const supabase = createClient()
-      const { count, error } = await supabase
-        .from('consultations')
-        .select('*', { count: 'exact', head: true })
-        .eq('lawyer_id', supabaseUser.id)
-        .eq('status', 'pending')
-      
-      if (!error && count !== null) {
-        setPendingCount(count)
-      }
+      try {
+        const res = await fetch(`/api/app/consultations?lawyerId=${encodeURIComponent(supabaseUser.id)}`, {
+          cache: 'no-store',
+        })
+        const json = await res.json().catch(() => ({}))
+        const list = json?.consultations || []
+        const pending = list.filter((c: any) => c.status === 'Gözləyir' || c.status === 'pending')
+        setPendingCount(pending.length)
+      } catch {}
     }
-    
+
     fetchAndCleanupChats()
     fetchPendingConsultations()
-    
+
     const handleUpdate = () => {
       fetchAndCleanupChats()
     }
-    
+
     window.addEventListener("chatHistoryUpdated", handleUpdate)
-    
-    // Realtime channel for consultations
-    const supabase = createClient()
-    let consultationsChannel: any = null
-    
-    if (user?.role === 'lawyer') {
-      consultationsChannel = supabase
-        .channel('sidebar_consultations')
-        .on('postgres_changes', { 
-          event: '*', 
-          schema: 'public', 
-          table: 'consultations',
-          filter: `lawyer_id=eq.${supabaseUser.id}`
-        }, () => {
-          fetchPendingConsultations()
-        })
-        .subscribe()
-    }
-    
+
     return () => {
       window.removeEventListener("chatHistoryUpdated", handleUpdate)
-      if (consultationsChannel) {
-        supabase.removeChannel(consultationsChannel)
-      }
     }
   }, [supabaseUser, user?.role])
 

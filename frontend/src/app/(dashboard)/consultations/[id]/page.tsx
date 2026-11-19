@@ -1,31 +1,30 @@
-import { createClient } from "@/utils/supabase/server"
+import { getServerSession } from "@/lib/auth-session"
+import { cfFetch } from "@/lib/cloudflare-db"
 import { notFound, redirect } from "next/navigation"
 import Link from "next/link"
 import { ChevronLeft } from "lucide-react"
 import ConsultationClient from "./ConsultationClient"
 
-export default async function ConsultationDetailPage({ params }: { params: { id: string } }) {
-  const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+export default async function ConsultationDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await getServerSession()
 
-  if (!session?.user) {
+  if (!session?.userId) {
     redirect("/login")
   }
 
-  const userId = session.user.id
+  const userId = session.userId
+  const { id } = await params
 
-  // Fetch consultation
-  const { data: consultation, error } = await supabase
-    .from('consultations')
-    .select(`
-      *,
-      client:profiles!consultations_client_id_fkey(id, name, avatar_url),
-      lawyer:profiles!consultations_lawyer_id_fkey(id, name, avatar_url)
-    `)
-    .eq('id', params.id)
-    .single()
+  const { ok, data } = await cfFetch<{ consultation?: any; messages?: any[] }>(
+    `/app/consultations?id=${encodeURIComponent(id)}`
+  )
+  const consultation = data?.consultation
+  const messages = (data?.messages || []).map((m: any) => ({
+    ...m,
+    message: m.content ?? m.message,
+  }))
 
-  if (error || !consultation) {
+  if (!ok || !consultation) {
     return notFound()
   }
 
@@ -33,13 +32,6 @@ export default async function ConsultationDetailPage({ params }: { params: { id:
   if (consultation.client_id !== userId && consultation.lawyer_id !== userId) {
     return notFound()
   }
-
-  // Fetch initial messages
-  const { data: messages, error: messagesError } = await supabase
-    .from('consultation_messages')
-    .select('*')
-    .eq('consultation_id', consultation.id)
-    .order('created_at', { ascending: true })
 
   return (
     <div className="flex flex-col min-h-screen pb-10">

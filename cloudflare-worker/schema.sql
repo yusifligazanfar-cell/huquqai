@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   certificates TEXT DEFAULT '[]',
   is_verified INTEGER DEFAULT 0,
   admin_note TEXT DEFAULT '',
+  password_hash TEXT DEFAULT '',
+  email_verified INTEGER DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now')),
   last_sign_in_at TEXT DEFAULT ''
 );
@@ -56,5 +58,47 @@ CREATE TABLE IF NOT EXISTS community_posts (
   title TEXT NOT NULL,
   content TEXT DEFAULT '',
   category TEXT DEFAULT 'Ümumi',
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS community_comments (
+  id TEXT PRIMARY KEY,
+  post_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS reviews (
+  id TEXT PRIMARY KEY,
+  lawyer_id TEXT NOT NULL,
+  client_id TEXT NOT NULL,
+  rating INTEGER DEFAULT 5,
+  comment TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS consultation_messages (
+  id TEXT PRIMARY KEY,
+  consultation_id TEXT NOT NULL,
+  sender_id TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS conversations (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  title TEXT DEFAULT 'Yeni Söhbət',
+  mode TEXT DEFAULT 'chat',
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS messages (
+  id TEXT PRIMARY KEY,
+  conversation_id TEXT NOT NULL,
+  role TEXT NOT NULL,
+  content TEXT NOT NULL,
   created_at TEXT DEFAULT (datetime('now'))
 );

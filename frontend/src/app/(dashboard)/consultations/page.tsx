@@ -1,32 +1,23 @@
-import { createClient } from "@/utils/supabase/server"
+import { getServerSession } from "@/lib/auth-session"
+import { cfFetch } from "@/lib/cloudflare-db"
 import { Shield, Clock, CheckCircle2, XCircle, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import ConsultationActionButtons from "./ConsultationActionButtons"
 
 export default async function ConsultationsPage() {
-  const supabase = await createClient()
-  const { data: { session } } = await supabase.auth.getSession()
+  const session = await getServerSession()
 
-  if (!session?.user) {
+  if (!session?.userId) {
     redirect("/login")
   }
 
-  const userId = session.user.id
+  const userId = session.userId
 
-  const { data: consultations, error } = await supabase
-    .from('consultations')
-    .select(`
-      *,
-      client:profiles!consultations_client_id_fkey(id, name, avatar_url),
-      lawyer:profiles!consultations_lawyer_id_fkey(id, name, avatar_url)
-    `)
-    .or(`client_id.eq.${userId},lawyer_id.eq.${userId}`)
-    .order('created_at', { ascending: false })
-
-  if (error) {
-    console.error("Consultation fetch error:", error)
-  }
+  const { data } = await cfFetch<{ consultations?: any[] }>(
+    `/app/consultations?userId=${encodeURIComponent(userId)}`
+  )
+  const consultations = data?.consultations || []
 
   const incomingRequests = consultations?.filter(c => c.lawyer_id === userId) || []
   const outgoingRequests = consultations?.filter(c => c.client_id === userId) || []

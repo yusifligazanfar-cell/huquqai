@@ -1,4 +1,3 @@
-import { createClient } from "@/utils/supabase/server"
 import { cfFetch } from "@/lib/cloudflare-db"
 import { Shield, MapPin, Briefcase, Star, Search, MessageSquare } from "lucide-react"
 import Link from "next/link"
@@ -26,23 +25,7 @@ export default async function LawyersDirectoryPage({
   if (d1Res.ok && Array.isArray(d1Res.data?.lawyers)) {
     lawyers = d1Res.data.lawyers
   } else {
-    const supabase = await createClient()
-    let query = supabase
-      .from('profiles')
-      .select('*')
-      .eq('role', 'lawyer')
-      .eq('is_verified', true)
-      .order('created_at', { ascending: false })
-
-    if (selectedCat) {
-      query = query.contains('specialties', JSON.stringify([selectedCat.name_az]))
-    }
-    if (q) {
-      query = query.or(`name.ilike.%${q}%,bio.ilike.%${q}%`)
-    }
-    const sbRes = await query
-    lawyers = sbRes.data || []
-    error = sbRes.error
+    error = { message: "Vəkillər kataloqu yüklənə bilmədi" }
   }
 
   return (

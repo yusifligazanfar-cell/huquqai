@@ -6,7 +6,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Bell, Clock, Sun, Moon } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
-import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
 

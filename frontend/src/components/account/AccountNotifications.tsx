@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@/utils/supabase/client"
 import { useAuth } from "@/context/AuthContext"
 import Link from "next/link"
 import { Card } from "@/components/ui/card"
@@ -10,50 +9,32 @@ export default function AccountNotifications() {
   const { user, isLoaded, supabaseUser } = useAuth()
   const [notifications, setNotifications] = useState<Record<string, any>[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
     if (!isLoaded || !user || !supabaseUser) return
 
     const fetchNotifications = async () => {
-      // Fetch pending consultations for lawyers, or updates for clients
-      let query = supabase.from('consultations').select('*, client:profiles!consultations_client_id_fkey(name, avatar_url), lawyer:profiles!consultations_lawyer_id_fkey(name, avatar_url)').order('created_at', { ascending: false }).limit(10)
-
-      if (user.role === 'lawyer') {
-        query = query.eq('lawyer_id', supabaseUser.id).eq('status', 'Gözləyir')
-      } else {
-        query = query.eq('client_id', supabaseUser.id).in('status', ['Qəbul edildi', 'İmtina edildi', 'Tamamlandı'])
-      }
-
-      const { data, error } = await query
-
-      if (!error && data) {
-        setNotifications(data)
-      }
+      try {
+        const res = await fetch(`/api/app/consultations?userId=${encodeURIComponent(supabaseUser.id)}`, {
+          cache: 'no-store',
+        })
+        const json = await res.json().catch(() => ({}))
+        const list = (json?.consultations || []) as Record<string, any>[]
+        const filtered =
+          user.role === 'lawyer'
+            ? list.filter((c) => c.lawyer_id === supabaseUser.id && c.status === 'Gözləyir')
+            : list.filter(
+                (c) =>
+                  c.client_id === supabaseUser.id &&
+                  ['Qəbul edildi', 'İmtina edildi', 'Tamamlandı'].includes(c.status)
+              )
+        setNotifications(filtered.slice(0, 10))
+      } catch {}
       setLoading(false)
     }
 
     fetchNotifications()
-
-    // Realtime subscriptions
-    const channel = supabase.channel('account-notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'consultations',
-        },
-        () => {
-          fetchNotifications()
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [user, isLoaded, supabase])
+  }, [user, isLoaded, supabaseUser])
 
   if (loading) {
     return <div className="text-sm text-muted-foreground p-4 text-center">Yüklənir...</div>

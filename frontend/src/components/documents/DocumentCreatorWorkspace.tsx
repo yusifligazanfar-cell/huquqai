@@ -12,7 +12,6 @@ import {
   type DocumentTypeId,
   type LegalDocumentFormInput,
 } from "@/lib/legal-documents"
-import { createClient } from "@/utils/supabase/client"
 import { DocumentCreatorForm } from "./DocumentCreatorForm"
 import { DocumentIcon } from "./DocumentIcon"
 import { DocumentResultSheet, type DocumentVersionItem } from "./DocumentResultSheet"
@@ -61,30 +60,33 @@ export function DocumentCreatorWorkspace({ docType }: { docType: DocumentTypeId 
 
       if (supabaseUser && res.text) {
         try {
-          const supabase = createClient()
-          const { data: convData } = await supabase
-            .from("conversations")
-            .insert({
-              user_id: supabaseUser.id,
-              type: "petition",
+          const convRes = await fetch("/api/app/conversations", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
               title: `${spec.shortTitle}: ${input.party1}`.slice(0, 60),
+              mode: "petition",
+            }),
+          })
+          const convJson = await convRes.json().catch(() => ({}))
+          if (convJson?.conversation?.id) {
+            await fetch("/api/app/conversations/messages", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                conversation_id: convJson.conversation.id,
+                items: [
+                  {
+                    role: "user",
+                    content: `${spec.title} — ${input.party1}: ${input.facts}`.slice(0, 2000),
+                  },
+                  {
+                    role: "assistant",
+                    content: res.text,
+                  },
+                ],
+              }),
             })
-            .select()
-            .single()
-
-          if (convData) {
-            await supabase.from("messages").insert([
-              {
-                conversation_id: convData.id,
-                role: "user",
-                content: `${spec.title} — ${input.party1}: ${input.facts}`.slice(0, 2000),
-              },
-              {
-                conversation_id: convData.id,
-                role: "assistant",
-                content: res.text,
-              },
-            ])
           }
         } catch (dbErr) {
           console.warn("Supabase document save skipped:", dbErr)

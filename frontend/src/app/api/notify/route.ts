@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { createClient } from '@/utils/supabase/server'
+import { cfFetch } from '@/lib/cloudflare-db'
 
 export async function POST(req: Request) {
   try {
@@ -16,19 +16,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'consultationId required' }, { status: 400 })
     }
 
-    // Fetch full consultation with client + lawyer details
-    const supabase = await createClient()
-    const { data: consultation, error } = await supabase
-      .from('consultations')
-      .select(`
-        *,
-        client:profiles!consultations_client_id_fkey(id, name, email, avatar_url),
-        lawyer:profiles!consultations_lawyer_id_fkey(id, name, email, avatar_url)
-      `)
-      .eq('id', consultationId)
-      .single()
+    const { ok, data: cfData } = await cfFetch<{ consultation?: any }>(
+      `/app/consultations?id=${encodeURIComponent(consultationId)}`
+    )
+    const consultation = cfData?.consultation
 
-    if (error || !consultation) {
+    if (!ok || !consultation) {
       return NextResponse.json({ error: 'Consultation not found' }, { status: 404 })
     }
 

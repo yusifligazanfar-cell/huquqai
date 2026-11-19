@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -26,7 +25,6 @@ export default function ConsultationClient({
   const [detailsOpen, setDetailsOpen] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
-  const supabase = createClient()
   const isLawyer = currentUserId === consultation.lawyer_id
   const otherParty = isLawyer ? consultation.client : consultation.lawyer
 
@@ -35,41 +33,32 @@ export default function ConsultationClient({
   }, [messages])
 
   useEffect(() => {
-    const channel = supabase
-      .channel(`consultation_${consultation.id}`)
-      .on('postgres_changes', { 
-        event: 'INSERT', 
-        schema: 'public', 
-        table: 'consultation_messages',
-        filter: `consultation_id=eq.${consultation.id}`
-      }, (payload: any) => {
-        setMessages(prev => [...prev, payload.new])
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'consultations',
-        filter: `id=eq.${consultation.id}`
-      }, (payload: any) => {
-        setStatus(payload.new.status)
-      })
-      .subscribe()
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/app/consultations?id=${encodeURIComponent(consultation.id)}`, {
+          cache: 'no-store',
+        })
+        const json = await res.json().catch(() => ({}))
+        if (json?.consultation?.status) setStatus(json.consultation.status)
+        if (Array.isArray(json?.messages)) {
+          setMessages(json.messages.map((m: any) => ({ ...m, message: m.content ?? m.message })))
+        }
+      } catch {}
+    }, 5000)
 
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [consultation.id, supabase])
+    return () => clearInterval(interval)
+  }, [consultation.id])
 
   const handleUpdateStatus = async (newStatus: string) => {
     setIsUpdating(true)
-    const { error } = await supabase
-      .from('consultations')
-      .update({ status: newStatus })
-      .eq('id', consultation.id)
-      
-    if (!error) {
+    const res = await fetch('/api/app/consultations', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: consultation.id, status: newStatus }),
+    })
+
+    if (res.ok) {
       setStatus(newStatus)
-      // Send email notification to client when accepted
       if (newStatus === 'Qəbul edildi') {
         try {
           await fetch('/api/notify', {
@@ -92,17 +81,19 @@ export default function ConsultationClient({
     const msg = newMessage
     setNewMessage("")
 
-    const { error } = await supabase
-      .from('consultation_messages')
-      .insert({
+    const res = await fetch('/api/app/consultations/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         consultation_id: consultation.id,
-        sender_id: currentUserId,
-        message: msg
-      })
-
-    if (error) {
-      console.error("Error sending message:", error)
+        content: msg,
+      }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
       setNewMessage(msg)
+    } else if (json?.message) {
+      setMessages(prev => [...prev, { ...json.message, message: json.message.content ?? msg }])
     }
   }
 
