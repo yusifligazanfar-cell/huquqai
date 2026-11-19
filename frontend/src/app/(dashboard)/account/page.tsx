@@ -25,6 +25,7 @@ import {
   Eye,
   EyeOff,
   Circle,
+  X,
 } from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "next-themes"
@@ -59,6 +60,7 @@ export default function AccountPage() {
   const [confirmNewPassword, setConfirmNewPassword] = useState("")
   const [showPasswords, setShowPasswords] = useState(false)
   const [changingPassword, setChangingPassword] = useState(false)
+  const [guestBannerDismissed, setGuestBannerDismissed] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -235,19 +237,29 @@ export default function AccountPage() {
       <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 pt-6 flex-1 z-10">
         {isLoggedIn ? (
           <div className="space-y-6">
-            {role === "lawyer" && !user?.isVerified && (
-              <div className="rounded-2xl border-2 border-amber-400/80 dark:border-amber-600/70 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 dark:from-amber-950/60 dark:via-orange-950/40 dark:to-amber-950/60 p-4 sm:p-5 shadow-lg shadow-amber-500/10 flex items-start gap-3.5">
-                <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
-                  <Shield className="w-5 h-5" />
+            {role === "lawyer" && !user?.isVerified && !guestBannerDismissed && (
+              <div className="rounded-2xl border-2 border-amber-400/80 dark:border-amber-600/70 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 dark:from-amber-950/60 dark:via-orange-950/40 dark:to-amber-950/60 p-4 sm:p-5 shadow-lg shadow-amber-500/10 flex items-start justify-between gap-3.5">
+                <div className="flex items-start gap-3.5">
+                  <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
+                    <Shield className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <h2 className="text-sm sm:text-base font-extrabold text-amber-950 dark:text-amber-200">
+                      Qonaq rejimi — Admin təsdiqi gözlənilir
+                    </h2>
+                    <p className="text-xs sm:text-sm font-medium text-amber-900/90 dark:text-amber-200/85 leading-relaxed">
+                      Anketiniz admin tərəfindən yoxlanılır. Təsdiqlənənə qədər Vəkillər Kataloqunda görünmürsünüz və müştərilərdən randevu qəbul edə bilmirsiniz. Təsdiqdən sonra e-poçtunuza bildiriş göndəriləcək.
+                    </p>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <h2 className="text-sm sm:text-base font-extrabold text-amber-950 dark:text-amber-200">
-                    Qonaq rejimi — Admin təsdiqi gözlənilir
-                  </h2>
-                  <p className="text-xs sm:text-sm font-medium text-amber-900/90 dark:text-amber-200/85 leading-relaxed">
-                    Anketiniz admin tərəfindən yoxlanılır. Təsdiqlənənə qədər Vəkillər Kataloqunda görünmürsünüz və müştərilərdən randevu qəbul edə bilmirsiniz. Təsdiqdən sonra e-poçtunuza bildiriş göndəriləcək.
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  aria-label="Bildirişi bağla"
+                  onClick={() => setGuestBannerDismissed(true)}
+                  className="p-1.5 rounded-lg text-amber-800/70 dark:text-amber-300/70 hover:text-amber-950 dark:hover:text-amber-100 hover:bg-amber-500/15 transition-colors shrink-0"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             )}
 

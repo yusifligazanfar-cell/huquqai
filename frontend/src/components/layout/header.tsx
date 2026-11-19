@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Bell, Clock, Sun, Moon } from "lucide-react"
+import { Bell, Clock, Sun, Moon, X } from "lucide-react"
 import Link from "next/link"
 import { useAuth } from "@/context/AuthContext"
 import { Button } from "@/components/ui/button"
@@ -13,9 +13,15 @@ export function Header() {
   const { isLoggedIn, user, isLoaded } = useAuth()
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [bannerDismissed, setBannerDismissed] = useState(false)
 
   useEffect(() => {
     setMounted(true)
+    try {
+      if (sessionStorage.getItem("dismissedPendingBanner") === "1") {
+        setBannerDismissed(true)
+      }
+    } catch {}
   }, [])
 
   // Prevent rendering header if lawyer is in mandatory onboarding
@@ -85,9 +91,9 @@ export function Header() {
         )}
       </div>
     </header>
-    {isPendingLawyer && (
-      <div className="mx-1 sm:mx-2 md:mx-8 mb-4 rounded-2xl border-2 border-amber-400/70 dark:border-amber-600/60 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 dark:from-amber-950/60 dark:via-orange-950/40 dark:to-amber-950/60 px-4 py-3 shadow-md shadow-amber-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-        <div className="flex items-start sm:items-center gap-3">
+    {isPendingLawyer && !bannerDismissed && (
+      <div className="mx-1 sm:mx-2 md:mx-8 mb-4 rounded-2xl border-2 border-amber-400/70 dark:border-amber-600/60 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 dark:from-amber-950/60 dark:via-orange-950/40 dark:to-amber-950/60 px-4 py-3 shadow-md shadow-amber-500/10 flex items-center justify-between gap-3">
+        <div className="flex items-start sm:items-center gap-3 min-w-0">
           <span className="p-2 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 shrink-0">
             <Clock className="w-4 h-4" />
           </span>
@@ -95,12 +101,27 @@ export function Header() {
             <span className="font-extrabold">Qonaq rejimi (Təsdiq gözləyir):</span> Anketiniz admin tərəfindən yoxlanılır. Təsdiqlənənə qədər Vəkillər Kataloqunda görünmürsünüz.
           </p>
         </div>
-        <Link
-          href="/account"
-          className="text-xs font-bold text-amber-800 dark:text-amber-300 underline underline-offset-2 shrink-0 self-end sm:self-center"
-        >
-          Profilimə bax &rarr;
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link
+            href="/account"
+            className="hidden sm:inline text-xs font-bold text-amber-800 dark:text-amber-300 underline underline-offset-2"
+          >
+            Profilimə bax &rarr;
+          </Link>
+          <button
+            type="button"
+            aria-label="Bildirişi bağla"
+            onClick={() => {
+              setBannerDismissed(true)
+              try {
+                sessionStorage.setItem("dismissedPendingBanner", "1")
+              } catch {}
+            }}
+            className="p-1.5 rounded-lg text-amber-800/70 dark:text-amber-300/70 hover:text-amber-950 dark:hover:text-amber-100 hover:bg-amber-500/15 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     )}
     </>
