@@ -51,14 +51,16 @@ export function Header() {
         )
         const json = await res.json().catch(() => ({}))
         const list = (json?.consultations || []) as any[]
-        const filtered =
-          user?.role === "lawyer"
-            ? list.filter((c) => c.lawyer_id === supabaseUser.id)
-            : list.filter(
-                (c) =>
-                  c.client_id === supabaseUser.id &&
-                  ["Qəbul edildi", "İmtina edildi", "Tamamlandı"].includes(c.status)
-              )
+        const filtered = list.filter((c) => {
+          if (c.lawyer_id === supabaseUser.id) return true
+          if (
+            c.client_id === supabaseUser.id &&
+            ["Qəbul edildi", "İmtina edildi", "Tamamlandı"].includes(c.status)
+          ) {
+            return true
+          }
+          return false
+        })
         setNotifications(filtered.slice(0, 8))
       } catch {}
     }
@@ -188,9 +190,14 @@ export function Header() {
                               {n.status}
                             </span>
                           </div>
-                          {(n.preferred_date || n.preferred_time) && (
-                            <p className="text-[11px] text-slate-500 mt-1">
-                              {n.preferred_date} {n.preferred_time ? `• ${n.preferred_time}` : ""}
+                          {(n.preferred_date || n.preferred_time || n.meeting_url) && (
+                            <p className="text-[11px] text-slate-500 mt-1 flex items-center justify-between gap-2">
+                              <span>{n.preferred_date} {n.preferred_time ? `• ${n.preferred_time}` : ""}</span>
+                              {n.meeting_url && (
+                                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                                  Cal.com Linki ✓
+                                </span>
+                              )}
                             </p>
                           )}
                         </Link>

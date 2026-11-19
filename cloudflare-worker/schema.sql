@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS consultations (
   preferred_date TEXT DEFAULT '',
   preferred_time TEXT DEFAULT '',
   status TEXT DEFAULT 'Gözləyir',
+  meeting_url TEXT DEFAULT '',
   created_at TEXT DEFAULT (datetime('now'))
 );
 

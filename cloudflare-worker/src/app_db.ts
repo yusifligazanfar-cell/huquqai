@@ -864,9 +864,24 @@ export async function handleAppDb(request: Request, env: AppDbEnv): Promise<Resp
     }
 
     if (path === "/app/consultations" && request.method === "PATCH") {
-      const body = (await request.json().catch(() => ({}))) as { id?: string; status?: string };
-      if (!body.id || !body.status) return json({ error: "id and status required" }, 400);
-      await db.prepare("UPDATE consultations SET status = ? WHERE id = ?").bind(body.status, body.id).run();
+      const body = (await request.json().catch(() => ({}))) as {
+        id?: string;
+        status?: string;
+        meeting_url?: string;
+      };
+      if (!body.id) return json({ error: "id required" }, 400);
+      if (body.status && body.meeting_url) {
+        await db
+          .prepare("UPDATE consultations SET status = ?, meeting_url = ? WHERE id = ?")
+          .bind(body.status, body.meeting_url, body.id)
+          .run();
+      } else if (body.status) {
+        await db.prepare("UPDATE consultations SET status = ? WHERE id = ?").bind(body.status, body.id).run();
+      } else if (body.meeting_url) {
+        await db.prepare("UPDATE consultations SET meeting_url = ? WHERE id = ?").bind(body.meeting_url, body.id).run();
+      } else {
+        return json({ error: "status or meeting_url required" }, 400);
+      }
       const row = await db.prepare("SELECT * FROM consultations WHERE id = ?").bind(body.id).first();
       return json({ success: true, consultation: row });
     }

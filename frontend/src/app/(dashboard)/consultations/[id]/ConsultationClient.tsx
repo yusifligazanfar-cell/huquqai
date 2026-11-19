@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input"
 import {
   Send, CheckCircle2, XCircle, Shield, AlertTriangle,
   MessageSquare, Calendar, Clock, User, FileText,
-  ChevronDown, ChevronUp
+  ChevronDown, ChevronUp, Video, ExternalLink
 } from "lucide-react"
 
 export default function ConsultationClient({ 
@@ -21,6 +21,7 @@ export default function ConsultationClient({
   const [messages, setMessages] = useState(initialMessages)
   const [newMessage, setNewMessage] = useState("")
   const [status, setStatus] = useState(consultation.status)
+  const [meetingUrl, setMeetingUrl] = useState<string>(consultation.meeting_url || "")
   const [isUpdating, setIsUpdating] = useState(false)
   const [detailsOpen, setDetailsOpen] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -40,6 +41,7 @@ export default function ConsultationClient({
         })
         const json = await res.json().catch(() => ({}))
         if (json?.consultation?.status) setStatus(json.consultation.status)
+        if (json?.consultation?.meeting_url) setMeetingUrl(json.consultation.meeting_url)
         if (Array.isArray(json?.messages)) {
           setMessages(json.messages.map((m: any) => ({ ...m, message: m.content ?? m.message })))
         }
@@ -60,6 +62,9 @@ export default function ConsultationClient({
     if (res.ok) {
       const patchJson = await res.json().catch(() => ({}))
       setStatus(newStatus)
+      if (patchJson?.meetingUrl) {
+        setMeetingUrl(patchJson.meetingUrl)
+      }
       if (newStatus === 'Qəbul edildi' || newStatus === 'İmtina edildi') {
         try {
           await fetch('/api/notify', {
@@ -242,6 +247,32 @@ export default function ConsultationClient({
                 </div>
                 <p className="text-foreground font-mono text-xs break-all">{consultation.id}</p>
               </div>
+
+              {/* Cal.com Video Görüş Linki */}
+              {status === 'Qəbul edildi' && (
+                <div className="sm:col-span-2 bg-emerald-50/80 dark:bg-emerald-950/30 rounded-2xl p-4 border border-emerald-200 dark:border-emerald-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-300 uppercase tracking-wide mb-1">
+                      <Video className="w-4 h-4" />
+                      Cal.com Video Görüş Linki
+                    </div>
+                    <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80 break-all">
+                      {meetingUrl || "Görüş linki hazırdır — Cal.com üzərindən qoşula bilərsiniz."}
+                    </p>
+                  </div>
+                  {meetingUrl && (
+                    <a
+                      href={meetingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm shrink-0 transition-all"
+                    >
+                      <span>Görüşə Qoşul</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

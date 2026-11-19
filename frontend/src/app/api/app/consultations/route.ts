@@ -112,6 +112,13 @@ export async function PATCH(req: Request) {
               ? calData.location
               : null) ||
             (calData.uid ? `https://app.cal.com/booking/${calData.uid}` : null)
+
+          if (meetingUrl) {
+            await cfFetch("/app/consultations", {
+              method: "PATCH",
+              body: JSON.stringify({ id: String(body.id), meeting_url: meetingUrl }),
+            }).catch(() => {})
+          }
         }
       } catch (calErr) {
         console.warn("Cal.com booking creation skipped:", calErr)
