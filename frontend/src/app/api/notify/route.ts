@@ -82,6 +82,35 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, emailId: lawyerMailData?.id })
     }
 
+    if (event === 'rejected') {
+      if (!clientEmail) {
+        return NextResponse.json({ success: true, skipped: true })
+      }
+      const { data: rejData, error: rejError } = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL || 'HuquqAI <noreply@huquqai.az>',
+        to: [clientEmail],
+        subject: `Konsultasiya müraciətinizin statusu — ${lawyerName}`,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
+            <h2 style="margin: 0 0 12px; color: #dc2626;">Konsultasiya müraciəti qəbul edilmədi</h2>
+            <p style="margin: 0 0 16px; color: #475569; font-size: 14px; line-height: 1.6;">
+              Hörmətli <strong>${clientName}</strong>, təəssüf ki, <strong>${lawyerName}</strong> sizin ${dateStr || ''} ${timeStr || ''} tarixli konsultasiya müraciətinizi qəbul edə bilmədi.
+            </p>
+            <p style="margin: 20px 0; text-align: center;">
+              <a href="https://huquqai.az/lawyers" style="display:inline-block;background:#059669;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                Başqa Vəkil Seç
+              </a>
+            </p>
+          </div>
+        `,
+      })
+      if (rejError) {
+        console.error('[RESEND REJECT ERROR]', rejError)
+        return NextResponse.json({ error: 'Email send failed', detail: rejError }, { status: 500 })
+      }
+      return NextResponse.json({ success: true, emailId: rejData?.id })
+    }
+
     if (!clientEmail) {
       console.warn('[NOTIFY] Client email not found, skipping email send')
       return NextResponse.json({ success: true, skipped: true })

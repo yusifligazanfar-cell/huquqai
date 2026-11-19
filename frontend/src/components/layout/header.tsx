@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Bell, Clock, Sun, Moon, X } from "lucide-react"
@@ -10,10 +10,13 @@ import { Button } from "@/components/ui/button"
 import { useTheme } from "next-themes"
 
 export function Header() {
-  const { isLoggedIn, user, isLoaded } = useAuth()
+  const { isLoggedIn, user, isLoaded, supabaseUser } = useAuth()
   const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifications, setNotifications] = useState<any[]>([])
+  const notifRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setMounted(true)
@@ -23,6 +26,56 @@ export function Header() {
       }
     } catch {}
   }, [])
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  useEffect(() => {
+    if (!isLoaded || !isLoggedIn || !supabaseUser?.id) {
+      setNotifications([])
+      return
+    }
+
+    const fetchNotifs = async () => {
+      try {
+        const res = await fetch(
+          `/api/app/consultations?userId=${encodeURIComponent(supabaseUser.id)}`,
+          { cache: "no-store" }
+        )
+        const json = await res.json().catch(() => ({}))
+        const list = (json?.consultations || []) as any[]
+        const filtered =
+          user?.role === "lawyer"
+            ? list.filter((c) => c.lawyer_id === supabaseUser.id)
+            : list.filter(
+                (c) =>
+                  c.client_id === supabaseUser.id &&
+                  ["Qəbul edildi", "İmtina edildi", "Tamamlandı"].includes(c.status)
+              )
+        setNotifications(filtered.slice(0, 8))
+      } catch {}
+    }
+
+    fetchNotifs()
+    const timer = setInterval(fetchNotifs, 25000)
+    window.addEventListener("notificationsUpdated", fetchNotifs)
+    return () => {
+      clearInterval(timer)
+      window.removeEventListener("notificationsUpdated", fetchNotifs)
+    }
+  }, [isLoaded, isLoggedIn, supabaseUser?.id, user?.role])
+
+  const unreadCount =
+    user?.role === "lawyer"
+      ? notifications.filter((n) => n.status === "Gözləyir" || n.status === "pending").length
+      : notifications.length
 
   // Prevent rendering header if lawyer is in mandatory onboarding
   if (isLoaded && user?.role === 'lawyer') {
@@ -67,6 +120,87 @@ export function Header() {
           >
             {theme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
           </button>
+        )}
+
+        {isLoaded && isLoggedIn && (
+          <div className="relative" ref={notifRef}>
+            <button
+              type="button"
+              onClick={() => setNotifOpen((prev) => !prev)}
+              aria-label="Bildirişlər"
+              className="relative w-11 h-11 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-200 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all"
+            >
+              <Bell className="w-4 h-4" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-extrabold flex items-center justify-center shadow-sm">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {notifOpen && (
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl z-50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">Bildirişlər</span>
+                  <Link
+                    href="/consultations"
+                    onClick={() => setNotifOpen(false)}
+                    className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                  >
+                    Konsultasiyalar &rarr;
+                  </Link>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/70">
+                  {notifications.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-slate-500">
+                      Hazırda yeni bildirişiniz yoxdur.
+                    </div>
+                  ) : (
+                    notifications.map((n) => {
+                      const isPending = n.status === "Gözləyir" || n.status === "pending"
+                      const peerName =
+                        user?.role === "lawyer"
+                          ? `${n.client?.name || ""} ${n.client?.surname || ""}`.trim() || "Müştəri"
+                          : `${n.lawyer?.name || ""} ${n.lawyer?.surname || ""}`.trim() || "Vəkil"
+                      return (
+                        <Link
+                          key={n.id}
+                          href={`/consultations/${n.id}`}
+                          onClick={() => setNotifOpen(false)}
+                          className="block px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                              {user?.role === "lawyer"
+                                ? `${peerName} randevu istədi`
+                                : `${peerName} cavab verdi`}
+                            </span>
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
+                                isPending
+                                  ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+                                  : n.status === "Qəbul edildi"
+                                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                                    : "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300"
+                              }`}
+                            >
+                              {n.status}
+                            </span>
+                          </div>
+                          {(n.preferred_date || n.preferred_time) && (
+                            <p className="text-[11px] text-slate-500 mt-1">
+                              {n.preferred_date} {n.preferred_time ? `• ${n.preferred_time}` : ""}
+                            </p>
+                          )}
+                        </Link>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
         <div className="h-5 w-[1px] bg-border/50 hidden sm:block"></div>

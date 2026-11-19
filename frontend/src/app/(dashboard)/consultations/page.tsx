@@ -5,6 +5,8 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import ConsultationActionButtons from "./ConsultationActionButtons"
 
+export const dynamic = "force-dynamic"
+
 export default async function ConsultationsPage() {
   const session = await getServerSession()
 
@@ -13,6 +15,7 @@ export default async function ConsultationsPage() {
   }
 
   const userId = session.userId
+  const isLawyerUser = session.role === "lawyer"
 
   const { data } = await cfFetch<{ consultations?: any[] }>(
     `/app/consultations?userId=${encodeURIComponent(userId)}`
@@ -43,12 +46,17 @@ export default async function ConsultationsPage() {
           <p className="text-muted-foreground">Bütün hüquqi məsləhətləşmələrinizi buradan idarə edin.</p>
         </div>
 
-        {/* INCOMING — vəkil üçün, düymələr Link xaricindədir */}
-        {incomingRequests.length > 0 && (
+        {/* INCOMING — vəkil və hüquqşünas üçün */}
+        {(isLawyerUser || incomingRequests.length > 0) && (
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-foreground border-b border-slate-200 dark:border-white/10 pb-2">
-              Sizə Gələn Müraciətlər (Vəkil kimi)
+              Sizə Gələn Müraciətlər (Vəkil / Hüquqşünas kimi)
             </h2>
+            {incomingRequests.length === 0 ? (
+              <div className="bg-slate-50 dark:bg-white/5 border border-dashed border-slate-200 dark:border-white/10 rounded-2xl p-6 text-center text-sm text-muted-foreground">
+                Hələ sizə gələn konsultasiya müraciəti yoxdur.
+              </div>
+            ) : (
             <div className="grid grid-cols-1 gap-4">
               {incomingRequests.map(req => (
                 <div key={req.id} className="bg-white/70 dark:bg-card/40 backdrop-blur-xl border border-slate-200 dark:border-white/10 p-5 rounded-2xl hover:shadow-lg transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -75,6 +83,7 @@ export default async function ConsultationsPage() {
                 </div>
               ))}
             </div>
+            )}
           </div>
         )}
 

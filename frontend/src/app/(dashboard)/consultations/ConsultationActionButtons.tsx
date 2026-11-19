@@ -37,26 +37,33 @@ export default function ConsultationActionButtons({
       return
     }
 
-    // 2. If accepted → send email notification to client
-    if (newStatus === "Qəbul edildi") {
-      try {
-        await fetch("/api/notify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ consultationId }),
-        })
-        setFeedback("Qəbul edildi! Müştəriyə bildiriş göndərildi ✓")
-      } catch {
-        setFeedback("Qəbul edildi! (Bildiriş göndərilmədi)")
-      }
-    } else {
-      setFeedback("İmtina edildi.")
+    // 2. Send email notification to client for both Accept & Reject
+    try {
+      await fetch("/api/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          consultationId,
+          event: newStatus === "İmtina edildi" ? "rejected" : "accepted",
+        }),
+      })
+      setFeedback(
+        newStatus === "Qəbul edildi"
+          ? "Qəbul edildi! Müştəriyə bildiriş göndərildi ✓"
+          : "İmtina edildi! Müştəriyə bildiriş göndərildi ✓"
+      )
+    } catch {
+      setFeedback(newStatus === "Qəbul edildi" ? "Qəbul edildi!" : "İmtina edildi!")
     }
 
+    try {
+      window.dispatchEvent(new Event("notificationsUpdated"))
+    } catch {}
+
     setIsUpdating(false)
+    router.refresh()
     setTimeout(() => {
       setFeedback(null)
-      router.refresh()
     }, 2500)
   }
 

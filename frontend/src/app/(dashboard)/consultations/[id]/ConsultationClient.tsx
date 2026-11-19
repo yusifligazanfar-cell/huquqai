@@ -59,17 +59,23 @@ export default function ConsultationClient({
 
     if (res.ok) {
       setStatus(newStatus)
-      if (newStatus === 'Qəbul edildi') {
+      if (newStatus === 'Qəbul edildi' || newStatus === 'İmtina edildi') {
         try {
           await fetch('/api/notify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ consultationId: consultation.id }),
+            body: JSON.stringify({
+              consultationId: consultation.id,
+              event: newStatus === 'İmtina edildi' ? 'rejected' : 'accepted',
+            }),
           })
         } catch (e) {
           console.warn('Email notification failed', e)
         }
       }
+      try {
+        window.dispatchEvent(new Event('notificationsUpdated'))
+      } catch {}
     }
     setIsUpdating(false)
   }
