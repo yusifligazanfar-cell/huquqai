@@ -691,16 +691,16 @@ function ChatContent() {
       {messages.length > 0 && (
         <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-2.5 sm:py-4 border-b border-slate-200 dark:border-white/5 bg-white/70 dark:bg-background/40 backdrop-blur-md z-10">
           <div className="flex items-center gap-2.5 sm:gap-4 min-w-0">
-            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-primary shadow-[0_0_15px_rgba(234,88,12,0.4)] border border-white/10">
+            <div className="flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 shadow-[0_0_15px_rgba(16,185,129,0.35)] border border-white/10">
               <Scale className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm sm:text-lg font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-primary dark:from-orange-400 dark:to-primary truncate">{greeting}</h2>
+              <h2 className="text-sm sm:text-lg font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 truncate">{greeting}</h2>
             </div>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <Button onClick={handleReset} variant="outline" size="sm" className="min-h-10 sm:min-h-9 gap-1.5 sm:gap-2 px-2.5 sm:px-3 bg-slate-50 dark:bg-secondary/50 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-secondary/80 text-orange-600 dark:text-orange-500 hover:text-orange-700 dark:hover:text-orange-400">
+            <Button onClick={handleReset} variant="outline" size="sm" className="min-h-10 sm:min-h-9 gap-1.5 sm:gap-2 px-2.5 sm:px-3 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300">
               <PlusCircle className="h-4 w-4 shrink-0" />
               <span className="sm:hidden text-xs font-semibold">Yeni</span>
               <span className="hidden sm:inline">Yeni Söhbət</span>
@@ -721,7 +721,7 @@ function ChatContent() {
 
             <div className="w-full max-w-3xl mx-auto my-auto flex flex-col items-center justify-center z-10 pointer-events-auto px-1.5 sm:px-6 py-4">
               <div className="w-full min-h-[3.5rem] md:min-h-[5.5rem] flex items-center justify-center mb-5 sm:mb-8 md:mb-10">
-                <h1 className="text-2xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-slate-950 dark:text-white drop-shadow-sm dark:drop-shadow-md text-center leading-tight">
+                <h1 className="text-2xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 drop-shadow-sm dark:drop-shadow-md text-center leading-tight">
                   {greeting}
                 </h1>
               </div>

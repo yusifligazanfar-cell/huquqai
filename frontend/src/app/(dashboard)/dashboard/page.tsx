@@ -39,11 +39,11 @@ export default function DashboardPage() {
     <div className="relative min-h-[calc(100vh-6rem)] flex flex-col justify-center items-center pb-12 text-center">
       {/* Background Glows */}
       <div className="absolute top-0 -left-10 w-96 h-96 bg-primary/20 rounded-full mix-blend-screen filter blur-[100px] opacity-50 pointer-events-none"></div>
-      <div className="absolute top-40 -right-10 w-96 h-96 bg-orange-500/10 rounded-full mix-blend-screen filter blur-[100px] opacity-30 pointer-events-none"></div>
+      <div className="absolute top-40 -right-10 w-96 h-96 bg-teal-500/10 rounded-full mix-blend-screen filter blur-[100px] opacity-30 pointer-events-none"></div>
       
       <div className="relative z-10 w-full max-w-3xl pt-6">
         <div className="w-full flex flex-col items-center">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-primary dark:from-orange-400 dark:to-primary mb-10 drop-shadow-sm text-center">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 mb-10 drop-shadow-sm text-center">
             {greeting}
           </h1>
           
