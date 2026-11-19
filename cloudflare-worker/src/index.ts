@@ -1297,14 +1297,18 @@ async function handleGenerateDocument(body: Record<string, unknown>, env: Env): 
 async function callCerebrasEdge(
   env: Env,
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
-  options: { maxTokens: number; temperature: number; jsonMode?: boolean }
+  options: { maxTokens: number; temperature: number; jsonMode?: boolean; preferFastModel?: boolean }
 ): Promise<string | null> {
   const apiKey = (env.CEREBRAS_API_KEY || "").trim();
   if (!apiKey) return null;
 
-  const attempt = async () => {
+  const models = options.preferFastModel
+    ? ["qwen-3.8-27b", "gpt-oss-120b"]
+    : ["gpt-oss-120b", "qwen-3.8-27b"];
+
+  const attemptModel = async (model: string) => {
     const payload: Record<string, unknown> = {
-      model: "gpt-oss-120b",
+      model,
       messages,
       temperature: options.temperature,
       max_tokens: options.maxTokens,
@@ -1330,12 +1334,14 @@ async function callCerebrasEdge(
   };
 
   try {
-    const first = await attempt();
-    if (first.text) return first.text;
-    if (first.retry) {
-      await new Promise((r) => setTimeout(r, 2000));
-      const second = await attempt();
-      if (second.text) return second.text;
+    for (const model of models) {
+      const first = await attemptModel(model);
+      if (first.text) return first.text;
+      if (first.retry) {
+        await new Promise((r) => setTimeout(r, 1500));
+        const second = await attemptModel(model);
+        if (second.text) return second.text;
+      }
     }
   } catch {
     // Fall through to Cloudflare Workers AI backup
@@ -1757,7 +1763,7 @@ YALNIZ ETİBARLI JSON QAYTAR:
       { role: "system", content: sysPrompt },
       { role: "user", content: userPrompt },
     ],
-    { maxTokens: 320, temperature: 0.0, jsonMode: true }
+    { maxTokens: 320, temperature: 0.0, jsonMode: true, preferFastModel: true }
   );
 
   if (raw) {
@@ -1811,7 +1817,8 @@ Aşağıdakı 5 KRİTİK xətanı yoxla və YALNIZ JSON qaytar:
 
 YALNIZ ETİBARLI JSON QAYTAR:
 {"passed": true/false, "insufficient_sources": true/false, "repealed_misuse": true/false, "issues": ["konkret qısa xəta təsviri (əgər varsa)"]}
-QEYD: Kiçik üslub fərqlərinə görə səhv yazma; yalnız REAL faktiki/normativ/istinad/məna xətası varsa passed: false et.`;
+QEYD 1: Kiçik üslub fərqlərinə görə səhv yazma; yalnız REAL faktiki/normativ/istinad/məna xətası varsa passed: false et.
+QEYD 2: Əgər mənbədə əsas qüvvədə olan qayda (məs., 10.1: 18 yaş) VƏ ləğv olunmuş bənd ([QÜVVƏDƏN DÜŞÜB]) mövcuddursa, bu suala "xeyr, əvvəlki istisna ləğv edilib" cavabını vermək üçün KİFAYƏT mənbədir (insufficient_sources: false)!`;
 
   const userPrompt = `İSTİFADƏÇİNİN SUALI:\n${query}\n\nRƏSMİ MƏNBƏLƏR:\n${context.slice(0, 14500)}\n\nQARALAMA CAVAB:\n${draftAnswer.slice(0, 5000)}`;
 
@@ -1821,7 +1828,7 @@ QEYD: Kiçik üslub fərqlərinə görə səhv yazma; yalnız REAL faktiki/norma
       { role: "system", content: sysPrompt },
       { role: "user", content: userPrompt },
     ],
-    { maxTokens: 650, temperature: 0.0, jsonMode: true }
+    { maxTokens: 650, temperature: 0.0, jsonMode: true, preferFastModel: true }
   );
 
   if (raw) {

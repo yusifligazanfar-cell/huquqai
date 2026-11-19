@@ -82,10 +82,24 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     forbiddenPhrases: ["soyad secmek", "madde 30", "madde 30."]
   },
   {
+    id: "family_marriage_age_conditions",
+    domain: "Ailə hüququ",
+    primaryLawId: "aile",
+    triggerPhrases: [
+      "nikah yasi", "nikah yasini", "nikahin yasi", "evlenme yasi", "evlenmek yasi",
+      "nikah yasinin azaldilmasi", "nikaha daxil olmaq", "nikahin baglanma sertleri", "qohum nikah"
+    ],
+    expandedTerms: [
+      "nikahin yasi", "18 yas", "nikahin baglanma sertleri", "nikahin baglanmasina mane olan hallar",
+      "aile mecellesi madde 10", "aile mecellesi madde 11", "aile mecellesi madde 12"
+    ],
+    priorityArticles: ["10", "11", "12", "13"]
+  },
+  {
     id: "family_marriage_termination",
     domain: "Ailə hüququ",
     primaryLawId: "aile",
-    triggerPhrases: ["nikaha xitam", "bosanma", "nikahin pozulmasi", "nikah"],
+    triggerPhrases: ["nikaha xitam", "bosanma", "bosanmaq", "nikahin pozulmasi"],
     expandedTerms: [
       "nikaha xitam verilmesi", "nikahin pozulmasi qaydasi", "vefaetme", "mehkeme qaydasinda bosanma",
       "qeydiyyat sobeleri", "yetkinlik yasina catmayan usaqlar", "aile mecellesi madde 19", "aile mecellesi madde 21"
@@ -329,18 +343,31 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     priorityArticles: ["13", "14", "15", "16", "17"]
   },
   {
-    id: "traffic_speed_and_alcohol_fines",
+    id: "traffic_alcohol_driving",
     domain: "Yol hərəkəti & İnzibati",
     primaryLawId: "inzibati_xetalar",
+    primaryDocId: "46960",
     triggerPhrases: [
-      "suret heddi", "radara dusmek", "icki", "serxos halda", "spirtli icki",
-      "avtomobil idare etmek", "suruculuk huququndan mehrum"
+      "alkoqol", "alkoqollu", "icki", "serxos", "spirtli icki", "ickili", "serxos halda"
     ],
     expandedTerms: [
-      "yolda mueyyen edilmis hereket suretini asma", "serxos veziyyetde neqliyyat vasitesini idare etme",
-      "inzibati xetalar mecellesi 328", "inzibati xetalar mecellesi 333", "yol hereketi qaydalari"
+      "neqliyyat vasitesini idare etmek huququ olan sexs terefinden alkoqoldan istifade olunmasi neticesinde serxos veziyyetde idare edilmesi",
+      "dord yuz manat mebleginde cerime", "inzibati xetalar mecellesi 333", "madde 333.1"
     ],
-    priorityArticles: ["327", "328", "333", "334"]
+    priorityArticles: ["333.1", "333", "334"]
+  },
+  {
+    id: "traffic_speed_and_license_fines",
+    domain: "Yol hərəkəti & İnzibati",
+    primaryLawId: "inzibati_xetalar",
+    primaryDocId: "46960",
+    triggerPhrases: [
+      "suret heddi", "radara dusmek", "avtomobil idare etmek", "suruculuk huququndan mehrum"
+    ],
+    expandedTerms: [
+      "yolda mueyyen edilmis hereket suretini asma", "inzibati xetalar mecellesi 328", "yol hereketi qaydalari"
+    ],
+    priorityArticles: ["328", "327", "332", "333"]
   },
   {
     id: "customs_declaration",
