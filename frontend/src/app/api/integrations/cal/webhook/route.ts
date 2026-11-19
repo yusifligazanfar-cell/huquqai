@@ -1,5 +1,6 @@
 import crypto from "crypto"
 import { NextResponse } from "next/server"
+import { cfFetch } from "@/lib/cloudflare-db"
 
 export const dynamic = "force-dynamic"
 
@@ -21,8 +22,24 @@ export async function POST(req: Request) {
     }
 
     const payload = rawBody ? JSON.parse(rawBody) : {}
-    const triggerEvent = payload?.triggerEvent || "PING"
-    console.log("[CAL WEBHOOK]", triggerEvent, payload?.payload?.uid || "")
+    const triggerEvent = String(payload?.triggerEvent || "PING")
+    const bookingPayload = payload?.payload || {}
+    const consultationId = bookingPayload?.metadata?.consultationId
+
+    if (consultationId) {
+      let nextStatus: string | null = null
+      if (triggerEvent === "BOOKING_CREATED" || triggerEvent === "BOOKING_RESCHEDULED") {
+        nextStatus = "Qəbul edildi"
+      } else if (triggerEvent === "BOOKING_CANCELLED" || triggerEvent === "BOOKING_REJECTED") {
+        nextStatus = "İmtina edildi"
+      }
+      if (nextStatus) {
+        await cfFetch("/app/consultations", {
+          method: "PATCH",
+          body: JSON.stringify({ id: String(consultationId), status: nextStatus }),
+        }).catch(() => {})
+      }
+    }
 
     return NextResponse.json({ ok: true, triggerEvent })
   } catch (err: any) {
