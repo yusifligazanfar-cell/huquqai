@@ -1836,12 +1836,15 @@ async function handleVerifyAnswer(body: Record<string, unknown>, env: Env): Prom
 
   const sysPrompt = `Sən Azərbaycan qanunvericiliyi üzrə MÜSTƏQİL HÜQUQİ AUDİTORSAN (Zero-Hallucination Fact-Checker).
 Sənə 3 şey verilir: (1) İstifadəçinin sualı, (2) Rəsmi e-qanun mənbələri ([MƏNBƏ 1..N]), (3) Qaralama cavab.
-Aşağıdakı 5 KRİTİK xətanı yoxla və YALNIZ JSON qaytar:
+Aşağıdakı 6 KRİTİK xətanı yoxla və YALNIZ JSON qaytar:
 1. UYDURMA İSTİNAD: Qaralama cavabda [MƏNBƏ 1..N] mətnində SÖZBƏSÖZ olmayan hər hansı maddə, bənd, bölmə nömrəsi (məs., mətndə olmayan "bölmə 10.4" və ya başqa maddə), tarix və ya məhkəmə qərarı yazılıbmı?
-2. YANLIŞ BƏND / CƏRİMƏ QARIŞDIRMASI: İstifadəçinin soruşduğu əsas hal üçün yanlış alt-bəndin cəriməsi/sanksiyası yazılıbmı? (Məs., adi vergi hesabatının gecikməsinə 57.1-in 40 manatı əvəzinə transmilli 57.1-2-nin 10 000 manatını əsas cərimə kimi vermək; ilk dəfə sərxoş idarəetməyə 333.1-in 400 manatı əvəzinə təkrar/ağırlaşdırılmış 333.5 həbsini əsas cərimə kimi vermək.)
+2. YANLIŞ BƏND / CƏRİMƏ VƏ YA MİQDAR HƏDDİ QARIŞDIRMASI:
+   - İstifadəçinin soruşduğu əsas hal üçün yanlış alt-bəndin cəriməsi/sanksiyası yazılıbmı? (Məs., adi vergi hesabatının gecikməsinə 57.1-in 40 manatı əvəzinə transmilli 57.1-2-nin 10 000 manatını əsas cərimə kimi vermək; ilk dəfə sərxoş idarəetməyə 333.1-in 400 manatı əvəzinə təkrar/ağırlaşdırılmış 333.5 həbsini əsas cərimə kimi vermək.)
+   - Cinayət Məcəlləsinin maddəsindəki cərimə cəzası (məs., 179.1-dəki 1000–2000 manat cərimə) cinayətin miqdar həddi (Qeyd hissəsindəki külli/xüsusilə külli miqdar) ilə qarışdırılıbmı, yaxud 179.3.2 (külli miqdar: 50.000–500.000 manat, 5–10 il) ilə 179.4 (xüsusilə külli miqdar: >500.000 manat, 10–14 il) bir-biri ilə səhv salınıbmı?
 3. MƏNA TƏHRİFİ (POLARITY FLIP): Qanunun təsdiq/inkar şərti tərsinə çevrilibmi? (Məs., "lazımi keyfiyyətli mal"ı "keyfiyyəti uyğun olmadıqda" kimi təhrif etmək və ya "yol verməlidir"i "qadağandır" yazmaq.)
-4. QÜVVƏDƏN DÜŞMÜŞ NORMA: Mənbədə "[QÜVVƏDƏN DÜŞÜB" / "LƏĞV EDİLİB" işarəli bənd qüvvədə olan qayda kimi təqdim olunubmu?
-5. MƏNBƏ ÇATIŞMAZLIĞI: Əgər [MƏNBƏ 1..N] mətnləri istifadəçinin konkret sualına heç bir real hüquqi cavab/norma vermirsə (məs., tamam başqa sahəyə aid təsadüfi maddələrdirsə) və qaralama cavab özündən ümumi fikir/norma uydurubsa -> "insufficient_sources": true yaz!
+4. QÜVVƏDƏN DÜŞMÜŞ NORMA: Mənbədə "[QÜVVƏDƏN DÜŞÜB" / "LƏĞV EDİLİB" / "ləğv edilib" işarəli bənd qüvvədə olan qayda kimi təqdim olunubmu?
+5. MADDƏ–SANKSİYA ZİDDİYYƏTİ: Hüquqi nəticə ilə istinad edilən maddənin məzmunu və sanksiyası arasında ziddiyyət varmı?
+6. MƏNBƏ ÇATIŞMAZLIĞI: Əgər [MƏNBƏ 1..N] mətnləri istifadəçinin konkret sualına heç bir real hüquqi cavab/norma vermirsə (məs., tamam başqa sahəyə aid təsadüfi maddələrdirsə) və qaralama cavab özündən ümumi fikir/norma uydurubsa -> "insufficient_sources": true yaz!
 
 YALNIZ ETİBARLI JSON QAYTAR:
 {"passed": true/false, "insufficient_sources": true/false, "repealed_misuse": true/false, "issues": ["konkret qısa xəta təsviri (əgər varsa)"]}
