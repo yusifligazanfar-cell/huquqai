@@ -24,8 +24,14 @@ export function Header() {
     if (isMissingInfo) return null
   }
 
-  const displayName = isLoaded && isLoggedIn && user ? user.name : "Qonaq İstifadəçi"
-  const displayRole = isLoaded && isLoggedIn ? "User" : "Qeydiyyatsız"
+  const displayName = isLoaded && isLoggedIn && user ? `${user.name || ""} ${user.surname || ""}`.trim() || user.name : "Qonaq İstifadəçi"
+  const displayRole = isLoaded && isLoggedIn
+    ? user?.role === "lawyer"
+      ? user?.licenseNumber?.startsWith("HÜQ:")
+        ? "Hüquqşünas"
+        : "Vəkil"
+      : "Müştəri"
+    : "Qeydiyyatsız"
   const initials = displayName.split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()
 
   return (

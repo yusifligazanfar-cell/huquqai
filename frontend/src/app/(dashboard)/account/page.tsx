@@ -2,7 +2,26 @@
 
 import { useState, useRef, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { User, LogIn, LogOut, Save, Camera, Mail, Shield, Bell, Key, CreditCard, LayoutDashboard, Palette, Moon, Sun, Monitor } from "lucide-react"
+import {
+  User,
+  LogIn,
+  LogOut,
+  Save,
+  Camera,
+  Mail,
+  Shield,
+  Bell,
+  Key,
+  CreditCard,
+  Palette,
+  Moon,
+  Sun,
+  Monitor,
+  CheckCircle2,
+  Scale,
+  Briefcase,
+  Loader2,
+} from "lucide-react"
 import { useAuth } from "@/context/AuthContext"
 import { useTheme } from "next-themes"
 import { Button } from "@/components/ui/button"
@@ -16,8 +35,9 @@ import Link from "next/link"
 export default function AccountPage() {
   const { isLoggedIn, user, logout, updateProfile } = useAuth()
   const { theme, setTheme } = useTheme()
-  
+
   const [name, setName] = useState(user?.name || "")
+  const [surname, setSurname] = useState(user?.surname || "")
   const [email, setEmail] = useState(user?.email || "")
   const [bio, setBio] = useState(user?.bio || "")
   const [role, setRole] = useState(user?.role || "client")
@@ -27,11 +47,14 @@ export default function AccountPage() {
   const [experienceYears, setExperienceYears] = useState(user?.experienceYears?.toString() || "")
   const [activeTab, setActiveTab] = useState("personal")
   const [isUpdating, setIsUpdating] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [resetMessage, setResetMessage] = useState<{ text: string; type: "success" | "error" } | null>(null)
+  const [sendingReset, setSendingReset] = useState(false)
 
-  // Sync state when user object loads from DB
   useEffect(() => {
     if (user) {
       setName(user.name || "")
+      setSurname(user.surname || "")
       setEmail(user.email || "")
       setBio(user.bio || "")
       setRole(user.role || "client")
@@ -42,458 +65,560 @@ export default function AccountPage() {
     }
   }, [user])
 
-  // File Input Refs
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const coverInputRef = useRef<HTMLInputElement>(null)
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'cover') => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "avatar" | "cover") => {
     const file = e.target.files?.[0]
     if (!file || !user) return
 
     try {
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
-        reader.onerror = () => reject(new Error('File read error'))
+        reader.onerror = () => reject(new Error("File read error"))
         reader.onload = () => {
           const img = new Image()
-          img.onerror = () => reject(new Error('Image decode error'))
+          img.onerror = () => reject(new Error("Image decode error"))
           img.onload = () => {
-            const maxDim = type === 'avatar' ? 400 : 1200
+            const maxDim = type === "avatar" ? 400 : 1200
             const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
-            const canvas = document.createElement('canvas')
+            const canvas = document.createElement("canvas")
             canvas.width = Math.max(1, Math.round(img.width * scale))
             canvas.height = Math.max(1, Math.round(img.height * scale))
-            const ctx = canvas.getContext('2d')
-            if (!ctx) return reject(new Error('Canvas unavailable'))
+            const ctx = canvas.getContext("2d")
+            if (!ctx) return reject(new Error("Canvas unavailable"))
             ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-            resolve(canvas.toDataURL('image/jpeg', 0.8))
+            resolve(canvas.toDataURL("image/jpeg", 0.8))
           }
           img.src = String(reader.result)
         }
         reader.readAsDataURL(file)
       })
 
-      if (type === 'avatar') {
+      if (type === "avatar") {
         await updateProfile({ avatar: dataUrl })
       } else {
         await updateProfile({ coverImage: dataUrl })
       }
+      setSaveMessage("Şəkil uğurla yeniləndi.")
+      setTimeout(() => setSaveMessage(null), 3500)
     } catch (error) {
-      console.error('Error uploading image:', error)
-      alert('Şəkil yüklənərkən xəta baş verdi. Zəhmət olmasa daha kiçik ölçülü şəkil seçin.')
+      console.error("Error uploading image:", error)
+      alert("Şəkil yüklənərkən xəta baş verdi. Zəhmət olmasa daha kiçik ölçülü şəkil seçin.")
     }
   }
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsUpdating(true)
-    await updateProfile({ 
-      name, 
-      email, 
-      bio, 
-      role, 
-      specialties: role === 'lawyer' ? selectedSpecialties : undefined,
-      hourlyRate: role === 'lawyer' ? parseFloat(hourlyRate) || 0 : undefined,
-      licenseNumber: role === 'lawyer' ? licenseNumber : undefined,
-      experienceYears: role === 'lawyer' ? parseInt(experienceYears, 10) || 0 : undefined
+    setSaveMessage(null)
+    await updateProfile({
+      name,
+      surname,
+      email,
+      bio,
+      role,
+      specialties: role === "lawyer" ? selectedSpecialties : undefined,
+      hourlyRate: role === "lawyer" ? parseFloat(hourlyRate) || 0 : undefined,
+      licenseNumber: role === "lawyer" ? licenseNumber : undefined,
+      experienceYears: role === "lawyer" ? parseInt(experienceYears, 10) || 0 : undefined,
     })
     setIsUpdating(false)
-    alert("Məlumatlarınız uğurla yeniləndi!")
+    setSaveMessage("Məlumatlarınız uğurla yadda saxlanıldı.")
+    setTimeout(() => setSaveMessage(null), 4000)
   }
 
-  // Helper for generating initials
-  const initials = (name || "Qonaq").split(" ").map(n => n[0]).join("").substring(0, 2).toUpperCase()
+  const handleSendPasswordReset = async () => {
+    if (!email.trim()) return
+    setSendingReset(true)
+    setResetMessage(null)
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "request", email: email.trim().toLowerCase() }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data.ok) {
+        setResetMessage({ text: data.error || "Link göndərilə bilmədi.", type: "error" })
+      } else {
+        setResetMessage({ text: "Şifrə yeniləmə linki e-poçt ünvanınıza göndərildi.", type: "success" })
+      }
+    } catch {
+      setResetMessage({ text: "Şəbəkə xətası baş verdi.", type: "error" })
+    } finally {
+      setSendingReset(false)
+    }
+  }
+
+  const fullName = `${name} ${surname}`.trim() || "İstifadəçi"
+  const initials = fullName
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join("")
+    .substring(0, 2)
+    .toUpperCase()
+
+  const roleLabel =
+    role === "lawyer"
+      ? licenseNumber?.startsWith("HÜQ:")
+        ? "Hüquqşünas"
+        : "Vəkil"
+      : "Adi Müştəri"
+
+  const navItems = [
+    { id: "personal", label: "Şəxsi Məlumatlar", icon: User },
+    ...(user?.role === "lawyer" ? [{ id: "lawyer_profile", label: "Peşəkar Profil", icon: Briefcase }] : []),
+    { id: "security", label: "Təhlükəsizlik", icon: Shield },
+    { id: "notifications", label: "Bildirişlər", icon: Bell },
+    { id: "appearance", label: "Görünüş", icon: Palette },
+    { id: "billing", label: "Abunəlik", icon: CreditCard },
+  ]
 
   return (
-    <div className="flex flex-col min-h-screen pb-10">
-      <div className="max-w-5xl w-full mx-auto px-4 sm:px-6 pt-8 flex-1 z-10">
-        
+    <div className="flex flex-col min-h-screen pb-14">
+      <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 pt-6 flex-1 z-10">
         {isLoggedIn ? (
           <div className="space-y-6">
-            {/* Cover and Avatar Section */}
-            <div className="relative rounded-3xl overflow-hidden bg-white/80 dark:bg-card/40 backdrop-blur-3xl border border-slate-200 dark:border-white/5 shadow-2xl">
-              {/* Cover Image */}
-              <div className="h-48 md:h-64 w-full relative">
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  ref={coverInputRef} 
-                  className="hidden" 
-                  onChange={(e) => handleImageUpload(e, 'cover')} 
+            {/* Hero Profile Card */}
+            <div className="rounded-3xl overflow-hidden bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 shadow-lg shadow-slate-200/40 dark:shadow-black/30">
+              <div className="h-36 sm:h-44 w-full relative overflow-hidden bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-900">
+                <input
+                  type="file"
+                  accept="image/*"
+                  ref={coverInputRef}
+                  className="hidden"
+                  onChange={(e) => handleImageUpload(e, "cover")}
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-500/80 to-blue-600/80 mix-blend-multiply z-10" />
-                <img 
-                  src={user?.coverImage || "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop"} 
-                  alt="Cover" 
-                  className="w-full h-full object-cover"
-                />
-                <Button 
-                  size="sm" 
-                  variant="secondary" 
-                  className="absolute top-4 right-4 z-20 bg-black/50 text-white hover:bg-black/70 border-none backdrop-blur-md"
+                {user?.coverImage && (
+                  <img src={user.coverImage} alt="Cover" className="w-full h-full object-cover opacity-80" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/15" />
+                <button
+                  type="button"
                   onClick={() => coverInputRef.current?.click()}
+                  className="absolute top-4 right-4 z-20 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/45 hover:bg-black/65 text-white text-xs font-semibold backdrop-blur-md border border-white/15 transition-all"
                 >
-                  <Camera className="w-4 h-4 mr-2" />
-                  Örtüyü Dəyiş
-                </Button>
+                  <Camera className="w-3.5 h-3.5" />
+                  <span>Örtüyü Dəyiş</span>
+                </button>
               </div>
 
-              {/* Profile Info Row */}
-              <div className="px-6 sm:px-10 pb-8 relative flex flex-col sm:flex-row items-center sm:items-end gap-6 sm:gap-8 -mt-16 sm:-mt-20 z-20">
-                <div className="relative group">
-                  <input 
-                    type="file" 
-                    accept="image/*" 
-                    ref={avatarInputRef} 
-                    className="hidden" 
-                    onChange={(e) => handleImageUpload(e, 'avatar')} 
-                  />
-                  <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full border-4 border-background bg-gradient-to-br from-primary to-blue-600 flex items-center justify-center text-4xl font-bold text-white shadow-xl overflow-hidden">
-                    {user?.avatar ? (
-                      <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
-                    ) : initials}
-                  </div>
-                  <button 
-                    onClick={() => avatarInputRef.current?.click()}
-                    className="absolute bottom-2 right-2 p-2 bg-primary rounded-full text-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity hover:scale-105"
-                  >
-                    <Camera className="w-5 h-5" />
-                  </button>
-                </div>
-                
-                <div className="flex-1 text-center sm:text-left mb-2">
-                  <div className="flex items-center justify-center sm:justify-start gap-3">
-                    <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{name}</h1>
-                    {user?.isVerified && (
-                      <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 text-xs font-bold px-2.5 py-1 rounded-md">
-                        {user?.licenseNumber?.startsWith('HÜQ:') ? 'Təsdiqlənmiş Hüquqşünas' : 'Təsdiqlənmiş Vəkil'}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-center sm:justify-start gap-2 text-slate-600 dark:text-slate-300 mt-1">
-                    <Mail className="w-4 h-4" />
-                    <span>{email}</span>
-                  </div>
-                  {user?.role === 'lawyer' && (
-                    <div className="mt-2 text-sm text-primary font-bold">
-                      {user?.licenseNumber?.startsWith('HÜQ:') ? 'Hüquqşünas' : 'Vəkil'}
+              <div className="px-5 sm:px-8 pb-6 relative flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-12 sm:-mt-14 z-20">
+                <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 sm:gap-5">
+                  <div className="relative group shrink-0">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={avatarInputRef}
+                      className="hidden"
+                      onChange={(e) => handleImageUpload(e, "avatar")}
+                    />
+                    <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl border-4 border-white dark:border-slate-900 bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-3xl font-black text-white shadow-xl overflow-hidden">
+                      {user?.avatar ? (
+                        <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        initials
+                      )}
                     </div>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => avatarInputRef.current?.click()}
+                      aria-label="Profil şəklini dəyiş"
+                      className="absolute -bottom-1.5 -right-1.5 p-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-white shadow-md transition-all border-2 border-white dark:border-slate-900"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="text-center sm:text-left pb-1">
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                      <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-950 dark:text-white">
+                        {fullName}
+                      </h1>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                        {role === "lawyer" && <Scale className="w-3 h-3" />}
+                        {roleLabel}
+                      </span>
+                      {user?.isVerified && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Təsdiqlənmiş
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-center sm:justify-start gap-1.5 text-sm text-slate-500 dark:text-slate-400 mt-1">
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>{email}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="mb-2">
-                  <Button variant="destructive" onClick={logout} className="gap-2 shadow-lg">
-                    <LogOut className="w-4 h-4" />
-                    Çıxış Et
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  onClick={logout}
+                  className="gap-2 rounded-xl border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 self-center sm:self-end"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Çıxış Et
+                </Button>
               </div>
             </div>
 
-            {/* Layout Split: Sidebar + Main Content */}
-            <div className="flex flex-col md:flex-row gap-8 items-start mt-8">
-              
-              {/* Left Sidebar Menu */}
-              <div className="w-full md:w-72 shrink-0 flex flex-col gap-2">
-                <div className="px-4 pb-2">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Hesab Ayarları</h3>
-                </div>
-                <button 
-                  onClick={() => setActiveTab("personal")}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all text-sm font-semibold ${activeTab === "personal" ? "bg-primary/15 text-primary shadow-[inset_0_0_20px_rgba(234,88,12,0.1)]" : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-white/5 hover:text-foreground"}`}
-                >
-                  <User className={`w-5 h-5 ${activeTab === "personal" ? "text-primary" : "opacity-70"}`} />
-                  Şəxsi Məlumatlar
-                </button>
-                {user?.role === 'lawyer' && (
-                  <button 
-                    onClick={() => setActiveTab("lawyer_profile")}
-                    className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all text-sm font-semibold ${activeTab === "lawyer_profile" ? "bg-primary/15 text-primary shadow-[inset_0_0_20px_rgba(234,88,12,0.1)]" : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-white/5 hover:text-foreground"}`}
+            {/* Mobile Horizontal Tabs */}
+            <div className="flex md:hidden gap-2 overflow-x-auto pb-1">
+              {navItems.map((item) => {
+                const Icon = item.icon
+                const active = activeTab === item.id
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setActiveTab(item.id)}
+                    className={`shrink-0 inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                      active
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-sm"
+                        : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800"
+                    }`}
                   >
-                    <User className={`w-5 h-5 ${activeTab === "lawyer_profile" ? "text-primary" : "opacity-70"}`} />
-                    Peşəkar Profil
+                    <Icon className="w-4 h-4" />
+                    <span>{item.label}</span>
                   </button>
-                )}
-                <button 
-                  onClick={() => setActiveTab("security")}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all text-sm font-semibold ${activeTab === "security" ? "bg-primary/15 text-primary shadow-[inset_0_0_20px_rgba(234,88,12,0.1)]" : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-white/5 hover:text-foreground"}`}
-                >
-                  <Shield className={`w-5 h-5 ${activeTab === "security" ? "text-primary" : "opacity-70"}`} />
-                  Təhlükəsizlik
-                </button>
-                <button 
-                  onClick={() => setActiveTab("notifications")}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all text-sm font-semibold ${activeTab === "notifications" ? "bg-primary/15 text-primary shadow-[inset_0_0_20px_rgba(234,88,12,0.1)]" : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-white/5 hover:text-foreground"}`}
-                >
-                  <Bell className={`w-5 h-5 ${activeTab === "notifications" ? "text-primary" : "opacity-70"}`} />
-                  Bildirişlər
-                </button>
-                <button 
-                  onClick={() => setActiveTab("appearance")}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all text-sm font-semibold ${activeTab === "appearance" ? "bg-primary/15 text-primary shadow-[inset_0_0_20px_rgba(234,88,12,0.1)]" : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-white/5 hover:text-foreground"}`}
-                >
-                  <Palette className={`w-5 h-5 ${activeTab === "appearance" ? "text-primary" : "opacity-70"}`} />
-                  Görünüş
-                </button>
-                
-                <div className="px-4 pb-2 pt-6">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Ödənişlər</h3>
-                </div>
-                <button 
-                  onClick={() => setActiveTab("billing")}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all text-sm font-semibold ${activeTab === "billing" ? "bg-primary/15 text-primary shadow-[inset_0_0_20px_rgba(234,88,12,0.1)]" : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-white/5 hover:text-foreground"}`}
-                >
-                  <CreditCard className={`w-5 h-5 ${activeTab === "billing" ? "text-primary" : "opacity-70"}`} />
-                  Abunəlik (Tezliklə)
-                </button>
+                )
+              })}
+            </div>
+
+            {/* Desktop Split Layout */}
+            <div className="flex flex-col md:flex-row gap-6 items-start">
+              {/* Left Sidebar Nav */}
+              <div className="hidden md:flex w-64 shrink-0 flex-col gap-1.5 bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3 shadow-sm">
+                <p className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                  Hesab Ayarları
+                </p>
+                {navItems.map((item) => {
+                  const Icon = item.icon
+                  const active = activeTab === item.id
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActiveTab(item.id)}
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-sm font-semibold ${
+                        active
+                          ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300"
+                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white"
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 ${active ? "text-emerald-600 dark:text-emerald-400" : "opacity-70"}`} />
+                      <span>{item.label}</span>
+                    </button>
+                  )
+                })}
               </div>
 
               {/* Main Content Area */}
               <div className="flex-1 w-full">
-                <Card className="bg-white/70 dark:bg-card/30 backdrop-blur-3xl border-slate-200 dark:border-white/5 relative overflow-hidden shadow-2xl rounded-3xl">
+                <Card className="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 shadow-lg shadow-slate-200/40 dark:shadow-black/30 rounded-3xl overflow-hidden">
                   {activeTab === "personal" && (
                     <>
-                      <CardHeader className="border-b border-slate-200 dark:border-white/5 pb-6 px-8 pt-8">
-                        <CardTitle className="text-2xl font-bold">Şəxsi Məlumatlar</CardTitle>
-                        <CardDescription className="text-base mt-1">Profil məlumatlarınızı buradan yeniləyə bilərsiniz.</CardDescription>
+                      <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-5 px-6 sm:px-8 pt-6">
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <div>
+                            <CardTitle className="text-xl sm:text-2xl font-bold">Şəxsi Məlumatlar</CardTitle>
+                            <CardDescription className="text-sm mt-1">
+                              Profil məlumatlarınızı buradan yeniləyə bilərsiniz.
+                            </CardDescription>
+                          </div>
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                            {roleLabel}
+                          </span>
+                        </div>
                       </CardHeader>
-                      <CardContent className="p-8">
-                        <form onSubmit={handleProfileUpdate} className="flex flex-col gap-10">
-                          
-                          {/* Basic Info Section */}
-                          <div className="flex flex-col gap-6">
-                            <div className="border-b border-slate-200 dark:border-white/10 pb-3">
-                              <h4 className="text-sm font-bold text-foreground uppercase tracking-widest">Ümumi Məlumatlar</h4>
+
+                      <CardContent className="p-6 sm:p-8">
+                        {saveMessage && (
+                          <div className="mb-6 p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 text-sm font-semibold flex items-center gap-2">
+                            <CheckCircle2 className="w-4 h-4 shrink-0" />
+                            <span>{saveMessage}</span>
+                          </div>
+                        )}
+
+                        <form onSubmit={handleProfileUpdate} className="space-y-7">
+                          <div className="space-y-4">
+                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                              Ümumi Məlumatlar
+                            </h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="profile-name">
+                                  Ad
+                                </label>
+                                <Input
+                                  id="profile-name"
+                                  value={name}
+                                  onChange={(e) => setName(e.target.value)}
+                                  className="bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 h-11 rounded-xl"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="profile-surname">
+                                  Soyad
+                                </label>
+                                <Input
+                                  id="profile-surname"
+                                  value={surname}
+                                  onChange={(e) => setSurname(e.target.value)}
+                                  className="bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 h-11 rounded-xl"
+                                />
+                              </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                              <div className="flex flex-col gap-3">
-                                <label className="text-sm font-semibold text-muted-foreground ml-1" htmlFor="profile-name">Ad və Soyad</label>
-                                <Input 
-                                  id="profile-name" 
-                                  value={name} 
-                                  onChange={e => setName(e.target.value)} 
-                                  className="bg-slate-50 dark:bg-background/40 border-slate-200 dark:border-white/10 h-12 text-base px-4 rounded-xl focus-visible:ring-primary/50 transition-all text-slate-900 dark:text-white"
-                                />
-                              </div>
-                              <div className="flex flex-col gap-3">
-                                <label className="text-sm font-semibold text-muted-foreground ml-1" htmlFor="profile-email">E-poçt Ünvanı</label>
-                                <Input 
-                                  id="profile-email" 
-                                  type="email" 
-                                  value={email} 
-                                  onChange={e => setEmail(e.target.value)} 
-                                  className="bg-slate-50 dark:bg-background/40 border-slate-200 dark:border-white/10 h-12 text-base px-4 rounded-xl focus-visible:ring-primary/50 transition-all text-slate-900 dark:text-white"
-                                />
-                              </div>
+
+                            <div className="space-y-1.5">
+                              <label className="text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="profile-email">
+                                E-poçt Ünvanı
+                              </label>
+                              <Input
+                                id="profile-email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 h-11 rounded-xl"
+                              />
                             </div>
                           </div>
 
-                          {/* Bio & Questionnaire Section */}
-                          <div className="flex flex-col gap-6">
-                            <div className="border-b border-slate-200 dark:border-white/10 pb-3 flex items-center justify-between gap-3 flex-wrap">
-                              <h4 className="text-sm font-bold text-foreground uppercase tracking-widest">Profil Detalları</h4>
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
-                                {role === 'lawyer'
-                                  ? (licenseNumber?.startsWith('HÜQ:') ? 'Hüquqşünas' : 'Vəkil')
-                                  : 'Müştəri / Vətəndaş'}
-                              </span>
-                            </div>
-
-                            {role === 'lawyer' && (
+                          {role === "lawyer" && (
+                            <div className="space-y-5 pt-2 border-t border-slate-100 dark:border-slate-800">
                               <div
                                 className={`rounded-2xl border p-4 text-xs sm:text-sm font-medium ${
                                   user?.isVerified
-                                    ? 'bg-emerald-50 dark:bg-emerald-950/35 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300'
-                                    : 'bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-300'
+                                    ? "bg-emerald-50 dark:bg-emerald-950/35 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-300"
+                                    : "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-300"
                                 }`}
                               >
                                 {user?.isVerified
-                                  ? 'Hesabınız admin tərəfindən təsdiqlənib və aktivdir. Artıq müştərilər sizi kataloqda görə və randevu ala bilər.'
-                                  : 'Qonaq rejimi: Anketiniz admin tərəfindən yoxlanılır (təsdiq gözləyir). Təsdiqlənənə qədər Vəkillər Kataloqunda görünmürsünüz. Təsdiqdən sonra e-poçtunuza bildiriş göndəriləcək.'}
+                                  ? "Hesabınız admin tərəfindən təsdiqlənib və aktivdir. Artıq müştərilər sizi kataloqda görə və randevu ala bilər."
+                                  : "Qonaq rejimi: Anketiniz admin tərəfindən yoxlanılır (təsdiq gözləyir). Təsdiqlənənə qədər Vəkillər Kataloqunda görünmürsünüz."}
                               </div>
-                            )}
 
-                            {role === 'lawyer' && (
-                              <div className="flex flex-col gap-6 mt-2">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                  <div className="flex flex-col gap-3">
-                                    <label className="text-sm font-semibold text-muted-foreground ml-1" htmlFor="profile-license">Lisenziya / Vəsiqə Nömrəsi</label>
-                                    <Input 
-                                      id="profile-license" 
-                                      value={licenseNumber} 
-                                      onChange={e => setLicenseNumber(e.target.value)} 
-                                      placeholder="Məs: VK-12345"
-                                      className="bg-slate-50 dark:bg-background/40 border-slate-200 dark:border-white/10 h-12 text-base px-4 rounded-xl focus-visible:ring-primary/50 transition-all text-slate-900 dark:text-white"
-                                    />
-                                  </div>
-                                  <div className="flex flex-col gap-3">
-                                    <label className="text-sm font-semibold text-muted-foreground ml-1" htmlFor="profile-experience">İş Təcrübəsi (İl)</label>
-                                    <Input 
-                                      id="profile-experience" 
-                                      type="number"
-                                      min="0"
-                                      max="60"
-                                      value={experienceYears} 
-                                      onChange={e => setExperienceYears(e.target.value)} 
-                                      placeholder="Məs: 10"
-                                      className="bg-slate-50 dark:bg-background/40 border-slate-200 dark:border-white/10 h-12 text-base px-4 rounded-xl focus-visible:ring-primary/50 transition-all text-slate-900 dark:text-white"
-                                    />
-                                  </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="profile-license">
+                                    Lisenziya / Vəsiqə №
+                                  </label>
+                                  <Input
+                                    id="profile-license"
+                                    value={licenseNumber}
+                                    onChange={(e) => setLicenseNumber(e.target.value)}
+                                    placeholder="Məs: VK-12345"
+                                    className="bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 h-11 rounded-xl"
+                                  />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                  <div className="flex flex-col gap-3">
-                                    <label className="text-sm font-semibold text-muted-foreground ml-1" htmlFor="profile-hourly">Saatlıq Xidmət Haqqı (AZN)</label>
-                                    <Input 
-                                      id="profile-hourly" 
-                                      type="number"
-                                      value={hourlyRate} 
-                                      onChange={e => setHourlyRate(e.target.value)} 
-                                      className="bg-slate-50 dark:bg-background/40 border-slate-200 dark:border-white/10 h-12 text-base px-4 rounded-xl focus-visible:ring-primary/50 transition-all text-slate-900 dark:text-white"
-                                    />
-                                  </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="profile-experience">
+                                    İş Təcrübəsi (İl)
+                                  </label>
+                                  <Input
+                                    id="profile-experience"
+                                    type="number"
+                                    min="0"
+                                    max="60"
+                                    value={experienceYears}
+                                    onChange={(e) => setExperienceYears(e.target.value)}
+                                    className="bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 h-11 rounded-xl"
+                                  />
                                 </div>
-                                <div className="flex flex-col gap-3 mt-4">
-                                  <label className="text-sm font-semibold text-muted-foreground ml-1">İxtisas Sahələriniz (Toxunaraq seçin)</label>
-                                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                                    {categoriesData.map(category => {
-                                      const isSelected = selectedSpecialties.includes(category.name_az)
-                                      return (
-                                        <button
-                                          key={category.id}
-                                          type="button"
-                                          onClick={() => {
-                                            setSelectedSpecialties(prev => 
-                                              prev.includes(category.name_az) 
-                                                ? prev.filter(s => s !== category.name_az) 
-                                                : [...prev, category.name_az]
-                                            )
-                                          }}
-                                          className={`flex flex-col items-center justify-center gap-2 p-3 h-28 rounded-xl border text-center transition-all ${
-                                            isSelected
-                                              ? 'border-primary bg-primary/10 shadow-[0_0_15px_rgba(234,88,12,0.15)] text-primary font-semibold'
-                                              : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-background/40 hover:bg-slate-100 dark:hover:bg-white/5 text-slate-700 dark:text-slate-300'
-                                          }`}
-                                        >
-                                          <CategoryIcon id={category.id} className="w-6 h-6 mb-1" />
-                                          <span className="text-xs leading-tight line-clamp-2">{category.name_az}</span>
-                                        </button>
-                                      )
-                                    })}
-                                  </div>
+                                <div className="space-y-1.5">
+                                  <label className="text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="profile-hourly">
+                                    Saatlıq Haqq (AZN)
+                                  </label>
+                                  <Input
+                                    id="profile-hourly"
+                                    type="number"
+                                    value={hourlyRate}
+                                    onChange={(e) => setHourlyRate(e.target.value)}
+                                    className="bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 h-11 rounded-xl"
+                                  />
                                 </div>
                               </div>
-                            )}
 
-                            <div className="flex flex-col gap-3 mt-2">
-                              <label className="text-sm font-semibold text-muted-foreground ml-1" htmlFor="profile-bio">Haqqında (Bio)</label>
-                              <textarea 
-                                id="profile-bio" 
-                                placeholder={role === 'lawyer' ? "Təcrübəniz və xidmətləriniz haqqında yazın..." : "Özünüz haqqında qısa məlumat yazın..."}
-                                value={bio}
-                                onChange={e => setBio(e.target.value)}
-                                className="flex min-h-[120px] w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-background/40 px-4 py-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all resize-y text-slate-900 dark:text-white"
-                              />
-                              <p className="text-xs text-muted-foreground ml-1 mt-1">Bu məlumat digər istifadəçilər tərəfindən görülə bilər.</p>
+                              <div className="space-y-2.5">
+                                <label className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+                                  İxtisas Sahələriniz
+                                </label>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
+                                  {categoriesData.map((category) => {
+                                    const isSelected = selectedSpecialties.includes(category.name_az)
+                                    return (
+                                      <button
+                                        key={category.id}
+                                        type="button"
+                                        onClick={() =>
+                                          setSelectedSpecialties((prev) =>
+                                            prev.includes(category.name_az)
+                                              ? prev.filter((s) => s !== category.name_az)
+                                              : [...prev, category.name_az]
+                                          )
+                                        }
+                                        className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-all ${
+                                          isSelected
+                                            ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-semibold"
+                                            : "border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950 hover:border-emerald-500/40 text-slate-700 dark:text-slate-300"
+                                        }`}
+                                      >
+                                        <CategoryIcon id={category.id} className="w-4 h-4 shrink-0" />
+                                        <span className="text-xs leading-tight line-clamp-2">{category.name_az}</span>
+                                      </button>
+                                    )
+                                  })}
+                                </div>
+                              </div>
                             </div>
+                          )}
+
+                          <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                            <label className="text-xs font-semibold text-slate-600 dark:text-slate-300" htmlFor="profile-bio">
+                              Haqqında (Bio)
+                            </label>
+                            <textarea
+                              id="profile-bio"
+                              placeholder={
+                                role === "lawyer"
+                                  ? "Təcrübəniz və xidmətləriniz haqqında yazın..."
+                                  : "Özünüz haqqında qısa məlumat yazın..."
+                              }
+                              value={bio}
+                              onChange={(e) => setBio(e.target.value)}
+                              className="flex min-h-[110px] w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950 px-4 py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40 transition-all resize-y text-slate-900 dark:text-white"
+                            />
+                            <p className="text-xs text-slate-400">
+                              Bu məlumat digər istifadəçilər tərəfindən görülə bilər.
+                            </p>
                           </div>
-                          
-                          <div className="pt-4 flex items-center justify-end">
-                            <Button type="submit" size="lg" className="gap-2 bg-primary hover:bg-primary/90 text-white px-8 h-12 rounded-xl text-base font-semibold shadow-[0_0_20px_rgba(234,88,12,0.3)] hover:shadow-[0_0_30px_rgba(234,88,12,0.5)] transition-all">
-                              <Save className="w-5 h-5" />
-                              Dəyişiklikləri Yadda Saxla
+
+                          <div className="flex justify-end">
+                            <Button
+                              type="submit"
+                              disabled={isUpdating}
+                              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-6 h-11 rounded-xl text-sm font-bold shadow-md shadow-emerald-600/20"
+                            >
+                              {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                              <span>{isUpdating ? "Yadda saxlanır..." : "Dəyişiklikləri Yadda Saxla"}</span>
                             </Button>
                           </div>
                         </form>
                       </CardContent>
                     </>
                   )}
-                  
-                  {activeTab === "lawyer_profile" && (
-                    <LawyerProfileTab />
-                  )}
-                  
+
+                  {activeTab === "lawyer_profile" && <LawyerProfileTab />}
+
                   {activeTab === "security" && (
-                    <div className="p-12 text-center">
-                      <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Key className="w-10 h-10 text-primary opacity-80" />
+                    <div className="p-6 sm:p-10">
+                      <div className="max-w-lg mx-auto text-center space-y-4">
+                        <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-2xl flex items-center justify-center mx-auto">
+                          <Key className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <h3 className="text-xl sm:text-2xl font-bold text-foreground">Şifrə və Təhlükəsizlik</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Hesab şifrənizi yeniləmək üçün e-poçt ünvanınıza (<strong>{email}</strong>) təhlükəsiz yeniləmə linki göndərə bilərsiniz.
+                        </p>
+                        {resetMessage && (
+                          <div
+                            className={`p-3 rounded-xl text-xs sm:text-sm font-medium border ${
+                              resetMessage.type === "error"
+                                ? "bg-red-50 dark:bg-red-950/30 border-red-200 text-red-600"
+                                : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 text-emerald-700 dark:text-emerald-300"
+                            }`}
+                          >
+                            {resetMessage.text}
+                          </div>
+                        )}
+                        <Button
+                          type="button"
+                          onClick={handleSendPasswordReset}
+                          disabled={sendingReset}
+                          className="h-11 px-6 rounded-xl font-bold"
+                        >
+                          {sendingReset && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                          Şifrə Yeniləmə Linki Göndər
+                        </Button>
                       </div>
-                      <h3 className="text-2xl font-bold text-foreground mb-3">Şifrəni Yenilə</h3>
-                      <p className="text-muted-foreground max-w-md mx-auto text-lg">Təhlükəsizlik məqsədilə şifrənizi periodik olaraq yeniləməyiniz tövsiyə olunur. (Tezliklə)</p>
                     </div>
                   )}
 
                   {activeTab === "notifications" && (
-                    <div className="p-8">
-                      <div className="flex items-center gap-3 mb-6 border-b border-slate-200 dark:border-white/10 pb-4">
-                        <div className="p-3 bg-primary/10 rounded-xl">
-                          <Bell className="w-6 h-6 text-primary" />
+                    <div className="p-6 sm:p-8">
+                      <div className="flex items-center justify-between gap-3 mb-6 border-b border-slate-100 dark:border-slate-800 pb-4 flex-wrap">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/60 rounded-xl">
+                            <Bell className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <div>
+                            <h3 className="text-xl font-bold text-foreground">Bildirişlər</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground">
+                              Sizə gələn müraciətlər və bildirişlər
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="text-2xl font-bold text-foreground">Bildirişlər</h3>
-                          <p className="text-muted-foreground">Sizə gələn müraciətlər və bildirişlər</p>
-                        </div>
+                        <Link href="/consultations">
+                          <Button variant="outline" size="sm" className="rounded-xl">
+                            Bütün Müraciətlər
+                          </Button>
+                        </Link>
                       </div>
-                      
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-semibold text-lg">Gözləyən Müraciətlər</h4>
-                          <Link href="/consultations">
-                            <Button variant="outline" size="sm">Bütün Müraciətlərə Bax</Button>
-                          </Link>
-                        </div>
-                        
-                        {/* We will fetch and display notifications here via a new component to keep it clean */}
-                        <AccountNotifications />
-                      </div>
+                      <AccountNotifications />
                     </div>
                   )}
-                  
+
                   {activeTab === "appearance" && (
                     <>
-                      <CardHeader className="border-b border-slate-200 dark:border-white/5 pb-6 px-8 pt-8">
-                        <CardTitle className="text-2xl font-bold text-foreground">Görünüş</CardTitle>
-                        <CardDescription className="text-base mt-1">Sistemin vizual mövzusunu buradan dəyişdirə bilərsiniz.</CardDescription>
+                      <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-5 px-6 sm:px-8 pt-6">
+                        <CardTitle className="text-xl sm:text-2xl font-bold">Görünüş</CardTitle>
+                        <CardDescription className="text-sm mt-1">
+                          Sistemin vizual mövzusunu buradan dəyişdirə bilərsiniz.
+                        </CardDescription>
                       </CardHeader>
-                      <CardContent className="p-8">
-                        <div className="flex flex-col gap-6">
-                           <div className="border-b border-slate-200 dark:border-white/10 pb-3">
-                             <h4 className="text-sm font-bold text-foreground uppercase tracking-widest">Mövzu Seçimi</h4>
-                           </div>
-                           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                              <button 
-                                onClick={() => setTheme('light')} 
-                                className={`border rounded-2xl p-6 flex flex-col items-center gap-4 transition-all ${theme === 'light' ? 'border-primary bg-primary/10 shadow-[0_0_15px_rgba(234,88,12,0.15)]' : 'border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-background/40 hover:bg-slate-100 dark:hover:bg-white/5'}`}
+                      <CardContent className="p-6 sm:p-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          {[
+                            { id: "light", label: "Açıq", icon: Sun },
+                            { id: "dark", label: "Qaranlıq", icon: Moon },
+                            { id: "system", label: "Sistem", icon: Monitor },
+                          ].map((opt) => {
+                            const Icon = opt.icon
+                            const active = theme === opt.id
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => setTheme(opt.id)}
+                                className={`border rounded-2xl p-6 flex flex-col items-center gap-3 transition-all ${
+                                  active
+                                    ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300"
+                                    : "border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:border-emerald-500/40"
+                                }`}
                               >
-                                <Sun className={`w-8 h-8 ${theme === 'light' ? 'text-primary' : 'text-muted-foreground'}`} />
-                                <span className={`font-semibold ${theme === 'light' ? 'text-primary' : 'text-muted-foreground'}`}>Açıq</span>
+                                <Icon className="w-7 h-7" />
+                                <span className="font-bold text-sm">{opt.label}</span>
                               </button>
-                              <button 
-                                onClick={() => setTheme('dark')} 
-                                className={`border rounded-2xl p-6 flex flex-col items-center gap-4 transition-all ${theme === 'dark' ? 'border-primary bg-primary/10 shadow-[0_0_15px_rgba(234,88,12,0.15)]' : 'border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-background/40 hover:bg-slate-100 dark:hover:bg-white/5'}`}
-                              >
-                                <Moon className={`w-8 h-8 ${theme === 'dark' ? 'text-primary' : 'text-muted-foreground'}`} />
-                                <span className={`font-semibold ${theme === 'dark' ? 'text-primary' : 'text-muted-foreground'}`}>Qaranlıq</span>
-                              </button>
-                              <button 
-                                onClick={() => setTheme('system')} 
-                                className={`border rounded-2xl p-6 flex flex-col items-center gap-4 transition-all ${theme === 'system' ? 'border-primary bg-primary/10 shadow-[0_0_15px_rgba(234,88,12,0.15)]' : 'border-slate-200 dark:border-white/10 bg-slate-50/50 dark:bg-background/40 hover:bg-slate-100 dark:hover:bg-white/5'}`}
-                              >
-                                <Monitor className={`w-8 h-8 ${theme === 'system' ? 'text-primary' : 'text-muted-foreground'}`} />
-                                <span className={`font-semibold ${theme === 'system' ? 'text-primary' : 'text-muted-foreground'}`}>Sistem</span>
-                              </button>
-                           </div>
+                            )
+                          })}
                         </div>
                       </CardContent>
                     </>
                   )}
-                  
+
                   {activeTab === "billing" && (
-                    <div className="p-12 text-center">
-                      <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <CreditCard className="w-10 h-10 text-primary opacity-80" />
+                    <div className="p-10 sm:p-12 text-center space-y-4">
+                      <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-2xl flex items-center justify-center mx-auto">
+                        <CreditCard className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
                       </div>
-                      <h3 className="text-2xl font-bold text-foreground mb-3">Ödənişlər və Abunəlik</h3>
-                      <p className="text-muted-foreground max-w-md mx-auto text-lg">Premium xidmətlər aktivləşdikdə abunəliyinizi buradan idarə edə biləcəksiniz. (Tezliklə)</p>
+                      <h3 className="text-xl sm:text-2xl font-bold text-foreground">Ödənişlər və Abunəlik</h3>
+                      <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                        Premium xidmətlər aktivləşdikdə abunəliyinizi buradan idarə edə biləcəksiniz. (Tezliklə)
+                      </p>
                     </div>
                   )}
                 </Card>
@@ -501,18 +626,21 @@ export default function AccountPage() {
             </div>
           </div>
         ) : (
-          /* Login Redirect State */
           <div className="max-w-md mx-auto pt-12 text-center">
-            <Card className="bg-card/40 backdrop-blur-3xl border-white/5 shadow-2xl p-12">
-              <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Shield className="h-10 w-10 text-primary" />
+            <Card className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl rounded-3xl p-8 sm:p-10">
+              <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/60 rounded-2xl flex items-center justify-center mx-auto mb-5">
+                <Shield className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <h2 className="text-2xl font-bold mb-3">Hesaba daxil olmalısınız</h2>
-              <p className="text-muted-foreground mb-8">
-                Profil məlumatlarınıza baxmaq və dəyişdirmək üçün zəhmət olmasa sistemə daxil olun.
+              <h2 className="text-2xl font-bold mb-2">Hesaba daxil olmalısınız</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                Profil məlumatlarınıza baxmaq və dəyişdirmək üçün sistemə daxil olun.
               </p>
-              <Button size="lg" className="w-full gap-2 text-base font-semibold" onClick={() => window.location.href = '/login'}>
-                <LogIn className="h-5 w-5" />
+              <Button
+                size="lg"
+                className="w-full gap-2 text-sm font-bold rounded-xl"
+                onClick={() => (window.location.href = "/login")}
+              >
+                <LogIn className="h-4 w-4" />
                 Daxil Ol səhifəsinə keç
               </Button>
             </Card>
