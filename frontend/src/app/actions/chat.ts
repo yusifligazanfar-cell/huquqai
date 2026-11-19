@@ -746,6 +746,9 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       /(emek muqaviles|is muqaviles|isden cixar|isden azad|isden qovul)/i.test(combinedQNorm) &&
       /(legv|xitam|cixar|azad|qovul)/i.test(combinedQNorm) &&
       !/\b69\b|\boz erizesi\b/.test(combinedQNorm);
+    const isTheftOrPropertyLossQuery =
+      /(ogurlan|ogurluq|ogurlayib|xirda talama|cibgir)/i.test(combinedQNorm) &&
+      !/(menimse|israf|saxta xidmet)/i.test(combinedQNorm);
     const hasMediationChunk = retrievedChunks.slice(0, 8).some((c) => c.documentId === "41828" || c.lawName.toLowerCase().includes("mediasiya"));
     const hasAile34 = retrievedChunks.slice(0, 8).some((c) => c.lawId === "aile" && (c.articleNumber === "34" || c.articleNumber.startsWith("34.")));
 
@@ -813,6 +816,9 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       em71Chunk,
       em77Chunk,
       em83Chunk,
+      cm177TheftChunk,
+      ixm227Chunk,
+      cpm207Chunk,
     ] = await Promise.all([
       isRemoteRagConfigured()
         ? fetchRemoteJudicialSearch(
@@ -922,6 +928,15 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       isLaborTerminationQuery
         ? fetchCompanionArticle("46943", "83", "emek")
         : Promise.resolve(null),
+      isTheftOrPropertyLossQuery
+        ? fetchCompanionArticle("46947", "177", "cinayet")
+        : Promise.resolve(null),
+      isTheftOrPropertyLossQuery
+        ? fetchCompanionArticle("46960", "227", "inzibati_xetalar")
+        : Promise.resolve(null),
+      isTheftOrPropertyLossQuery
+        ? fetchCompanionArticle("46950", "207", "cinayet_prosessual")
+        : Promise.resolve(null),
     ]);
 
     const cmCompanionChunks = [
@@ -943,6 +958,9 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       em71Chunk,
       em77Chunk,
       em83Chunk,
+      cm177TheftChunk,
+      ixm227Chunk,
+      cpm207Chunk,
     ].filter((c): c is StructuredChunk => Boolean(c));
     const companionKeys = new Set(cmCompanionChunks.map((c) => `${c.lawId}::${c.articleNumber}`));
     const dedupedRetrievedChunks =

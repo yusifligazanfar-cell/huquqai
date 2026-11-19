@@ -58,6 +58,8 @@ const AZ_STOP_WORDS = new Set([
   "basqa", "ederse", "etdikde", "olarsa", "olduqda", "bilermi", "biler", "olarmi",
   "dasiya", "dasiyir", "dasiyirmi", "yaranir", "yaranirmi", "dusur", "dusurmu",
   "sayilir", "sayilirmi", "tutulur", "tutulurmu",
+  "bilerem", "bilersen", "bilerik", "ede", "edim", "edek", "olub", "oldu",
+  "menim", "senin", "onun", "bizim", "sizin", "meni", "sene", "mene", "ona", "bize", "size",
 ]);
 
 const GENERIC_META = new Set([
@@ -107,11 +109,13 @@ const SUFFIXES = [
   "inin", "unun", "ndan", "nden",
   "sini", "sunu", "sina", "sine",
   "liyi", "lugu", "luyu",
+  "lanib", "lenib", "ayib", "eyib",
   "liq", "lik", "luq", "luk",
   "ici", "ucu",
   "siz", "suz",
   "dir", "dur", "mis", "maq", "mek",
   "dan", "den", "nin", "nun", "da", "de",
+  "ib", "ub", "im", "um",
   "si", "su", "ni", "nu", "ya", "ye", "ca", "ce",
   "li", "lu", "la", "le", "ma", "me", "i", "u", "a", "e",
 ];
@@ -212,6 +216,14 @@ const STATUTORY_STEM_SYNONYMS: Record<string, string[]> = {
   alkoqollu: ["serxos"],
   icki: ["serxos"],
   masin: ["neqliyyat", "vasite"],
+  ogurl: ["ogurluq", "talama"],
+  ogurla: ["ogurluq", "talama"],
+  ogurlan: ["ogurluq", "talama"],
+  ogurlanib: ["ogurluq", "talama"],
+  ogurlayib: ["ogurluq", "talama"],
+  cibgir: ["ogurluq", "talama"],
+  doyul: ["saglamliq", "zerer", "xuliqan"],
+  cizib: ["emlak", "zerer", "mehv"],
 };
 
 function isAskingAboutRepealedLaw(queryNorm: string): boolean {
@@ -454,9 +466,8 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
   );
 
   // Article maps for primary target laws (fallback to core Codes if no explicit law was detected)
-  const targetMapIds = (
-    targetDocs.length > 0 ? targetDocs : ["46944", "46947", "46960", "46943", "46946"]
-  ).slice(0, 3);
+  const targetMapIds =
+    targetDocs.length > 0 ? targetDocs.slice(0, 3) : ["46947", "46960", "46944", "46943", "46946"];
 
   const [idxShards, titleShards, artMaps] = await Promise.all([
     Promise.all(

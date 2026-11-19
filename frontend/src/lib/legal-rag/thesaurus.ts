@@ -594,5 +594,21 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
       "cinayet mecellesi madde 156", "cinayet mecellesi madde 271"
     ],
     priorityArticles: ["156", "271", "272", "273"]
+  },
+  {
+    id: "criminal_theft_and_petty_theft",
+    domain: "Cinayət və İnzibati xətalar hüququ",
+    primaryLawId: "cinayet",
+    primaryDocId: "46947",
+    triggerPhrases: [
+      "ogurlan", "ogurluq", "ogurlayib", "ogurlanib", "cibgirlik", "xirda talama"
+    ],
+    expandedTerms: [
+      "ogurluq ozgenin emlakini gizli olaraq talama",
+      "xirda talama ogurlama yolu ile ozgesinin emlakini talama",
+      "toredilmis cinayetler haqqinda melumatlara baxilmasi",
+      "cinayet mecellesi madde 177", "inzibati xetalar mecellesi madde 227"
+    ],
+    priorityArticles: ["177", "227", "207", "37"]
   }
 ];
