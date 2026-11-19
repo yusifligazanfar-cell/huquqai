@@ -1313,6 +1313,9 @@ async function callCerebrasEdge(
       temperature: options.temperature,
       max_tokens: options.maxTokens,
     };
+    if (model.startsWith("qwen")) {
+      payload.reasoning_effort = "none";
+    }
     if (options.jsonMode) {
       payload.response_format = { type: "json_object" };
     }
