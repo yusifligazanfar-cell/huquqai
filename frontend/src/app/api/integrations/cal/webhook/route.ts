@@ -28,9 +28,7 @@ export async function POST(req: Request) {
 
     if (consultationId) {
       let nextStatus: string | null = null
-      if (triggerEvent === "BOOKING_CREATED" || triggerEvent === "BOOKING_RESCHEDULED") {
-        nextStatus = "Qəbul edildi"
-      } else if (triggerEvent === "BOOKING_CANCELLED" || triggerEvent === "BOOKING_REJECTED") {
+      if (triggerEvent === "BOOKING_CANCELLED" || triggerEvent === "BOOKING_REJECTED") {
         nextStatus = "İmtina edildi"
       }
       if (nextStatus) {
