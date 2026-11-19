@@ -740,6 +740,10 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     const isDefamationOrInsultQuery =
       /(tehqir|bohtan|defamasiya|seref ve leyaqet|saxta profil|nalayiq formada)/i.test(combinedQNorm) &&
       !/(doyul|qetl|oldur|qebir|bayraq|gerb|mehkemeye hormetsizlik)/i.test(combinedQNorm);
+    const isLaborTerminationQuery =
+      /(emek muqaviles|is muqaviles|isden cixar|isden azad|isden qovul)/i.test(combinedQNorm) &&
+      /(legv|xitam|cixar|azad|qovul)/i.test(combinedQNorm) &&
+      !/\b69\b|\boz erizesi\b/.test(combinedQNorm);
     const hasMediationChunk = retrievedChunks.slice(0, 8).some((c) => c.documentId === "41828" || c.lawName.toLowerCase().includes("mediasiya"));
     const hasAile34 = retrievedChunks.slice(0, 8).some((c) => c.lawId === "aile" && (c.articleNumber === "34" || c.articleNumber.startsWith("34.")));
 
@@ -800,6 +804,12 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       cpm37Chunk,
       ixm510Chunk,
       mm23Chunk,
+      em68Chunk,
+      em69Chunk,
+      em70Chunk,
+      em71Chunk,
+      em77Chunk,
+      em83Chunk,
     ] = await Promise.all([
       isRemoteRagConfigured()
         ? fetchRemoteJudicialSearch(
@@ -810,11 +820,15 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
                 ? Array.from(new Set(["cinayet", ...topLawIds]))
                 : isDefamationOrInsultQuery
                 ? Array.from(new Set(["cinayet", "cinayet_prosessual", "mulki", ...topLawIds]))
+                : isLaborTerminationQuery
+                ? Array.from(new Set(["emek", ...topLawIds]))
                 : topLawIds,
               matchedArticles: isCriminalEmbezzlementOrOfficialKazus
                 ? Array.from(new Set(["179", "313", "308", "178", ...topArtNums]))
                 : isDefamationOrInsultQuery
                 ? Array.from(new Set(["148", "148.1", "147", "37", "23", ...topArtNums]))
+                : isLaborTerminationQuery
+                ? Array.from(new Set(["68", "69", "70", "71", "77", "83", ...topArtNums]))
                 : topArtNums,
               matchedPairs: isCriminalEmbezzlementOrOfficialKazus
                 ? [
@@ -829,6 +843,14 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
                     { law: "cinayet", article: "147" },
                     { law: "cinayet_prosessual", article: "37" },
                     { law: "mulki", article: "23" },
+                    ...topPairs,
+                  ]
+                : isLaborTerminationQuery
+                ? [
+                    { law: "emek", article: "68" },
+                    { law: "emek", article: "69" },
+                    { law: "emek", article: "70" },
+                    { law: "emek", article: "71" },
                     ...topPairs,
                   ]
                 : topPairs,
@@ -876,6 +898,24 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       isDefamationOrInsultQuery
         ? fetchCompanionArticle("46944", "23", "mulki")
         : Promise.resolve(null),
+      isLaborTerminationQuery
+        ? fetchCompanionArticle("46943", "68", "emek")
+        : Promise.resolve(null),
+      isLaborTerminationQuery
+        ? fetchCompanionArticle("46943", "69", "emek")
+        : Promise.resolve(null),
+      isLaborTerminationQuery
+        ? fetchCompanionArticle("46943", "70", "emek")
+        : Promise.resolve(null),
+      isLaborTerminationQuery
+        ? fetchCompanionArticle("46943", "71", "emek")
+        : Promise.resolve(null),
+      isLaborTerminationQuery
+        ? fetchCompanionArticle("46943", "77", "emek")
+        : Promise.resolve(null),
+      isLaborTerminationQuery
+        ? fetchCompanionArticle("46943", "83", "emek")
+        : Promise.resolve(null),
     ]);
 
     const cmCompanionChunks = [
@@ -890,6 +930,12 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       cpm37Chunk,
       ixm510Chunk,
       mm23Chunk,
+      em68Chunk,
+      em69Chunk,
+      em70Chunk,
+      em71Chunk,
+      em77Chunk,
+      em83Chunk,
     ].filter((c): c is StructuredChunk => Boolean(c));
     const companionKeys = new Set(cmCompanionChunks.map((c) => `${c.lawId}::${c.articleNumber}`));
     const dedupedRetrievedChunks =
@@ -912,8 +958,8 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
         : dedupedRetrievedChunks;
     const baseStatutory = selectDiverseContextChunks(
       relevantRetrieved.length >= 3 ? relevantRetrieved : dedupedRetrievedChunks,
-      cmCompanionChunks.length > 0 ? 3 : aile34Chunk ? 5 : 6,
-      lawMatch.confidence === "explicit"
+      cmCompanionChunks.length >= 5 ? 1 : cmCompanionChunks.length > 0 ? 3 : aile34Chunk ? 5 : 6,
+      lawMatch.confidence === "explicit" || lawMatch.confidence === "strong"
     );
     const contextChunks: StructuredChunk[] = [
       ...cmCompanionChunks,
