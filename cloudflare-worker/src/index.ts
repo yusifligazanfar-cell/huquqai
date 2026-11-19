@@ -1385,7 +1385,7 @@ async function handleRagAnswer(body: Record<string, unknown>, env: Env): Promise
       content: (
         systemPrompt ||
         "Sən Azərbaycan Respublikasının qanunvericiliyi üzrə rəsmi e-qanun mənbələrinə əsaslanan hüquqşünas analitikisən."
-      ).slice(0, 8000),
+      ).slice(0, 12000),
     },
   ];
 
