@@ -176,7 +176,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             {post.category}
           </span>
           <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Eye className="h-3 w-3 ml-2" /> {post.views_count + 1}
+            <Eye className="h-3 w-3 ml-2" /> {post.views_count || 0}
           </span>
         </div>
         
