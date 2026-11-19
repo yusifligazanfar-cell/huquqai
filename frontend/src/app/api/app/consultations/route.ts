@@ -37,10 +37,53 @@ export async function POST(req: Request) {
     if (!clientId || !body.lawyer_id) {
       return NextResponse.json({ error: "client_id və lawyer_id tələb olunur" }, { status: 400 })
     }
-    const { ok, status, data } = await cfFetch("/app/consultations", {
-      method: "POST",
-      body: JSON.stringify({ ...body, client_id: clientId }),
-    })
+    const { ok, status, data } = await cfFetch<{ success?: boolean; consultation?: any }>(
+      "/app/consultations",
+      {
+        method: "POST",
+        body: JSON.stringify({ ...body, client_id: clientId }),
+      }
+    )
+
+    if (ok && data?.consultation?.id && process.env.CAL_API_KEY && body.preferred_date && body.preferred_time) {
+      try {
+        const userRes = await cfFetch<{ user?: any }>(
+          `/app/auth/user?id=${encodeURIComponent(clientId)}`
+        )
+        const clientEmail = userRes?.data?.user?.email || session?.email
+        const clientName =
+          `${userRes?.data?.user?.name || ""} ${userRes?.data?.user?.surname || ""}`.trim() ||
+          "HuquqAI Müştəri"
+
+        if (clientEmail) {
+          const eventTypeId = Number(process.env.CAL_EVENT_TYPE_ID || 6391794)
+          const startIso = `${body.preferred_date}T${body.preferred_time}:00+04:00`
+          await fetch("https://api.cal.com/v2/bookings", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${process.env.CAL_API_KEY}`,
+              "cal-api-version": "2024-08-13",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              start: startIso,
+              eventTypeId,
+              attendee: {
+                name: clientName,
+                email: clientEmail,
+                timeZone: "Asia/Baku",
+                language: "en",
+              },
+              metadata: {
+                consultationId: String(data.consultation.id),
+                lawyerId: String(body.lawyer_id),
+              },
+            }),
+          }).catch(() => {})
+        }
+      } catch {}
+    }
+
     return NextResponse.json(data, { status: ok ? 200 : status || 500 })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || "Server xətası" }, { status: 500 })
