@@ -5,9 +5,11 @@ import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Mail, ArrowRight, Loader2, Scale, LogIn, UserPlus } from "lucide-react"
+import { Mail, ArrowRight, Loader2, Scale, LogIn, UserPlus, User } from "lucide-react"
 
 export default function LoginPage() {
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login")
+  const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [isOtpSent, setIsOtpSent] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -25,6 +27,14 @@ export default function LoginPage() {
       email,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
+        ...(authMode === "signup"
+          ? {
+              data: {
+                role: "citizen",
+                ...(fullName.trim() ? { full_name: fullName.trim() } : {}),
+              },
+            }
+          : {}),
       },
     })
 
@@ -33,7 +43,10 @@ export default function LoginPage() {
     } else {
       setIsOtpSent(true)
       setMessage({
-        text: "Giriş linki e-poçt ünvanınıza göndərildi! Zəhmət olmasa yoxlayın.",
+        text:
+          authMode === "signup"
+            ? "Qeydiyyat linki e-poçt ünvanınıza göndərildi! Linkə klikləyərək hesabınızı aktivləşdirin."
+            : "Giriş linki e-poçt ünvanınıza göndərildi! Zəhmət olmasa yoxlayın.",
         type: "success",
       })
     }
@@ -90,11 +103,46 @@ export default function LoginPage() {
               <img src="/logo.png" alt="HÜQUQ AI Logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-950 dark:text-white">
-              Xoş gəldiniz
+              {authMode === "signup" ? "Hesab Yaradın" : "Xoş gəldiniz"}
             </h1>
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1.5">
-              Şəxsi hüquq köməkçinizə daxil olun
+              {authMode === "signup"
+                ? "Adi müştəri kimi qeydiyyatdan keçin"
+                : "Şəxsi hüquq köməkçinizə daxil olun"}
             </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5 p-1 mb-6 rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("login")
+                setMessage(null)
+                setIsOtpSent(false)
+              }}
+              className={`h-10 rounded-lg text-sm font-bold transition-all ${
+                authMode === "login"
+                  ? "bg-white dark:bg-slate-800 text-slate-950 dark:text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              }`}
+            >
+              Daxil Ol
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("signup")
+                setMessage(null)
+                setIsOtpSent(false)
+              }}
+              className={`h-10 rounded-lg text-sm font-bold transition-all ${
+                authMode === "signup"
+                  ? "bg-white dark:bg-slate-800 text-slate-950 dark:text-white shadow-sm"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+              }`}
+            >
+              Qeydiyyat
+            </button>
           </div>
 
           {message && (
@@ -111,6 +159,19 @@ export default function LoginPage() {
 
           {!isOtpSent ? (
             <form onSubmit={handleSendOtp} className="space-y-4 mb-6">
+              {authMode === "signup" && (
+                <div className="relative group/input">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
+                  <Input
+                    type="text"
+                    placeholder="Adınız və Soyadınız"
+                    className="pl-12 h-13 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-base rounded-xl shadow-sm transition-all"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
               <div className="relative group/input">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
                 <Input
@@ -128,7 +189,11 @@ export default function LoginPage() {
                 disabled={loading}
               >
                 {loading && <Loader2 className="h-5 w-5 animate-spin mr-2" />}
-                {loading ? "Göndərilir..." : "Giriş Linki (OTP) Göndər"}
+                {loading
+                  ? "Göndərilir..."
+                  : authMode === "signup"
+                    ? "Qeydiyyatdan Keç (Link Göndər)"
+                    : "Giriş Linki (OTP) Göndər"}
                 {!loading && <ArrowRight className="h-5 w-5 ml-2" />}
               </Button>
             </form>
