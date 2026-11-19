@@ -1,4 +1,4 @@
-const DEFAULT_DB_WORKER_URL = "https://huquqai-db.yusifliqezenfer90.workers.dev"
+const DEFAULT_DB_WORKER_URL = "https://huquqai-db.huquqai-rag.workers.dev"
 
 export function getCloudflareDbUrl() {
   return (process.env.CLOUDFLARE_DB_URL || DEFAULT_DB_WORKER_URL).replace(/\/+$/, "")
