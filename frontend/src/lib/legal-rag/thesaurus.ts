@@ -610,5 +610,23 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
       "cinayet mecellesi madde 177", "inzibati xetalar mecellesi madde 227"
     ],
     priorityArticles: ["177", "227", "207", "37"]
+  },
+  {
+    id: "pet_animal_injury_or_killing",
+    domain: "İnzibati xətalar, Mülki və Cinayət hüququ",
+    primaryLawId: "inzibati_xetalar",
+    primaryDocId: "46960",
+    triggerPhrases: [
+      "ev heyvani", "heyvanimi", "heyvanini", "itimi", "pisiyimi", "heyvan oldur",
+      "heyvanlarla rehmsiz", "heyvani vurub", "heyvan telef"
+    ],
+    expandedTerms: [
+      "heyvanlarla rehmsiz reftar edilmesi heyvanlarin telef edilmesine sebeb olduqda",
+      "emlaki ehtiyatsizliqdan mehv etme ve ya zedeleme",
+      "bitkiler ve heyvanlar esyalarin huquqi veziyyeti",
+      "mulki huquq pozuntulari deliktler zererin evezi",
+      "inzibati xetalar mecellesi madde 274", "cinayet mecellesi madde 187", "mulki mecelle madde 135", "mulki mecelle madde 1096"
+    ],
+    priorityArticles: ["274", "135", "1096", "187", "186"]
   }
 ];

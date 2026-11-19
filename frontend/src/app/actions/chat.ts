@@ -749,6 +749,9 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     const isTheftOrPropertyLossQuery =
       /(ogurlan|ogurluq|ogurlayib|xirda talama|cibgir)/i.test(combinedQNorm) &&
       !/(menimse|israf|saxta xidmet)/i.test(combinedQNorm);
+    const isPetOrAnimalHarmQuery =
+      /(heyvan|itimi|pisiyimi|kopek|pisik)/i.test(combinedQNorm) &&
+      /(oldur|vur|telef|rehmsiz|ezab|sikest|zerer|ceza)/i.test(combinedQNorm);
     const hasMediationChunk = retrievedChunks.slice(0, 8).some((c) => c.documentId === "41828" || c.lawName.toLowerCase().includes("mediasiya"));
     const hasAile34 = retrievedChunks.slice(0, 8).some((c) => c.lawId === "aile" && (c.articleNumber === "34" || c.articleNumber.startsWith("34.")));
 
@@ -819,6 +822,11 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       cm177TheftChunk,
       ixm227Chunk,
       cpm207Chunk,
+      ixm274Chunk,
+      cm187Chunk,
+      cm177PetNoteChunk,
+      mm135Chunk,
+      mm1096Chunk,
     ] = await Promise.all([
       isRemoteRagConfigured()
         ? fetchRemoteJudicialSearch(
@@ -937,6 +945,21 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       isTheftOrPropertyLossQuery
         ? fetchCompanionArticle("46950", "207", "cinayet_prosessual")
         : Promise.resolve(null),
+      isPetOrAnimalHarmQuery
+        ? fetchCompanionArticle("46960", "274", "inzibati_xetalar")
+        : Promise.resolve(null),
+      isPetOrAnimalHarmQuery
+        ? fetchCompanionArticle("46947", "187", "cinayet")
+        : Promise.resolve(null),
+      isPetOrAnimalHarmQuery
+        ? fetchCompanionArticle("46947", "177", "cinayet", "cm177_note")
+        : Promise.resolve(null),
+      isPetOrAnimalHarmQuery
+        ? fetchCompanionArticle("46944", "135", "mulki")
+        : Promise.resolve(null),
+      isPetOrAnimalHarmQuery
+        ? fetchCompanionArticle("46944", "1096", "mulki")
+        : Promise.resolve(null),
     ]);
 
     const cmCompanionChunks = [
@@ -961,6 +984,11 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       cm177TheftChunk,
       ixm227Chunk,
       cpm207Chunk,
+      ixm274Chunk,
+      cm187Chunk,
+      cm177PetNoteChunk,
+      mm135Chunk,
+      mm1096Chunk,
     ].filter((c): c is StructuredChunk => Boolean(c));
     const companionKeys = new Set(cmCompanionChunks.map((c) => `${c.lawId}::${c.articleNumber}`));
     const dedupedRetrievedChunks =

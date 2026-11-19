@@ -110,6 +110,8 @@ const SUFFIXES = [
   "sini", "sunu", "sina", "sine",
   "liyi", "lugu", "luyu",
   "lanib", "lenib", "ayib", "eyib",
+  "imiz", "iniz", "lari", "leri",
+  "imi", "umu", "ini", "unu",
   "liq", "lik", "luq", "luk",
   "ici", "ucu",
   "siz", "suz",
@@ -224,6 +226,9 @@ const STATUTORY_STEM_SYNONYMS: Record<string, string[]> = {
   cibgir: ["ogurluq", "talama"],
   doyul: ["saglamliq", "zerer", "xuliqan"],
   cizib: ["emlak", "zerer", "mehv"],
+  heyvan: ["heyvanlar", "rehmsiz", "telef"],
+  oldur: ["telef", "mehv"],
+  bilmeden: ["ehtiyatsizliq"],
 };
 
 function isAskingAboutRepealedLaw(queryNorm: string): boolean {
@@ -1925,7 +1930,7 @@ Tapşırıq:
    - "is_follow_up": true yaz və "standalone_query"-də əvvəlki mövzunun əsas hüquqi kontekstini yeni sualla birləşdirərək tam müstəqil axtarış sorğusu yarat.
 3. Əgər qısa müstəqil yeni mövzudursa: "is_follow_up": false yaz.
 - Qanun ID-ləri yalnız bunlar ola bilər: aile, mulki, emek, inzibati_xetalar, yol_hereketi, cinayet, cinayet_prosessual, mulki_prosessual, vergi, menzil, torpaq, istehlakci, gomruk, miqrasiya, konstitusiya.
-YALNIZ ETİBARLI JSON QAYTAR:
+YALNIZ ETİBARLI JSON QAYTAR (bütün "issues" mətnlərini YALNIZ Azərbaycan dilində yaz, əsla ingilis dilində yazma!):
 {"is_follow_up": true/false, "standalone_query": "...", "same_case_laws": ["..."], "topic_summary": "..."}`;
 
   const userPrompt = compactHist
@@ -1993,7 +1998,7 @@ Aşağıdakı 6 KRİTİK xətanı yoxla və YALNIZ JSON qaytar:
 5. MADDƏ–SANKSİYA ZİDDİYYƏTİ: Hüquqi nəticə ilə istinad edilən maddənin məzmunu və sanksiyası arasında ziddiyyət varmı?
 6. MƏNBƏ ÇATIŞMAZLIĞI: Əgər [MƏNBƏ 1..N] mətnləri istifadəçinin konkret sualına heç bir real hüquqi cavab/norma vermirsə (məs., tamam başqa sahəyə aid təsadüfi maddələrdirsə) və qaralama cavab özündən ümumi fikir/norma uydurubsa -> "insufficient_sources": true yaz!
 
-YALNIZ ETİBARLI JSON QAYTAR:
+YALNIZ ETİBARLI JSON QAYTAR (bütün "issues" mətnlərini YALNIZ Azərbaycan dilində yaz, əsla ingilis dilində yazma!):
 {"passed": true/false, "insufficient_sources": true/false, "repealed_misuse": true/false, "issues": ["konkret qısa xəta təsviri (əgər varsa)"]}
 QEYD 1: Kiçik üslub fərqlərinə görə səhv yazma; yalnız REAL faktiki/normativ/istinad/məna xətası varsa passed: false et.
 QEYD 2: Əgər mənbədə əsas qüvvədə olan qayda (məs., 10.1: 18 yaş) VƏ ləğv olunmuş bənd ([QÜVVƏDƏN DÜŞÜB]) mövcuddursa, bu suala "xeyr, əvvəlki istisna ləğv edilib" cavabını vermək üçün KİFAYƏT mənbədir (insufficient_sources: false)!`;
