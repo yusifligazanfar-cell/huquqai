@@ -170,10 +170,20 @@ const GENERIC_PROCEDURAL_TOKENS = new Set([
   'huquqi', 'qayda', 'qaydasi', 'normativ', 'akt', 'respublikasinin', 'azerbaycan'
 ]);
 
-function cleanClauseNoise(text: string): string {
+function sanitizeStatutoryExcerpt(text: string): string {
   return text
-    .replace(/\[\d+\]/g, '')
     .replace(/\u2011|\u2010|\u2212/g, '-')
+    .replace(/\bgörəyüz\b/gi, 'görə yüz')
+    .replace(/\bgündənüçay\b/gi, 'gündən üç ay')
+    .replace(
+      /(?:\s+\d+(?:\.\d+)*(?:-\d+)?\.)?\s*\n?Maddə\s+\d+(?:-\d+)?\.[^\n]*?\b\d+(?:\.\d+)*(?:-\d+)?\n(?![0-9]+\.)[^\n]*(?:\n(?!\d+(?:\.\d+)*(?:-\d+)?\.\s)[a-zəöüğışç\d][^\n]*)?(?=\s+\d+(?:\.\d+)*(?:-\d+)?\.)/gi,
+      '\n'
+    );
+}
+
+function cleanClauseNoise(text: string): string {
+  return sanitizeStatutoryExcerpt(text)
+    .replace(/\[\d+\]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -645,7 +655,8 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     const contextText = contextChunks
       .map((c, i) => {
         const sliceLen = i < 3 ? 3400 : 1600;
-        return `[MƏNBƏ ${i + 1}: ${c.articleTitle}] (Rəsmi URL: ${c.sourceUrl})\n${c.content.substring(0, sliceLen)}`;
+        const cleanBody = sanitizeStatutoryExcerpt(c.content).substring(0, sliceLen);
+        return `[MƏNBƏ ${i + 1}: ${c.articleTitle}] (Rəsmi URL: ${c.sourceUrl})\n${cleanBody}`;
       })
       .join("\n\n---\n\n")
       .slice(0, 14500);
@@ -654,15 +665,15 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     const systemPrompt = `Sən HuquqAI — Azərbaycan Respublikasının qanunvericiliyinə (e-qanun.ai rəsmi mətnlərinə) əsaslanan peşəkar hüquqşünas sistemisən.
 
 DƏYİŞMƏZ QAYDALAR:
-1. YALNIZ aşağıdakı [MƏNBƏ X] mətnlərində sözbəsöz olan faktları, cərimə məbləğlərini, faizləri, gün/ay/il müddətlərini və dövlət orqanlarını yaz. Heç nə uydurma!
+1. YALNIZ aşağıdakı [MƏNBƏ X] mətnlərində sözbəsöz olan faktları, cərimə məbləğlərini, faizləri, gün/ay/il müddətlərini və dövlət orqanlarını yaz. Heç nə uydurma! Hər bənd nömrəsi özündən SONRAKI cümləyə aiddir.
 2. BƏNDLƏRİN MƏZMUNUNU VƏ ŞƏRTİNİ DƏQİQ OXU:
-   - Məsələn: "İstehlakçıların hüquqlarının müdafiəsi haqqında Qanun Maddə 15" = LAZIMI KEYFİYYƏTLİ (qüsursuz) qeyri-qida malının ölçü/rəng/forma/fasonuna görə 14 günə dəyişdirilməsidir ("keyfiyyətsiz/qüsurlu mal" isə Maddə 7-dir — ikisini qarışdırma!).
-   - "Vergi Məcəlləsi Maddə 57.1" = vergi hesabatının vaxtında verilməməsinə görə 40 manat maliyyə sanksiyasıdır; "57.1-1" YALNIZ kənd təsərrüfatı torpaqları üzrə sosial sığorta hesabatına aiddir — ümumi bəyannaməyə aid etmə!
-   - "Mülki Məcəllə Maddə 1322" = vərəsəlik şəhadətnaməsinin 6 aydan sonra verilməsidir; mirasın açılması vaxtı Maddə 1145-1146 (ölüm/məhkəmə qərarı günü), qəbul müddəti Maddə 1246-dır.
-   - "Ailə Məcəlləsi Maddə 2.2" ümumi prinsiplərdir — əmlak bölgüsünə yazma! Birgə əmlak və bölgü Maddə 32, 34, 36, 37-dir.
-   - "Əmək Məcəlləsi Maddə 70" ləğvetmə əsaslarıdır — şikayət orqanı və iddia müddəti Maddə 294, 296 (məhkəməyə 1 təqvim ayı) və işə bərpa Maddə 300-dür!
-   - İnzibati Xətalar Məcəlləsində konkret əməl və cərimə (məs: 327.2 — 100 manat; 212.4 — 300/700 manat) kontekstdə varsa birbaşa onu yaz; Cinayət Məcəlləsini qarışdırma. Həmçinin piyada işıqfor qaydası 338.1.3 deyil; 338.1.3 sayrışan işıqlı xüsusi nəqliyyat vasitəsinə yol verilməməsidir.
-3. Bİtişik OCR sözlərini düzgün oxu ("görəyüz manat" = 100 manat, "gündənüçay" = 3 ay); məbləğ mətndə varsa əsla "göstərilməyib" yazma.
+   - İstehlakçı Qanunu Maddə 15 = LAZIMI KEYFİYYƏTLİ (yəni QÜSURSUZ/SAĞLAM, lakin forması, ölçüsü, fasonu və ya rəngi uyğun gəlməyən) qeyri-qida malının 14 gün ərzində dəyişdirilməsidir — ƏSLA "lazımi keyfiyyətli olmayan" yazma! (Qüsurlu/keyfiyyətsiz mal Maddə 7-dir.)
+   - Vergi Məcəlləsi Maddə 57.1 = ümumi vergi hesabatının (bəyannaməsinin) vaxtında verilməməsinə görə 40 manat maliyyə sanksiyasıdır. Maddə 57.1-1 (3%/6%) yalnız kənd təsərrüfatı torpaqlarının sosial sığortasına, 57.1-2 (10000 manat) isə yalnız 16.9-cu maddə hallarına aiddir — ümumi bəyannamə gecikməsi sualında 3%/6% və ya 10000 manat yazma!
+   - Mülki Məcəllə Maddə 1322 = vərəsəlik şəhadətnaməsinin 6 aydan sonra verilməsidir; mirasın açılması vaxtı Maddə 1145-1146 (ölüm/məhkəmə qərarı günü), qəbul müddəti Maddə 1246-dır.
+   - Ailə Məcəlləsi Maddə 2.2 ümumi prinsiplərdir — əmlak bölgüsünə yazma! Birgə əmlak və bölgü Maddə 32, 34, 36, 37-dir.
+   - Əmək Məcəlləsi Maddə 70 ləğvetmə əsaslarıdır — şikayət orqanı və iddia müddəti Maddə 294, 296 (məhkəməyə 1 təqvim ayı) və işə bərpa Maddə 300-dür!
+   - İnzibati Xətalar Məcəlləsi: 327.2 = svetoforun qadağanedici işarəsində keçmə (100 manat); 338.1.3 sayrışan işıqlı xüsusi nəqliyyata aiddir (piyada işıqforu deyil!). 212.4 = tütün tullantısı atma (300 manat); 212.4-1 = təkrar (700 manat və ya 60-100 saat ictimai işlər); 212.5 = vəzifəli/hüquqi şəxslərdir.
+3. Məbləğ və ya müddət kontekstdə varsa əsla "göstərilməyib" yazma; "görə yüz" = 100 manatdır.
 4. MADDƏ NÖMRƏLƏRİNİ HƏMİŞƏ NÖQTƏ İLƏ YAZ (məs: "Maddə 36.1", "Maddə 37.1", "Maddə 76.1.1" — tire/defis işlətmə). Nömrəsi yalnız sənəddə olan 2–4 ən uyğun maddəni seç, təkrarlama.
 5. DİL VƏ FORMAT:
    - Saf Azərbaycan dilində yaz (ingilis sözləri işlətmə). Hər cümlə nöqtə ilə tam bitsin.
