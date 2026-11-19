@@ -785,7 +785,7 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
         ? fetchCompanionArticle("41828", "28", "eqanun_41828")
         : Promise.resolve(null),
       isDivorcePropertyQuery && !hasAile34
-        ? fetchCompanionArticle("46947" === "46946" ? "46946" : "46946", "34", "aile")
+        ? fetchCompanionArticle("46946", "34", "aile")
         : Promise.resolve(null),
       isCriminalEmbezzlementOrOfficialKazus
         ? fetchCompanionArticle("46947", "179", "cinayet")
