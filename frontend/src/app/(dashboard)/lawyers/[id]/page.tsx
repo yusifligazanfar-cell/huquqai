@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server"
+import { cfFetch } from "@/lib/cloudflare-db"
 import { Shield, MapPin, Briefcase, Star, Clock, FileText, Share2, Bookmark, GraduationCap, Building2, HelpCircle } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -10,14 +11,21 @@ export default async function LawyerProfilePage({ params }: { params: Promise<{ 
   const supabase = await createClient()
   const { id } = await params
 
-  const { data: lawyer, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', id)
-    .eq('role', 'lawyer')
-    .single()
+  let lawyer: any = null
+  const d1Res = await cfFetch<{ lawyer?: any }>(`/app/lawyers/${encodeURIComponent(id)}`)
+  if (d1Res.ok && d1Res.data?.lawyer) {
+    lawyer = d1Res.data.lawyer
+  } else {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', id)
+      .eq('role', 'lawyer')
+      .single()
+    lawyer = data
+  }
 
-  if (error || !lawyer) {
+  if (!lawyer) {
     return notFound()
   }
 

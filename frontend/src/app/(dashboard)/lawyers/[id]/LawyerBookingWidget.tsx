@@ -128,22 +128,35 @@ export default function LawyerBookingWidget({
     const formattedDate = `${selectedDate.getDate()} ${azMonths[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`
     const finalDescription = `Təklif edilən vaxt: ${formattedDate} - Saat: ${selectedTime}\n\nProblemin təsviri:\n${description}`
 
-    const { error } = await supabase
-      .from('consultations')
-      .insert({
-        client_id: session.user.id,
-        lawyer_id: lawyerId,
-        problem_description: finalDescription,
-        preferred_date: selectedDateKey,
-        preferred_time: selectedTime,
-        status: 'Gözləyir'
-      })
+    const [sbRes, d1Res] = await Promise.all([
+      supabase
+        .from('consultations')
+        .insert({
+          client_id: session.user.id,
+          lawyer_id: lawyerId,
+          problem_description: finalDescription,
+          preferred_date: selectedDateKey,
+          preferred_time: selectedTime,
+          status: 'Gözləyir'
+        }),
+      fetch('/api/app/consultations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          client_id: session.user.id,
+          lawyer_id: lawyerId,
+          problem_description: finalDescription,
+          preferred_date: selectedDateKey,
+          preferred_time: selectedTime,
+        }),
+      }).then(r => r.json()).catch(() => null),
+    ])
 
     setIsSubmitting(false)
 
-    if (error) {
-      console.error(error)
-      alert("Xəta baş verdi: " + error.message)
+    if (sbRes.error && !d1Res?.success) {
+      console.error(sbRes.error)
+      alert("Xəta baş verdi: " + sbRes.error.message)
     } else {
       // Locally mark this slot as booked immediately
       setBookedSlots(prev => ({

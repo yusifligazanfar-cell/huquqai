@@ -107,26 +107,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .select('*')
         .eq('id', session.user.id)
         .single()
-        
-      if (profileData) {
+
+      // Sync & read authoritative verification/schedule state from Cloudflare D1
+      let d1Profile: any = null
+      try {
+        const syncPayload = profileData
+          ? {
+              ...profileData,
+              email: session.user.email || profileData.email || '',
+              touch_login: true,
+            }
+          : {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: meta?.full_name || meta?.name || session.user.email?.split('@')[0] || 'İstifadəçi',
+              avatar_url: meta?.avatar_url || meta?.picture || '',
+              role: 'client',
+              touch_login: true,
+            }
+        const d1Res = await fetch('/api/app/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(syncPayload),
+        })
+        if (d1Res.ok) {
+          const d1Json = await d1Res.json()
+          d1Profile = d1Json?.profile || null
+        }
+      } catch (d1Err) {
+        console.warn('Cloudflare D1 profile sync skipped:', d1Err)
+      }
+
+      const merged = d1Profile || profileData
+      if (merged) {
         setUser({
-          name: profileData.name || meta?.full_name || meta?.name || session.user.email?.split('@')[0] || 'İstifadəçi',
+          name: merged.name || meta?.full_name || meta?.name || session.user.email?.split('@')[0] || 'İstifadəçi',
           email: session.user.email || '',
-          avatar: profileData.avatar_url || meta?.avatar_url || meta?.picture || '',
-          coverImage: profileData.cover_url || '',
-          bio: profileData.bio || '',
-          role: profileData.role || 'client',
-          specialties: profileData.specialties || [],
-          hourlyRate: profileData.hourly_rate || 0,
-          isVerified: profileData.is_verified || false,
-          surname: profileData.surname || '',
-          licenseNumber: profileData.license_number || '',
-          experienceYears: profileData.experience_years || 0,
-          certificates: profileData.certificates || [],
-          education: profileData.education || [],
-          workplaces: profileData.workplaces || [],
-          faqs: profileData.faqs || [],
-          unavailableDates: profileData.unavailable_dates || []
+          avatar: merged.avatar_url || meta?.avatar_url || meta?.picture || '',
+          coverImage: merged.cover_url || '',
+          bio: merged.bio || '',
+          role: merged.role || 'client',
+          specialties: merged.specialties || [],
+          hourlyRate: merged.hourly_rate || 0,
+          isVerified: Boolean(merged.is_verified),
+          surname: merged.surname || '',
+          licenseNumber: merged.license_number || '',
+          experienceYears: merged.experience_years || 0,
+          certificates: merged.certificates || [],
+          education: merged.education || [],
+          workplaces: merged.workplaces || [],
+          faqs: merged.faqs || [],
+          unavailableDates: merged.unavailable_dates || []
         })
       } else {
         // Fallback if profile row is not yet created by trigger
@@ -199,6 +230,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .from('profiles')
       .update(dbUpdates)
       .eq('id', supabaseUser.id)
+
+    try {
+      await fetch('/api/app/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: supabaseUser.id,
+          email: supabaseUser.email || '',
+          ...dbUpdates,
+        }),
+      })
+    } catch (d1Err) {
+      console.warn('Cloudflare D1 profile update skipped:', d1Err)
+    }
   }
 
   return (

@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server"
+import { cfFetch } from "@/lib/cloudflare-db"
 import { Shield, MapPin, Briefcase, Star, Search, MessageSquare } from "lucide-react"
 import Link from "next/link"
 import LawyerSearchClient from "./LawyerSearchClient"
@@ -9,37 +10,40 @@ export default async function LawyersDirectoryPage({
 }: { 
   searchParams: Promise<{ q?: string, category?: string }> 
 }) {
-  const supabase = await createClient()
   const params = await searchParams
   const q = params.q?.toLowerCase() || ''
   const categoryId = params.category || ''
+  const selectedCat = categoryId ? categoriesData.find(c => c.id === categoryId) : null
 
-  // Build the query (only admin-verified lawyers/jurists appear in catalog)
-  let query = supabase
-    .from('profiles')
-    .select('*')
-    .eq('role', 'lawyer')
-    .eq('is_verified', true)
-    .order('created_at', { ascending: false })
+  const cfQuery = new URLSearchParams()
+  if (q) cfQuery.set("q", q)
+  if (selectedCat) cfQuery.set("category", selectedCat.name_az)
 
-  // Apply filters
-  if (categoryId) {
-    // We assume the specialities contains the category name (az).
-    // Let's find the category name based on id
-    const selectedCat = categoriesData.find(c => c.id === categoryId)
+  let lawyers: any[] = []
+  let error: any = null
+
+  const d1Res = await cfFetch<{ lawyers?: any[] }>(`/app/lawyers?${cfQuery.toString()}`)
+  if (d1Res.ok && Array.isArray(d1Res.data?.lawyers)) {
+    lawyers = d1Res.data.lawyers
+  } else {
+    const supabase = await createClient()
+    let query = supabase
+      .from('profiles')
+      .select('*')
+      .eq('role', 'lawyer')
+      .eq('is_verified', true)
+      .order('created_at', { ascending: false })
+
     if (selectedCat) {
-      // In Supabase JSONB arrays, we must pass the value as a JSON string
-      // Otherwise it sends a Postgres array {value} which fails against JSONB
       query = query.contains('specialties', JSON.stringify([selectedCat.name_az]))
     }
+    if (q) {
+      query = query.or(`name.ilike.%${q}%,bio.ilike.%${q}%`)
+    }
+    const sbRes = await query
+    lawyers = sbRes.data || []
+    error = sbRes.error
   }
-
-  if (q) {
-    // Simple text search on name or bio
-    query = query.or(`name.ilike.%${q}%,bio.ilike.%${q}%`)
-  }
-
-  const { data: lawyers, error } = await query
 
   return (
     <div className="flex flex-col min-h-screen pb-10">

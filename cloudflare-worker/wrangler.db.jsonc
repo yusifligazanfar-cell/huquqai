@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "huquqai-db",
+  "main": "src/app_db_worker.ts",
+  "compatibility_date": "2025-05-01",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "huquqai-app",
+      "database_id": "c7de77dc-a23c-466a-94d8-a5604e7f03b0"
+    }
+  ]
+}
