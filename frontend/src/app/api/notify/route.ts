@@ -10,7 +10,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, warning: 'RESEND_API_KEY missing' })
     }
     const resend = new Resend(resendApiKey)
-    const { consultationId } = await req.json()
+    const { consultationId, event } = await req.json()
 
     if (!consultationId) {
       return NextResponse.json({ error: 'consultationId required' }, { status: 400 })
@@ -26,8 +26,9 @@ export async function POST(req: Request) {
     }
 
     const clientEmail = consultation.client?.email
-    const clientName = consultation.client?.name || 'Müraciət edən'
-    const lawyerName = consultation.lawyer?.name || 'Vəkil'
+    const lawyerEmail = consultation.lawyer?.email
+    const clientName = `${consultation.client?.name || ''} ${consultation.client?.surname || ''}`.trim() || 'Müraciət edən'
+    const lawyerName = `${consultation.lawyer?.name || ''} ${consultation.lawyer?.surname || ''}`.trim() || 'Vəkil'
 
     // Format date and time
     let dateStr = ''
@@ -45,6 +46,41 @@ export async function POST(req: Request) {
     }
 
     const meetLink = 'https://nitrocalls.site'
+
+    if (event === 'new_booking') {
+      if (!lawyerEmail) {
+        return NextResponse.json({ success: true, skipped: true })
+      }
+      const bookingUrl = `https://huquqai.az/consultations/${consultationId}`
+      const { data: lawyerMailData, error: lawyerMailError } = await resend.emails.send({
+        from: process.env.RESEND_FROM_EMAIL || 'HuquqAI <noreply@huquqai.az>',
+        to: [lawyerEmail],
+        subject: `📅 Yeni randevu müraciəti — ${clientName} (${dateStr || ''} ${timeStr || ''})`,
+        html: `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 16px;">
+            <h2 style="margin: 0 0 12px; color: #0f172a;">Yeni Randevu Müraciəti</h2>
+            <p style="margin: 0 0 16px; color: #475569; font-size: 14px; line-height: 1.6;">
+              Hörmətli <strong>${lawyerName}</strong>, müştəri <strong>${clientName}</strong> sizinlə konsultasiya üçün randevu seçdi.
+            </p>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 18px; font-size: 14px;">
+              ${dateStr ? `<p style="margin:0 0 6px;"><strong>📅 Tarix:</strong> ${dateStr}</p>` : ''}
+              ${timeStr ? `<p style="margin:0 0 6px;"><strong>🕐 Saat:</strong> ${timeStr}</p>` : ''}
+              ${consultation.problem_description ? `<p style="margin:8px 0 0;color:#334155;"><strong>Mövzu:</strong><br/>${consultation.problem_description}</p>` : ''}
+            </div>
+            <p style="margin: 20px 0; text-align: center;">
+              <a href="${bookingUrl}" style="display:inline-block;background:#059669;color:#fff;padding:12px 24px;border-radius:10px;text-decoration:none;font-weight:bold;">
+                Müraciətə Bax və Təsdiqlə
+              </a>
+            </p>
+          </div>
+        `,
+      })
+      if (lawyerMailError) {
+        console.error('[RESEND NEW BOOKING ERROR]', lawyerMailError)
+        return NextResponse.json({ error: 'Email send failed', detail: lawyerMailError }, { status: 500 })
+      }
+      return NextResponse.json({ success: true, emailId: lawyerMailData?.id })
+    }
 
     if (!clientEmail) {
       console.warn('[NOTIFY] Client email not found, skipping email send')

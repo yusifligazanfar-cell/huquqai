@@ -147,7 +147,7 @@ export default function LawyerBookingWidget({
         fetch('/api/notify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ consultationId: d1Json.consultation.id })
+          body: JSON.stringify({ consultationId: d1Json.consultation.id, event: 'new_booking' })
         }).catch(() => {})
       }
 
@@ -200,26 +200,42 @@ export default function LawyerBookingWidget({
         {/* Horizontal Days Scroll */}
         <div className="flex overflow-x-auto pb-4 gap-2 snap-x hide-scrollbar">
           {days.map((d, i) => {
+            const dKey = toDateKey(d)
+            const bookedOnDay = bookedSlots[dKey] || []
+            const activeOnDay = timeSlots.filter(
+              (t) =>
+                !unavailableDates.includes(`SLOT_OFF:${t}`) &&
+                !unavailableDates.includes(`WEEKDAY_SLOT_OFF:${d.getDay()}:${t}`)
+            )
+            const isFullyBooked = activeOnDay.length > 0 && bookedOnDay.length >= activeOnDay.length
+            const hasBookings = bookedOnDay.length > 0
             const isSelected = d.getDate() === selectedDate.getDate() && d.getMonth() === selectedDate.getMonth()
-            const isUnavailable = isDayUnavailable(d)
+            const isUnavailable = isDayUnavailable(d) || isFullyBooked
 
             return (
               <button
                 key={i}
                 onClick={() => !isUnavailable && setSelectedDate(d)}
                 disabled={isUnavailable}
-                className={`snap-center shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-xl border transition-all ${
-                  isUnavailable
-                    ? 'border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-300 dark:text-slate-700 cursor-not-allowed opacity-50'
-                    : isSelected
-                      ? 'border-primary bg-primary text-white shadow-md shadow-primary/20'
-                      : 'border-slate-200 dark:border-white/10 bg-white dark:bg-card text-slate-600 dark:text-slate-300 hover:border-primary/50'
+                className={`snap-center shrink-0 flex flex-col items-center justify-center w-14 h-16 rounded-xl border transition-all relative ${
+                  isFullyBooked
+                    ? 'border-red-200 dark:border-red-900/40 bg-red-50/70 dark:bg-red-950/20 text-red-400 cursor-not-allowed'
+                    : isUnavailable
+                      ? 'border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-300 dark:text-slate-700 cursor-not-allowed opacity-50'
+                      : isSelected
+                        ? 'border-primary bg-primary text-white shadow-md shadow-primary/20'
+                        : 'border-slate-200 dark:border-white/10 bg-white dark:bg-card text-slate-600 dark:text-slate-300 hover:border-primary/50'
                 }`}
               >
                 <span className="text-[10px] font-bold uppercase opacity-80">
                   {azDayNames[d.getDay() === 0 ? 6 : d.getDay() - 1]}
                 </span>
-                <span className="text-lg font-black">{d.getDate()}</span>
+                <span className="text-lg font-black leading-none">{d.getDate()}</span>
+                {isFullyBooked ? (
+                  <span className="text-[9px] font-bold text-red-500 mt-0.5">Seçilib</span>
+                ) : hasBookings ? (
+                  <span className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? 'bg-white' : 'bg-amber-500'}`} title="Bu gündə seçilmiş saat var" />
+                ) : null}
               </button>
             )
           })}
@@ -261,7 +277,7 @@ export default function LawyerBookingWidget({
                   {isBooked ? (
                     <span className="flex flex-col items-center leading-tight">
                       <span className="text-xs">{time}</span>
-                      <span className="text-[9px] font-bold text-red-400 dark:text-red-600 uppercase">Dolu</span>
+                      <span className="text-[9px] font-bold text-red-400 dark:text-red-500 uppercase">Seçilib</span>
                     </span>
                   ) : time}
                 </button>
