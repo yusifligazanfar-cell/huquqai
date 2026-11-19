@@ -183,7 +183,7 @@ export default function SearchPage() {
   return (
     <div className="flex flex-col min-h-screen pb-10">
       <div className="fixed top-20 left-1/4 w-96 h-96 bg-primary/20 dark:bg-primary/10 rounded-full blur-[100px] pointer-events-none" />
-      <div className="fixed bottom-20 right-1/4 w-96 h-96 bg-orange-600/20 dark:bg-orange-600/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="fixed bottom-20 right-1/4 w-96 h-96 bg-teal-600/15 dark:bg-teal-600/10 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="max-w-5xl w-full mx-auto px-2 sm:px-4 md:px-6 pt-3 sm:pt-6 md:pt-10 flex-1 z-10 min-w-0">
         <motion.div
@@ -191,9 +191,6 @@ export default function SearchPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center space-y-3 sm:space-y-4 mb-6 sm:mb-8"
         >
-          <div className="inline-flex items-center justify-center p-3 sm:p-4 bg-primary rounded-2xl mb-2 sm:mb-4 shadow-[0_0_20px_rgba(234,88,12,0.3)]">
-            <Sparkles className="h-6 w-6 sm:h-7 sm:w-7 text-white" aria-hidden="true" />
-          </div>
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-slate-950 dark:text-white">
             Ağıllı Hüquq Axtarışı
           </h1>

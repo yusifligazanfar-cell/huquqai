@@ -48,7 +48,7 @@ export default async function ConsultationsPage() {
       <div className="max-w-5xl w-full mx-auto px-4 sm:px-6 pt-12 flex-1 z-10 space-y-12">
         
         <div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Konsultasiyalarım</h1>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-foreground mb-2">Konsultasiyalarım</h1>
           <p className="text-muted-foreground">Bütün hüquqi məsləhətləşmələrinizi buradan idarə edin.</p>
         </div>
 

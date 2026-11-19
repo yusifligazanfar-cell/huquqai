@@ -45,7 +45,7 @@ export default async function LawyersDirectoryPage({
       <div className="max-w-6xl w-full mx-auto px-4 sm:px-6 pt-12 flex-1 z-10">
         
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-foreground mb-4">Hüquqşünaslar Kataloqu</h1>
+          <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-foreground mb-4">Hüquqşünaslar Kataloqu</h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             LexAZ platformasında qeydiyyatdan keçmiş peşəkar vəkillərlə və hüquqşünaslarla birbaşa əlaqə saxlayın, məsləhət alın.
           </p>

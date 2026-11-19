@@ -81,10 +81,6 @@ export default function PetitionHubPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 space-y-8">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 px-3 py-1 text-xs font-extrabold text-emerald-700 dark:text-emerald-300">
-              <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
-              <span>HüquqAI Sənəd Tərtibatçısı</span>
-            </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-950 dark:text-white tracking-tight">
               Rəsmi Hüquqi Sənəd Generatorları
             </h1>

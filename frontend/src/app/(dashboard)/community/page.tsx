@@ -121,36 +121,68 @@ export default function CommunityPage() {
               Yeni Sual Ver
             </Button>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader>
-                <DialogTitle>Yeni hüquqi sual</DialogTitle>
+              <DialogContent className="sm:max-w-[540px] rounded-3xl border border-emerald-500/20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl p-6 sm:p-7 shadow-2xl">
+              <DialogHeader className="space-y-1.5 text-left">
+                <div className="inline-flex items-center gap-2 w-fit px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-bold">
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  <span>İcma Müzakirəsi</span>
+                </div>
+                <DialogTitle className="text-xl sm:text-2xl font-black tracking-tight text-slate-950 dark:text-white">
+                  Yeni hüquqi sual
+                </DialogTitle>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                  Sualınızı qısa və aydın şəkildə yazın — vəkillər və hüquqşünaslar cavablandırsın.
+                </p>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-4">
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="title" className="text-sm font-medium">Mövzu (Qısa başlıq)</label>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-3">
+                <div className="flex flex-col gap-1.5">
+                  <label htmlFor="title" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    Mövzu (Qısa başlıq)
+                  </label>
                   <Input 
                     id="title" 
                     placeholder="Məsələn: Əmək müqaviləsinə xitam verilməsi..." 
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
+                    className="h-11 rounded-xl border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-950/60 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-sm"
                     required
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label htmlFor="content" className="text-sm font-medium">Ətraflı məzmun</label>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="content" className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      Ətraflı məzmun
+                    </label>
+                    <span className="text-[11px] text-slate-400 tabular-nums">{newContent.length} simvol</span>
+                  </div>
                   <Textarea 
                     id="content" 
                     placeholder="Sualınızı və probleminizi ətraflı şəkildə yazın..." 
                     rows={5}
                     value={newContent}
                     onChange={(e) => setNewContent(e.target.value)}
+                    className="rounded-xl border-slate-200 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-950/60 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-sm leading-relaxed resize-none"
                     required
                   />
                 </div>
-                <Button type="submit" disabled={isSubmitting} className="w-full gap-2 mt-2">
-                  {isSubmitting ? "Paylaşılır..." : "Paylaş"}
-                  {!isSubmitting && <Send className="h-4 w-4" />}
-                </Button>
+                <div className="flex items-center justify-end gap-2.5 pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsDialogOpen(false)}
+                    className="rounded-xl h-11 px-4"
+                  >
+                    Ləğv et
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmitting || !newTitle.trim() || !newContent.trim()}
+                    className="rounded-xl h-11 px-6 gap-2 font-bold shadow-md shadow-emerald-500/20"
+                  >
+                    {isSubmitting ? "Paylaşılır..." : "Sualı Paylaş"}
+                    {!isSubmitting && <Send className="h-4 w-4" />}
+                  </Button>
+                </div>
               </form>
             </DialogContent>
           </Dialog>
