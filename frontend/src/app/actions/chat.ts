@@ -740,8 +740,7 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     const fetchCompanionArticle = async (
       docId: string,
       artNum: string,
-      lawId: string,
-      preserveNoteTail = false
+      lawId: string
     ): Promise<StructuredChunk | null> => {
       try {
         const doc = isSqliteCorpusAvailable()
@@ -750,10 +749,7 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
           ? await fetchRemoteDocumentById(docId, artNum, 4500)
           : null;
         if (!doc?.content) return null;
-        const body =
-          preserveNoteTail && doc.content.length > 2200
-            ? `${doc.content.slice(0, 1100)}\n...\n${doc.content.slice(-1600)}`
-            : doc.content.slice(0, 3200);
+        const body = doc.content.slice(0, 3600);
         return {
           sourceId: `companion_${docId}_art_${artNum}`,
           lawId,
@@ -789,18 +785,18 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
         ? fetchCompanionArticle("41828", "28", "eqanun_41828")
         : Promise.resolve(null),
       isDivorcePropertyQuery && !hasAile34
-        ? fetchCompanionArticle("46946", "34", "aile")
+        ? fetchCompanionArticle("46947" === "46946" ? "46946" : "46946", "34", "aile")
         : Promise.resolve(null),
-      isCriminalEmbezzlementOrOfficialKazus && !hasCmArt("179")
+      isCriminalEmbezzlementOrOfficialKazus
         ? fetchCompanionArticle("46947", "179", "cinayet")
         : Promise.resolve(null),
-      isCriminalEmbezzlementOrOfficialKazus && !hasCmArt("177")
-        ? fetchCompanionArticle("46947", "177", "cinayet", true)
+      isCriminalEmbezzlementOrOfficialKazus
+        ? fetchCompanionArticle("46947", "177", "cinayet")
         : Promise.resolve(null),
-      isCriminalEmbezzlementOrOfficialKazus && !hasCmArt("308")
-        ? fetchCompanionArticle("46947", "308", "cinayet", true)
+      isCriminalEmbezzlementOrOfficialKazus
+        ? fetchCompanionArticle("46947", "308", "cinayet")
         : Promise.resolve(null),
-      isCriminalEmbezzlementOrOfficialKazus && !hasCmArt("313")
+      isCriminalEmbezzlementOrOfficialKazus
         ? fetchCompanionArticle("46947", "313", "cinayet")
         : Promise.resolve(null),
     ]);
@@ -808,23 +804,28 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     const cmCompanionChunks = [cm179Chunk, cm177NoteChunk, cm308Chunk, cm313Chunk].filter(
       (c): c is StructuredChunk => Boolean(c)
     );
+    const companionKeys = new Set(cmCompanionChunks.map((c) => `${c.lawId}::${c.articleNumber}`));
+    const dedupedRetrievedChunks =
+      cmCompanionChunks.length > 0
+        ? retrievedChunks.filter((c) => !companionKeys.has(`${c.lawId}::${c.articleNumber}`))
+        : retrievedChunks;
     const supplementalChunks: StructuredChunk[] = [
       ...cmCompanionChunks,
       ...(aile34Chunk ? [aile34Chunk] : []),
       ...(mediationChunk ? [mediationChunk] : []),
       ...judicialChunks,
     ];
-    const allRetrievedChunks = [...retrievedChunks, ...supplementalChunks];
+    const allRetrievedChunks = [...cmCompanionChunks, ...dedupedRetrievedChunks, ...(aile34Chunk ? [aile34Chunk] : []), ...(mediationChunk ? [mediationChunk] : []), ...judicialChunks];
 
     // 3. COMPOSE STRICT GROUND-TRUTH CONTEXT FOR LLM (Core statutory articles + companion procedural norm + binding Supreme/Constitutional Court rulings)
-    const primaryScore = Math.max(retrievedChunks[0]?.score ?? 0, cmCompanionChunks[0]?.score ?? 0);
+    const primaryScore = Math.max(dedupedRetrievedChunks[0]?.score ?? 0, cmCompanionChunks[0]?.score ?? 0);
     const relevantRetrieved =
       primaryScore >= 500
-        ? retrievedChunks.filter((c, idx) => idx < 3 || (c.score ?? 0) >= primaryScore * 0.62)
-        : retrievedChunks;
+        ? dedupedRetrievedChunks.filter((c, idx) => idx < 3 || (c.score ?? 0) >= primaryScore * 0.62)
+        : dedupedRetrievedChunks;
     const baseStatutory = selectDiverseContextChunks(
-      relevantRetrieved.length >= 3 ? relevantRetrieved : retrievedChunks,
-      cmCompanionChunks.length > 0 ? Math.max(3, 6 - cmCompanionChunks.length) : aile34Chunk ? 5 : 6,
+      relevantRetrieved.length >= 3 ? relevantRetrieved : dedupedRetrievedChunks,
+      cmCompanionChunks.length > 0 ? 3 : aile34Chunk ? 5 : 6,
       lawMatch.confidence === "explicit"
     );
     const contextChunks: StructuredChunk[] = [
@@ -871,7 +872,7 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
         const cleanBody = isJud
           ? sanitizeStatutoryExcerpt(c.content).slice(0, 3800)
           : isCompanion
-          ? sanitizeStatutoryExcerpt(c.content).slice(0, 2800)
+          ? sanitizeStatutoryExcerpt(c.content).slice(0, 3500)
           : extractFocusedExcerpt(c.content, i < 4 ? 2300 : 1500);
         return `[MƏNBƏ ${i + 1}: ${c.articleTitle}] (Rəsmi URL: ${c.sourceUrl})\n${cleanBody}`;
       })
@@ -891,9 +892,10 @@ MÜTLƏQ VƏ DƏYİŞMƏZ QAYDALAR (ZERO HALLUCINATION):
 3. QÜVVƏDƏN DÜŞMÜŞ (ÜZƏRİNDƏN XƏTT ÇƏKİLMİŞ) QAYDALAR:
    - Mənbə mətnində "[QÜVVƏDƏN DÜŞÜB" və ya "LƏĞV EDİLİB]" işarəsi olan hər hansı maddə/bənd ARTİQ QÜVVƏDƏ DEYİL!
    - Belə bəndləri ƏSLA qüvvədə olan hüquq/istisna/qayda kimi təqdim etmə! Əgər istifadəçi məhz həmin ləğv edilmiş bənd barədə soruşursa, onun qüvvədən düşdüyünü (ləğv edildiyini) açıq bildir.
-4. BƏNDLƏRİ, ƏSAS HAL VS AĞIRLAŞDIRICI HALI VƏ MƏHKƏMƏ ŞƏRHLƏRİNİ DƏQİQ OXU:
+4. BƏNDLƏRİ, QEYD HİSSƏLƏRİNİ (MƏBLƏĞ HƏDLƏRİ VƏ VƏZİFƏLİ ŞƏXS ANLAYIŞINI), ƏSAS HAL VS AĞIRLAŞDIRICI HALI VƏ MƏHKƏMƏ ŞƏRHLƏRİNİ DƏQİQ OXU:
    - Hər bənd nömrəsi özündən SONRAKI cümləyə aiddir, əvvəlki cümləyə deyil.
    - Sual ümumi / ilk hal barədədirsə, ƏVVƏLCƏ əsas bəndi (məs., adi vergi hesabatı gecikməsi üçün ümumi bənd; ilk dəfə yol hərəkəti pozuntusu üçün 1-ci bənd) əsas cavab kimi yaz; xüsusi transmilli/ağırlaşdırıcı/təkrar bəndləri yalnız ayrıca istisna və ya təkrar hal kimi qeyd et!
+   - Maddənin "Qeyd:" hissəsindəki məbləğ hədlərini ("xeyli miqdar", "külli miqdar", "xüsusilə külli miqdar") və anlayışları ("vəzifəli şəxs" — o cümlədən kommersiya və qeyri-kommersiya təşkilatlarının rəhbərləri və işçiləri, CM 308 Qeyd 3–4) sualdakı faktlarla DƏQİQ tutuşdur: məsələn, CM 177 Qeyd 2-yə görə 50.000–500.000 manat "külli miqdar"dır (450.000 manat -> 179.3.2: 5–10 il azadlıqdan məhrum etmə), "xüsusilə külli miqdar" isə yalnız 500.000 manatdan yuxarıdır (179.4: 10–14 il) — bu iki bəndi əsla qarışdırma!
    - Əsas qayda ilə yanaşı kontekstdəki BÜTÜN mühüm istisnaları (şəxsi/ayrıca əmlak, müddətin başlanma anı, sazişin forması, ilkin mediasiya sessiyası, təkrar törətmə və s.) mütləq əhatə et!
    - "lazımi keyfiyyətli" = qüsursuz/sağlam maldır — əsla "keyfiyyəti uyğun olmadıqda" və ya "lazımi keyfiyyətli olmayan" kimi TƏRSİNƏ çevirmə!
    - Bitişik yazılmış məbləğ və ya müddət sözlərini düzgün oxu; məbləğ mətndə varsa əsla "göstərilməyib" yazma.
