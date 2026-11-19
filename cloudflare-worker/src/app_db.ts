@@ -272,6 +272,65 @@ export async function handleAppDb(request: Request, env: AppDbEnv): Promise<Resp
       return json({ user: row ? hydrateProfile(row) : null });
     }
 
+    if (path === "/app/auth/oauth" && request.method === "POST") {
+      const p = (await request.json().catch(() => ({}))) as Record<string, any>;
+      const email = String(p.email || "").trim().toLowerCase();
+      if (!email) return json({ error: "email required" }, 400);
+
+      const existing = await db
+        .prepare("SELECT * FROM profiles WHERE lower(email) = ?")
+        .bind(email)
+        .first<Record<string, any>>();
+
+      const nowIso = new Date().toISOString();
+      const id = existing?.id ? String(existing.id) : crypto.randomUUID();
+
+      if (existing) {
+        await db
+          .prepare(
+            `UPDATE profiles SET
+              email_verified = 1,
+              name = COALESCE(NULLIF(name, ''), ?),
+              surname = COALESCE(NULLIF(surname, ''), ?),
+              avatar_url = COALESCE(NULLIF(avatar_url, ''), ?),
+              last_sign_in_at = ?
+            WHERE id = ?`
+          )
+          .bind(
+            String(p.name || ""),
+            String(p.surname || ""),
+            String(p.avatar_url || ""),
+            nowIso,
+            id
+          )
+          .run();
+      } else {
+        await db
+          .prepare(
+            `INSERT INTO profiles (
+              id, name, surname, email, role, avatar_url, cover_url, bio, phone, city,
+              license_number, experience_years, hourly_rate, specialties, education,
+              workplaces, faqs, unavailable_dates, certificates, is_verified,
+              password_hash, email_verified, created_at, last_sign_in_at
+            ) VALUES (?, ?, ?, ?, ?, ?, '', '', '', '', '', 0, 0, '[]', '[]', '[]', '[]', '[]', '[]', 0, '', 1, ?, ?)`
+          )
+          .bind(
+            id,
+            String(p.name || ""),
+            String(p.surname || ""),
+            email,
+            String(p.role || "client"),
+            String(p.avatar_url || ""),
+            nowIso,
+            nowIso
+          )
+          .run();
+      }
+
+      const row = await db.prepare("SELECT * FROM profiles WHERE id = ?").bind(id).first<Record<string, any>>();
+      return json({ success: true, user: row ? hydrateProfile(row) : null });
+    }
+
     // 1. Bulk import / seed from Supabase
     if (path === "/app/admin/import" && request.method === "POST") {
       const body = (await request.json().catch(() => ({}))) as {
