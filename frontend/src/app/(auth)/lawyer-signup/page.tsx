@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { 
-  Mail, ArrowRight, Loader2, Scale 
+  Mail, ArrowRight, Loader2, Scale, Lock, Eye, EyeOff, KeyRound
 } from "lucide-react"
 import { CategoryIcon } from "@/components/ui/category-icon"
 import categoriesData from "@/data/lawyer_categories.json"
@@ -42,6 +42,10 @@ export default function LawyerSignupPage() {
   
   // Step 2: Auth
   const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
+  const [authMethod, setAuthMethod] = useState<"password" | "otp">("password")
   const [isOtpSent, setIsOtpSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ text: string, type: 'error' | 'success' } | null>(null)
@@ -104,28 +108,82 @@ export default function LawyerSignupPage() {
 
     const hasOnboardingData = !isLoginMode && Boolean(name.trim() || surname.trim())
     const extra = buildStructuredFields()
+    const onboardingMeta = hasOnboardingData
+      ? {
+          role: 'lawyer',
+          practitioner_type: practitionerType,
+          name: name.trim(),
+          surname: surname.trim(),
+          full_name: `${name.trim()} ${surname.trim()}`.trim(),
+          license_number: getNormalizedLicense(),
+          experience_years: parseInt(experienceYears, 10) || 0,
+          bio: bio.trim(),
+          specialties: selectedSpecialties,
+          workplaces: extra.workplaces,
+          education: extra.education,
+          hourly_rate: extra.hourlyRate,
+        }
+      : undefined
+
+    if (authMethod === "password") {
+      if (isLoginMode) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        })
+        if (error) {
+          setMessage({
+            text: error.message === "Invalid login credentials" ? "E-poçt və ya şifrə yanlışdır." : error.message,
+            type: 'error',
+          })
+          setLoading(false)
+          return
+        }
+        window.location.assign("/account")
+        return
+      }
+
+      if (password.length < 6) {
+        setMessage({ text: "Şifrə ən azı 6 simvoldan ibarət olmalıdır.", type: 'error' })
+        setLoading(false)
+        return
+      }
+      if (password !== confirmPassword) {
+        setMessage({ text: "Şifrələr uyğun gəlmir.", type: 'error' })
+        setLoading(false)
+        return
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/account%3Frole=lawyer`,
+          ...(onboardingMeta ? { data: onboardingMeta } : {}),
+        },
+      })
+
+      if (error) {
+        setMessage({ text: error.message, type: 'error' })
+      } else if (data.session) {
+        window.location.assign("/account?role=lawyer")
+        return
+      } else {
+        setIsOtpSent(true)
+        setMessage({
+          text: "Qeydiyyat tamamlandı! E-poçtunuza göndərilən təsdiq linkinə kliklədikdən sonra anketiniz admin yoxlamasına göndəriləcək.",
+          type: 'success',
+        })
+      }
+      setLoading(false)
+      return
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: email.trim(),
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/account%3Frole=lawyer`,
-        ...(hasOnboardingData
-          ? {
-              data: {
-                role: 'lawyer',
-                practitioner_type: practitionerType,
-                name: name.trim(),
-                surname: surname.trim(),
-                full_name: `${name.trim()} ${surname.trim()}`.trim(),
-                license_number: getNormalizedLicense(),
-                experience_years: parseInt(experienceYears, 10) || 0,
-                bio: bio.trim(),
-                specialties: selectedSpecialties,
-                workplaces: extra.workplaces,
-                education: extra.education,
-                hourly_rate: extra.hourlyRate,
-              }
-            }
-          : {}),
+        ...(onboardingMeta ? { data: onboardingMeta } : {}),
       }
     })
 
@@ -335,20 +393,76 @@ export default function LawyerSignupPage() {
                 )}
 
                 {!isOtpSent ? (
-                  <form onSubmit={handleSendOtp} className="space-y-5 mb-8">
+                  <form onSubmit={handleSendOtp} className="space-y-4 mb-8">
                     <div className="space-y-2">
                       <div className="relative group/input">
                         <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/input:text-amber-500 transition-colors" />
                         <Input 
                           type="email" 
                           placeholder="E-poçt ünvanınız" 
-                          className="pl-12 h-14 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 focus-visible:ring-amber-500/30 focus-visible:border-amber-500/50 text-base shadow-inner rounded-xl transition-all"
+                          className="pl-12 h-13 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 focus-visible:ring-amber-500/30 focus-visible:border-amber-500/50 text-base shadow-inner rounded-xl transition-all"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           required
                         />
                       </div>
                     </div>
+
+                    {authMethod === "password" && (
+                      <>
+                        <div className="relative group/input">
+                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/input:text-amber-500 transition-colors" />
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder={isLoginMode ? "Şifrəniz" : "Şifrə (min. 6 simvol)"}
+                            className="pl-12 pr-12 h-13 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 focus-visible:ring-amber-500/30 focus-visible:border-amber-500/50 text-base shadow-inner rounded-xl transition-all"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            minLength={6}
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                            aria-label="Şifrəni göstər"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+
+                        {!isLoginMode && (
+                          <div className="relative group/input">
+                            <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/input:text-amber-500 transition-colors" />
+                            <Input
+                              type={showPassword ? "text" : "password"}
+                              placeholder="Şifrəni təsdiqləyin"
+                              className="pl-12 h-13 bg-white/50 dark:bg-black/20 border-white/30 dark:border-white/10 focus-visible:ring-amber-500/30 focus-visible:border-amber-500/50 text-base shadow-inner rounded-xl transition-all"
+                              value={confirmPassword}
+                              onChange={(e) => setConfirmPassword(e.target.value)}
+                              minLength={6}
+                              required
+                            />
+                          </div>
+                        )}
+                      </>
+                    )}
+
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAuthMethod((prev) => (prev === "password" ? "otp" : "password"))
+                          setMessage(null)
+                        }}
+                        className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline"
+                      >
+                        {authMethod === "password"
+                          ? "Şifrəsiz (E-poçt linki) ilə davam et"
+                          : "Şifrə ilə davam et"}
+                      </button>
+                    </div>
+
                     <Button type="submit" className="w-full h-14 font-semibold text-base rounded-xl shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all hover:-translate-y-0.5" disabled={loading}>
                       {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
                       {loading ? "Göndərilir..." : isLoginMode ? "Daxil Ol" : "Qeydiyyatı Tamamla"}

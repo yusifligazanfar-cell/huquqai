@@ -5,12 +5,29 @@ import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Mail, ArrowRight, Loader2, Scale, LogIn, UserPlus, User } from "lucide-react"
+import {
+  Mail,
+  ArrowRight,
+  Loader2,
+  Scale,
+  LogIn,
+  UserPlus,
+  User,
+  Lock,
+  Eye,
+  EyeOff,
+  KeyRound,
+} from "lucide-react"
 
 export default function LoginPage() {
   const [authMode, setAuthMode] = useState<"login" | "signup">("login")
-  const [fullName, setFullName] = useState("")
+  const [loginMethod, setLoginMethod] = useState<"password" | "otp">("password")
+  const [firstName, setFirstName] = useState("")
+  const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [showPassword, setShowPassword] = useState(false)
   const [isOtpSent, setIsOtpSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [videoFailed, setVideoFailed] = useState(false)
@@ -18,23 +35,80 @@ export default function LoginPage() {
 
   const supabase = createClient()
 
-  const handleSendOtp = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setMessage(null)
 
+    if (authMode === "signup") {
+      if (password.length < 6) {
+        setMessage({ text: "Şifrə ən azı 6 simvoldan ibarət olmalıdır.", type: "error" })
+        setLoading(false)
+        return
+      }
+      if (password !== confirmPassword) {
+        setMessage({ text: "Şifrələr uyğun gəlmir.", type: "error" })
+        setLoading(false)
+        return
+      }
+
+      const fullName = `${firstName.trim()} ${lastName.trim()}`.trim()
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            role: "citizen",
+            name: firstName.trim(),
+            surname: lastName.trim(),
+            full_name: fullName,
+          },
+        },
+      })
+
+      if (error) {
+        setMessage({ text: error.message, type: "error" })
+      } else if (data.session) {
+        window.location.assign("/")
+        return
+      } else {
+        setIsOtpSent(true)
+        setMessage({
+          text: "Qeydiyyat tamamlandı! Hesabınızı aktivləşdirmək üçün e-poçtunuza göndərilən təsdiq linkinə klikləyin.",
+          type: "success",
+        })
+      }
+      setLoading(false)
+      return
+    }
+
+    if (loginMethod === "password") {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      })
+
+      if (error) {
+        setMessage({
+          text:
+            error.message === "Invalid login credentials"
+              ? "E-poçt və ya şifrə yanlışdır."
+              : error.message,
+          type: "error",
+        })
+        setLoading(false)
+        return
+      }
+
+      window.location.assign("/")
+      return
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: email.trim(),
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback`,
-        ...(authMode === "signup"
-          ? {
-              data: {
-                role: "citizen",
-                ...(fullName.trim() ? { full_name: fullName.trim() } : {}),
-              },
-            }
-          : {}),
       },
     })
 
@@ -43,10 +117,28 @@ export default function LoginPage() {
     } else {
       setIsOtpSent(true)
       setMessage({
-        text:
-          authMode === "signup"
-            ? "Qeydiyyat linki e-poçt ünvanınıza göndərildi! Linkə klikləyərək hesabınızı aktivləşdirin."
-            : "Giriş linki e-poçt ünvanınıza göndərildi! Zəhmət olmasa yoxlayın.",
+        text: "Giriş linki e-poçt ünvanınıza göndərildi! Zəhmət olmasa yoxlayın.",
+        type: "success",
+      })
+    }
+    setLoading(false)
+  }
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setMessage({ text: "Şifrə sıfırlamaq üçün əvvəlcə e-poçt ünvanınızı daxil edin.", type: "error" })
+      return
+    }
+    setLoading(true)
+    setMessage(null)
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: `${window.location.origin}/auth/callback?next=/account`,
+    })
+    if (error) {
+      setMessage({ text: error.message, type: "error" })
+    } else {
+      setMessage({
+        text: "Şifrə sıfırlama linki e-poçt ünvanınıza göndərildi.",
         type: "success",
       })
     }
@@ -97,9 +189,9 @@ export default function LoginPage() {
           </span>
         </div>
 
-        <div className="w-full max-w-[420px] mx-auto my-auto py-8">
-          <div className="mb-8 text-center lg:text-left">
-            <div className="hidden lg:inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 mb-5 p-2">
+        <div className="w-full max-w-[460px] mx-auto my-auto py-6">
+          <div className="mb-6 text-center lg:text-left">
+            <div className="hidden lg:inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 mb-4 p-2">
               <img src="/logo.png" alt="HÜQUQ AI Logo" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-950 dark:text-white">
@@ -112,109 +204,191 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-1.5 p-1 mb-6 rounded-xl bg-slate-200/70 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode("login")
-                setMessage(null)
-                setIsOtpSent(false)
-              }}
-              className={`h-10 rounded-lg text-sm font-bold transition-all ${
-                authMode === "login"
-                  ? "bg-white dark:bg-slate-800 text-slate-950 dark:text-white shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              Daxil Ol
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode("signup")
-                setMessage(null)
-                setIsOtpSent(false)
-              }}
-              className={`h-10 rounded-lg text-sm font-bold transition-all ${
-                authMode === "signup"
-                  ? "bg-white dark:bg-slate-800 text-slate-950 dark:text-white shadow-sm"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              Qeydiyyat
-            </button>
-          </div>
-
-          {message && (
-            <div
-              className={`p-4 mb-6 rounded-2xl text-sm font-medium border ${
-                message.type === "error"
-                  ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400"
-                  : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300"
-              }`}
-            >
-              {message.text}
+          <div className="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl shadow-slate-200/50 dark:shadow-black/30">
+            <div className="grid grid-cols-2 gap-1.5 p-1 mb-5 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("login")
+                  setMessage(null)
+                  setIsOtpSent(false)
+                }}
+                className={`h-10 rounded-lg text-sm font-bold transition-all ${
+                  authMode === "login"
+                    ? "bg-white dark:bg-slate-800 text-slate-950 dark:text-white shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                Daxil Ol
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setAuthMode("signup")
+                  setMessage(null)
+                  setIsOtpSent(false)
+                }}
+                className={`h-10 rounded-lg text-sm font-bold transition-all ${
+                  authMode === "signup"
+                    ? "bg-white dark:bg-slate-800 text-slate-950 dark:text-white shadow-sm"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                Qeydiyyat
+              </button>
             </div>
-          )}
 
-          {!isOtpSent ? (
-            <form onSubmit={handleSendOtp} className="space-y-4 mb-6">
-              {authMode === "signup" && (
+            {message && (
+              <div
+                className={`p-3.5 mb-5 rounded-2xl text-sm font-medium border ${
+                  message.type === "error"
+                    ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400"
+                    : "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300"
+                }`}
+              >
+                {message.text}
+              </div>
+            )}
+
+            {!isOtpSent ? (
+              <form onSubmit={handleSubmit} className="space-y-3.5 mb-5">
+                {authMode === "signup" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="relative group/input">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
+                      <Input
+                        type="text"
+                        placeholder="Adınız"
+                        className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-sm rounded-xl transition-all"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="relative group/input">
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
+                      <Input
+                        type="text"
+                        placeholder="Soyadınız"
+                        className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-sm rounded-xl transition-all"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                )}
+
                 <div className="relative group/input">
-                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
                   <Input
-                    type="text"
-                    placeholder="Adınız və Soyadınız"
-                    className="pl-12 h-13 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-base rounded-xl shadow-sm transition-all"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    type="email"
+                    placeholder="E-poçt ünvanınız"
+                    className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-sm rounded-xl transition-all"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     required
                   />
                 </div>
-              )}
-              <div className="relative group/input">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
-                <Input
-                  type="email"
-                  placeholder="E-poçt ünvanınız"
-                  className="pl-12 h-13 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-base rounded-xl shadow-sm transition-all"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+
+                {(authMode === "signup" || loginMethod === "password") && (
+                  <div className="relative group/input">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder={authMode === "signup" ? "Şifrə (min. 6 simvol)" : "Şifrəniz"}
+                      className="pl-10 pr-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-sm rounded-xl transition-all"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      minLength={6}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                      aria-label="Şifrəni göstər"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                )}
+
+                {authMode === "signup" && (
+                  <div className="relative group/input">
+                    <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within/input:text-emerald-600 transition-colors" />
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Şifrəni təsdiqləyin"
+                      className="pl-10 h-12 bg-slate-50/70 dark:bg-slate-950 border-slate-200 dark:border-slate-800 focus-visible:ring-emerald-500/30 focus-visible:border-emerald-500 text-sm rounded-xl transition-all"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      minLength={6}
+                      required
+                    />
+                  </div>
+                )}
+
+                {authMode === "login" && (
+                  <div className="flex items-center justify-between text-xs pt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoginMethod((prev) => (prev === "password" ? "otp" : "password"))
+                        setMessage(null)
+                      }}
+                      className="font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                    >
+                      {loginMethod === "password"
+                        ? "Şifrəsiz (E-poçt linki) ilə daxil ol"
+                        : "Şifrə ilə daxil ol"}
+                    </button>
+                    {loginMethod === "password" && (
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        className="font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:underline"
+                      >
+                        Şifrəni unutdum
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full h-12 font-bold text-sm sm:text-base rounded-xl transition-all mt-1"
+                  disabled={loading}
+                >
+                  {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                  {loading
+                    ? "Gözləyin..."
+                    : authMode === "signup"
+                      ? "Qeydiyyatdan Keç"
+                      : loginMethod === "password"
+                        ? "Daxil Ol"
+                        : "Giriş Linki (OTP) Göndər"}
+                  {!loading && <ArrowRight className="h-4 w-4 ml-2" />}
+                </Button>
+              </form>
+            ) : (
+              <div className="mb-5">
+                <Button
+                  variant="outline"
+                  className="w-full h-12 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold text-sm"
+                  onClick={() => setIsOtpSent(false)}
+                >
+                  Başqa e-poçt yoxla
+                </Button>
               </div>
-              <Button
-                type="submit"
-                className="w-full h-13 font-bold text-base rounded-xl transition-all"
-                disabled={loading}
-              >
-                {loading && <Loader2 className="h-5 w-5 animate-spin mr-2" />}
-                {loading
-                  ? "Göndərilir..."
-                  : authMode === "signup"
-                    ? "Qeydiyyatdan Keç (Link Göndər)"
-                    : "Giriş Linki (OTP) Göndər"}
-                {!loading && <ArrowRight className="h-5 w-5 ml-2" />}
-              </Button>
-            </form>
-          ) : (
-            <div className="mb-6">
-              <Button
-                variant="outline"
-                className="w-full h-13 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold"
-                onClick={() => setIsOtpSent(false)}
-              >
-                Başqa e-poçt yoxla
-              </Button>
-            </div>
-          )}
+            )}
 
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200 dark:border-slate-800" />
             </div>
             <div className="relative flex justify-center text-xs font-semibold uppercase tracking-wider">
-              <span className="bg-slate-50 dark:bg-slate-950 px-3 text-slate-400">
+              <span className="bg-white dark:bg-slate-900 px-3 text-slate-400">
                 Və ya Sosial Şəbəkələrlə
               </span>
             </div>
@@ -267,23 +441,25 @@ export default function LoginPage() {
             </Button>
           </div>
 
+          </div>
+
           {/* Lawyer Section */}
-          <div className="mt-7 pt-6 border-t border-slate-200 dark:border-slate-800 text-center">
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-3 flex items-center justify-center gap-1.5">
+          <div className="mt-4 bg-white/80 dark:bg-slate-900/70 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 sm:p-5 text-center">
+            <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300 mb-3 flex items-center justify-center gap-1.5">
               <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>Vəkil və ya hüquqşünas kimi fəaliyyət göstərirsiniz?</span>
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5">
               <Link
                 href="/lawyer-signup?mode=login"
-                className="inline-flex items-center justify-center w-full h-12 gap-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold text-sm border border-slate-200 dark:border-slate-700 transition-all"
+                className="inline-flex items-center justify-center w-full h-11 gap-2 rounded-xl bg-white dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold text-sm border border-slate-200 dark:border-slate-700 transition-all"
               >
                 <LogIn className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                 <span>Daxil Ol</span>
               </Link>
               <Link
                 href="/lawyer-signup"
-                className="inline-flex items-center justify-center w-full h-12 gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm border border-emerald-200 dark:border-emerald-800/60 transition-all"
+                className="inline-flex items-center justify-center w-full h-11 gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm border border-emerald-200 dark:border-emerald-800/60 transition-all"
               >
                 <UserPlus className="w-4 h-4" />
                 <span>Qeydiyyat</span>
