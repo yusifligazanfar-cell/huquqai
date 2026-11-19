@@ -590,19 +590,33 @@ export async function generateLlmCompletion(
         attempts.push(`${provider}: skipped (${cfg.missingMsg})`);
         continue;
       }
-      const content = await callOpenAiCompatibleEndpoint({
-        url: cfg.url,
-        apiKey: cfg.apiKey,
-        model: cfg.model,
-        messages: options.messages,
-        temperature,
-        maxTokens,
-        responseFormatJson,
-        omitResponseFormatJson: cfg.omitResponseFormatJson,
-        extraHeaders: cfg.extraHeaders,
-        extraBody: cfg.extraBody,
-        timeoutMs,
-      });
+      const callProvider = () =>
+        callOpenAiCompatibleEndpoint({
+          url: cfg.url,
+          apiKey: cfg.apiKey,
+          model: cfg.model,
+          messages: options.messages,
+          temperature,
+          maxTokens,
+          responseFormatJson,
+          omitResponseFormatJson: cfg.omitResponseFormatJson,
+          extraHeaders: cfg.extraHeaders,
+          extraBody: cfg.extraBody,
+          timeoutMs,
+        });
+
+      let content: string;
+      try {
+        content = await callProvider();
+      } catch (firstErr) {
+        const firstMsg = firstErr instanceof Error ? firstErr.message : String(firstErr);
+        if (firstMsg.includes("HTTP 429") && /too_many_tokens|rate_limit|tokens per minute/i.test(firstMsg)) {
+          await new Promise((r) => setTimeout(r, 2000));
+          content = await callProvider();
+        } else {
+          throw firstErr;
+        }
+      }
       attempts.push(`${provider}: ok (${cfg.model})`);
       return { content, provider, model: cfg.model, attempts };
     } catch (err) {

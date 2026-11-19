@@ -83,6 +83,7 @@ export interface LegalResponsePayload {
   needs_review: boolean;
   maddeler: string[];
   citations: string[];
+  ungrounded_articles?: string[];
   debug?: {
     queryAnalysis: QueryAnalysis;
     retrievedCount: number;

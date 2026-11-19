@@ -382,16 +382,70 @@ export function validateLegalResponse(
     answer = answer.replace(/vərəsəlik hüququ altı aydan sonra əldə edilir/gi, "vərəsəlik şəhadətnaməsi mirasın açıldığı gündən altı ay keçdikdən sonra verilir (Maddə 1322)");
   }
 
-  // Legal Validation Rule: Prevent confusing Article 30 (Soyad seçmək) with Article 32, 36, 37 (Əmlakın bölünməsi)
-  if ((answer.toLowerCase().includes("əmlak") || answer.toLowerCase().includes("mülkiyyət") || answer.toLowerCase().includes("boşanma")) && 
-      (answer.includes("30.1") || answer.includes("30-cu maddə") || answer.includes("Maddə 30"))) {
-    answer = answer.replace(/Ailə Məcəlləsinin 30(?:\.[12])?-c[uü]\s*maddə[^\n\.]*/gi, "Ailə Məcəlləsinin 32, 36 və 37-ci maddələri");
-    answer = answer.replace(/Maddə 30(?:\.[12])?/gi, "Maddə 32 və 36");
+  // Legal Validation Rule: Prevent confusing Ailə Məcəlləsi Article 30 (Soyad seçmək) with Article 32, 36, 37 (Əmlakın bölünməsi)
+  // Strict word boundary \b so Article 300 (Əmək Məcəlləsi) is NEVER corrupted into "32 və 360"!
+  const ansLowForFamily = answer.toLowerCase();
+  if (
+    (ansLowForFamily.includes("ailə məcəllə") || ansLowForFamily.includes("boşanma") || ansLowForFamily.includes("nikah")) &&
+    (ansLowForFamily.includes("əmlak") || ansLowForFamily.includes("mülkiyyət")) &&
+    (/\b30\.[12]\b/.test(answer) || /\b30-cu\s+maddə/i.test(answer) || /\bMaddə\s+30(?:\.[12])?\b/i.test(answer))
+  ) {
+    answer = answer.replace(/Ailə Məcəlləsinin\s+30(?:\.[12])?-c[uü]\s*maddə[^\n\.]*/gi, "Ailə Məcəlləsinin 32, 36 və 37-ci maddələri");
+    answer = answer.replace(/\bMaddə\s+30(?:\.[12])?\b/gi, "Maddə 32 və 36");
   }
 
   // Legal Validation Rule: Replace joined decimal articles like Maddə 1268 with Maddə 126.8
   answer = answer.replace(/Maddə\s*1268\b/gi, "Maddə 126.8");
   answer = answer.replace(/1268-ci maddə/gi, "126.8-ci maddə");
+
+  // ZERO-HALLUCINATION ANSWER AUDIT: verify EVERY article number cited inside the prose against retrievedChunks
+  const ungroundedArticles: string[] = [];
+  if (retrievedChunks.length > 0 && answer) {
+    const mentionedSet = new Set<string>();
+    const patterns = [
+      /\bMaddə\s+(\d{1,4}(?:-\d+)?(?:\.\d{1,3})*(?:-\d+)?)\b/gi,
+      /\b(\d{1,4}(?:-\d+)?(?:\.\d{1,3})*(?:-\d+)?)\s*[-–]?\s*c[ıiuü]\s*maddə/gi,
+    ];
+    for (const pat of patterns) {
+      let m: RegExpExecArray | null;
+      while ((m = pat.exec(answer)) !== null) {
+        const tok = normalizeArticleToken(m[1]);
+        if (!tok || /^(19|20)\d{2}$/.test(tok)) continue;
+        mentionedSet.add(tok);
+      }
+    }
+
+    for (const art of mentionedSet) {
+      const hasSub = art.includes(".");
+      const isGrounded = retrievedChunks.some((c) => {
+        if (hasSub) {
+          return normalizeArticleToken(c.articleNumber) === art || chunkMentionsArticle(c.content, art);
+        }
+        return articleNumbersMatch(c.articleNumber, art) || chunkMentionsArticle(c.content, art);
+      });
+      if (!isGrounded) {
+        ungroundedArticles.push(art);
+      }
+    }
+
+    // Deterministically purge subsections and bullet lines citing completely unretrieved/fabricated articles
+    for (const badArt of ungroundedArticles) {
+      const esc = badArt.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      // Strip fabricated "### N. ... Maddə X" subsection
+      answer = answer.replace(
+        new RegExp(`\\n?###\\s+\\d+\\.[^\\n]*(?:Maddə\\s+${esc}|\\b${esc}[-–]?c[ıiuü]\\s*maddə)[^\\n]*\\n[\\s\\S]*?(?=\\n###\\s|\\n##\\s|$)`, "gi"),
+        ""
+      );
+      // Strip fabricated bullet line citing unretrieved article
+      answer = answer.replace(
+        new RegExp(`(?:^|\\n)-\\s+[^\\n]*(?:Maddə\\s+${esc}\\b|\\b${esc}[-–]?c[ıiuü]\\s*maddə)[^\\n]*`, "gi"),
+        ""
+      );
+    }
+    if (ungroundedArticles.length > 0) {
+      answer = answer.replace(/\n{3,}/g, "\n\n").trim();
+    }
+  }
 
   // Strip duplicate "## Mənbələr" and unwanted "## Məhkəmə təcrübəsi" sections from markdown
   // (Verified sources are already rendered once below the answer bubble)
@@ -420,8 +474,8 @@ export function validateLegalResponse(
     }
   );
 
-  const citationValid = verifiedSources.some(s => s.verified);
-  const confidence = citationValid ? 0.99 : 0.72;
+  const citationValid = verifiedSources.some(s => s.verified) && ungroundedArticles.length === 0;
+  const confidence = citationValid ? 0.99 : verifiedSources.some(s => s.verified) ? 0.82 : 0.72;
   const citations = Array.from(new Set(validArticleTitles));
 
   return {
@@ -433,6 +487,7 @@ export function validateLegalResponse(
     citation_valid: citationValid,
     needs_review: !citationValid,
     maddeler: citations,
-    citations
+    citations,
+    ungrounded_articles: ungroundedArticles,
   };
 }

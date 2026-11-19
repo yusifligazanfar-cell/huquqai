@@ -28,35 +28,24 @@ async function expandColloquialLegalQuery(
   apiKeyParam?: string
 ): Promise<string[]> {
   const sysPrompt =
-    'Sən Azərbaycan qanunvericiliyi üzrə axtarış sorğusu tərcüməçisisən. İstifadəçinin gündəlik danışıq dilində yazdığı sualı e-Qanun (İnzibati Xətalar, Cinayət, Mülki, Əmək, Ailə, Vergi, Yol Hərəkəti və s.) məcəllələrindəki RƏSMİ hüquqi terminlərə çevir. Məsələn: "siqareti yerə atma" -> "tütün məmulatları tullantılarının ətraf mühitə atılması cərimə". Yalnız JSON qaytar: {"terms": ["rəsmi ifadə 1", "rəsmi ifadə 2"]}';
+    'Sən Azərbaycan qanunvericiliyi üzrə axtarış sorğusu tərcüməçisisən. İstifadəçinin gündəlik danışıq dilində yazdığı sualı e-Qanun məcəllələri və qanunlarındakı RƏSMİ hüquqi terminlərə çevir. Yalnız JSON qaytar: {"terms": ["rəsmi ifadə 1", "rəsmi ifadə 2"]}';
   try {
-    let rawContent = "";
-    if (!apiKeyParam && isRemoteRagConfigured()) {
-      rawContent =
-        (await fetchRemoteRagAnswer(
-          [
-            { role: "system", content: sysPrompt },
-            { role: "user", content: query },
-          ],
-          { maxTokens: 220, temperature: 0.0, timeoutMs: 2200 }
-        )) || "";
-    } else {
-      const llmPromise = generateLlmCompletion({
-        messages: [
-          { role: "system", content: sysPrompt },
-          { role: "user", content: query },
-        ],
-        temperature: 0.0,
-        maxTokens: 260,
-        responseFormatJson: true,
-        apiKeyParam: apiKeyParam || undefined,
-      });
-      const timeoutPromise = new Promise<null>((resolve) =>
-        setTimeout(() => resolve(null), 1100)
-      );
-      const res = await Promise.race([llmPromise, timeoutPromise]);
-      rawContent = res?.content || "";
-    }
+    const llmPromise = generateLlmCompletion({
+      messages: [
+        { role: "system", content: sysPrompt },
+        { role: "user", content: query },
+      ],
+      temperature: 0.0,
+      maxTokens: 200,
+      responseFormatJson: true,
+      timeoutMs: 2500,
+      apiKeyParam: apiKeyParam || undefined,
+    });
+    const timeoutPromise = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), 2600)
+    );
+    const llmRes = await Promise.race([llmPromise, timeoutPromise]);
+    const rawContent = llmRes?.content || "";
     if (!rawContent) return [];
 
     const braceStart = rawContent.indexOf("{");
@@ -646,47 +635,47 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       }
     }
 
-    // 3. COMPOSE STRICT GROUND-TRUTH CONTEXT FOR LLM (Diverse top statutes + enlarged primary clauses)
+    // 3. COMPOSE STRICT GROUND-TRUTH CONTEXT FOR LLM (Diverse top reranked statutes across all in-force Codes & Laws)
     const contextChunks = selectDiverseContextChunks(
       retrievedChunks,
-      7,
+      6,
       lawMatch.confidence === "explicit"
     );
     const contextText = contextChunks
       .map((c, i) => {
-        const sliceLen = i < 3 ? 3400 : 1600;
+        const sliceLen = i < 2 ? 2600 : 1250;
         const cleanBody = sanitizeStatutoryExcerpt(c.content).substring(0, sliceLen);
         return `[MƏNBƏ ${i + 1}: ${c.articleTitle}] (Rəsmi URL: ${c.sourceUrl})\n${cleanBody}`;
       })
       .join("\n\n---\n\n")
-      .slice(0, 14500);
+      .slice(0, 10500);
 
-    // 4. PREPARE COMPACT, ULTRA-ACCURATE LEGAL PROMPT
-    const systemPrompt = `Sən HuquqAI — Azərbaycan Respublikasının qanunvericiliyinə (e-qanun.ai rəsmi mətnlərinə) əsaslanan peşəkar hüquqşünas sistemisən.
+    // 4. ZERO-EXAMPLE, STRICT CLOSED-WORLD LEGAL PROMPT (e-qanun.ai precision — zero hardcoded statute/fine examples to prevent cross-question bleed!)
+    const systemPrompt = `Sən HuquqAI — Azərbaycan Respublikasının qüvvədə olan qanunvericiliyinə (e-qanun.ai rəsmi mətnlərinə) əsaslanan dəqiq hüquqi araşdırma sistemisən.
 
-DƏYİŞMƏZ QAYDALAR:
-1. YALNIZ aşağıdakı [MƏNBƏ X] mətnlərində sözbəsöz olan faktları, cərimə məbləğlərini, faizləri, gün/ay/il müddətlərini və dövlət orqanlarını yaz. Heç nə uydurma! Hər bənd nömrəsi özündən SONRAKI cümləyə aiddir.
-2. BƏNDLƏRİN MƏZMUNUNU VƏ ŞƏRTİNİ DƏQİQ OXU:
-   - İstehlakçı Qanunu Maddə 15 = LAZIMI KEYFİYYƏTLİ (yəni QÜSURSUZ/SAĞLAM, lakin forması, ölçüsü, fasonu və ya rəngi uyğun gəlməyən) qeyri-qida malının 14 gün ərzində dəyişdirilməsidir — ƏSLA "lazımi keyfiyyətli olmayan" yazma! (Qüsurlu/keyfiyyətsiz mal Maddə 7-dir.)
-   - Vergi Məcəlləsi Maddə 57.1 = ümumi vergi hesabatının (bəyannaməsinin) vaxtında verilməməsinə görə 40 manat maliyyə sanksiyasıdır. Maddə 57.1-1 (3%/6%) yalnız kənd təsərrüfatı torpaqlarının sosial sığortasına, 57.1-2 (10000 manat) isə yalnız 16.9-cu maddə hallarına aiddir — ümumi bəyannamə gecikməsi sualında 3%/6% və ya 10000 manat yazma!
-   - Mülki Məcəllə Maddə 1322 = vərəsəlik şəhadətnaməsinin 6 aydan sonra verilməsidir; mirasın açılması vaxtı Maddə 1145-1146 (ölüm/məhkəmə qərarı günü), qəbul müddəti Maddə 1246-dır.
-   - Ailə Məcəlləsi Maddə 2.2 ümumi prinsiplərdir — əmlak bölgüsünə yazma! Birgə əmlak və bölgü Maddə 32, 34, 36, 37-dir.
-   - Əmək Məcəlləsi Maddə 70 ləğvetmə əsaslarıdır — şikayət orqanı və iddia müddəti Maddə 294, 296 (məhkəməyə 1 təqvim ayı) və işə bərpa Maddə 300-dür!
-   - İnzibati Xətalar Məcəlləsi: 327.2 = svetoforun qadağanedici işarəsində keçmə (100 manat); 338.1.3 sayrışan işıqlı xüsusi nəqliyyata aiddir (piyada işıqforu deyil!). 212.4 = tütün tullantısı atma (300 manat); 212.4-1 = təkrar (700 manat və ya 60-100 saat ictimai işlər); 212.5 = vəzifəli/hüquqi şəxslərdir.
-3. Məbləğ və ya müddət kontekstdə varsa əsla "göstərilməyib" yazma; "görə yüz" = 100 manatdır.
-4. MADDƏ NÖMRƏLƏRİNİ HƏMİŞƏ NÖQTƏ İLƏ YAZ (məs: "Maddə 36.1", "Maddə 37.1", "Maddə 76.1.1" — tire/defis işlətmə). Nömrəsi yalnız sənəddə olan 2–4 ən uyğun maddəni seç, təkrarlama.
+MÜTLƏQ VƏ DƏYİŞMƏZ QAYDALAR (ZERO HALLUCINATION):
+1. QAPALI MƏNBƏ PRİNSİPİ: Cavabında YALNIZ aşağıdakı [MƏNBƏ 1..N] mətnlərində SÖZBƏSÖZ mövcud olan qanun adlarını, maddə və bənd nömrələrini, cərimə məbləğlərini, faizləri, gün/ay/il müddətlərini və dövlət orqanlarını yaz.
+2. UYDURMA QADAĞASI: Öz yaddaşından HEÇ VAXT maddə nömrəsi, cərimə məbləği, müddət və ya sanksiya uydurma! Əgər [MƏNBƏ 1..N] mətnlərində konkret cərimə/sanksiya maddəsi YOXDURSA, bunu açıq yaz ("Təqdim olunan mənbələrdə bunun cərimə məbləği göstərilməyib"), əsla başqa maddə və ya məbləğ uydurma!
+3. BƏNDLƏRİ VƏ ŞƏRTLƏRİ DƏQİQ OXU:
+   - Hər bənd nömrəsi özündən SONRAKI cümləyə aiddir, əvvəlki cümləyə deyil.
+   - Hər normanın dəqiq şərtini və tətbiq dairəsini saxla (məs: "lazımi keyfiyyətli" = qüsursuz/sağlam maldır, bunu əsla "lazımi keyfiyyətli olmayan" kimi çevirmə; xüsusi kateqoriya/vəzifəli şəxs/təkrar törətmə bəndlərini ümumi qayda ilə qarışdırma!).
+   - Əgər həm əsas qanun (qayda/vəzifə), həm də sanksiya məcəlləsi (cərimə/məsuliyyət) kontekstdə varsa, İKİSİNİ DƏ dəqiq əlaqələndirib göstər — cərimə/məsuliyyət məbləğini elə ilk cümlədə qeyd et.
+   - Bitişik yazılmış məbləğ və ya müddət sözlərini düzgün oxu (məs., "görə yüz manat" = 100 manat); məbləğ mətndə varsa əsla "göstərilməyib" yazma.
+4. MADDƏ NÖMRƏLƏRİNİN YAZILIŞI:
+   - Maddə və bənd nömrələrini rəsmi yazılışla nöqtə ilə yaz (yalnız rəsmi aktda defisli olan bəndlərdə defisi saxla).
+   - Yalnız suala birbaşa aid olan 1–4 ən uyğun maddəyə istinad et; əlaqəsiz maddələri əlavə etmə və eyni maddəni təkrarlama.
 5. DİL VƏ FORMAT:
-   - Saf Azərbaycan dilində yaz (ingilis sözləri işlətmə). Hər cümlə nöqtə ilə tam bitsin.
-   - "## Qısa cavab": 1-2 aydın nəticə cümləsi + dərhal yeni sətirlərdə ("\n- ") 3-4 konkret "-" bəndi (qanun/maddə + məbləğ/müddət/orqan/addım).
+   - Saf və səlis Azərbaycan dilində yaz (ingilis və ya kiril hərfləri işlətmə). Hər cümlə nöqtə ilə tam bitsin.
+   - "## Qısa cavab": əvvəlcə 1–2 aydın, birbaşa yekun cümlə (konkret hüquqi nəticə + məbləğ/müddət/orqan), dərhal sonra hər biri yeni sətirdə ("\n- ") 2–4 qısa bənd.
    - "## Mənbələr" və ya URL siyahısı YAZMA (sistem kart kimi göstərir).
-   - Əgər istifadəçi "ərizə yaz / hazırla" deyirsə, boş şablon yazma — əvvəlcə yalnız 1-ci addımı (iddiaçının ad, soyad, ata adı, ünvan, FİN) soruş.
+   - İstifadəçi "ərizə yaz / hazırla" deyirsə, boş şablon yazma — əvvəlcə yalnız 1-ci addımı (iddiaçının ad, soyad, ata adı, ünvan, FİN) soruş.
 
-YALNIZ ETİBARLI JSON OBYEKTİ QAYTAR (əlavə mətn olmadan):
+YALNIZ ETİBARLI JSON OBYEKTİ QAYTAR (əlavə izah olmadan):
 {
-  "cavab": "## Hüquqi sual\n[sual]\n\n## Qısa cavab\n[1-2 aydın nəticə cümləsi.]\n- [Qanun/Məcəllə] [Maddə X]-ə əsasən, [konkret qayda/məbləğ].\n- [Qanun/Məcəllə] [Maddə Y]-ə görə, [müddət/şərt/orqan].\n- [Praktik addım/sübutlar].\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[dəqiq izah]\n\n### 2. [Normativ akt] — Maddə [Y]\n[dəqiq izah]\n\n## Praktik izah\n[vəziyyətə tətbiq]\n\n## Vacib məqamlar\n- [müddət/istisna/şərt]",
-  "maddeler": ["Azərbaycan Respublikasının [Qanun/Məcəllə] — Maddə [X]"],
+  "cavab": "## Hüquqi sual\n[sual]\n\n## Qısa cavab\n[1-2 aydın yekun cümlə — konkret nəticə və məbləğ/müddət.]\n- [Qanun/Məcəllə] — Maddə [X]-ə əsasən, [konkret qayda/məbləğ].\n- [Qanun/Məcəllə] — Maddə [Y]-ə görə, [müddət/şərt/orqan].\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[normanın dəqiq məzmunu və izahı]\n\n### 2. [Normativ akt] — Maddə [Y]\n[normanın dəqiq məzmunu və izahı]\n\n## Praktik izah\n[vəziyyətə tətbiq və izah]\n\n## Vacib məqamlar\n- [müddət / şərt / istisna]",
+  "maddeler": ["Azərbaycan Respublikasının [Normativ akt] — Maddə [X]"],
   "legal_basis": [
-    {"law_name": "[Qanunun adı]", "article_number": "[Məs: 327.2]", "article_title": "[Başlıq]", "claim": "[Hüquqi nəticə]"}
+    {"law_name": "[Normativ aktın rəsmi adı]", "article_number": "[Maddə nömrəsi]", "article_title": "[Maddənin başlığı]", "claim": "[Bu normanın tətbiq edildiyi nəticə]"}
   ]
 }`;
 
@@ -768,46 +757,47 @@ ${query}`;
       return recoverPartialJsonResponse(cleanedContent, rawContent, retrievedChunks);
     };
 
-    try {
-      let rawContent = "";
-      if (!passedKey && isRemoteRagConfigured()) {
-        const edgeAnswer = await fetchRemoteRagAnswer(
-          [
-            { role: "system", content: systemPrompt },
-            ...formattedHistory,
-            { role: "user", content: userPrompt },
-          ],
-          { maxTokens: 2400, temperature: 0.05, timeoutMs: 22000 }
-        );
-        if (edgeAnswer) {
-          rawContent = edgeAnswer;
-        }
-      }
-
-      if (!rawContent) {
+    const invokePrimaryLlm = async (
+      msgs: Array<{ role: "system" | "user" | "assistant"; content: string }>,
+      maxTokens = 2600
+    ): Promise<string> => {
+      try {
         const llmRes = await generateLlmCompletion({
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...formattedHistory,
-            { role: "user", content: userPrompt },
-          ],
+          messages: msgs,
           temperature: 0.05,
-          maxTokens: 2800,
-          timeoutMs: 20000,
+          maxTokens,
+          timeoutMs: 18000,
           responseFormatJson: true,
           apiKeyParam: passedKey || undefined,
         });
-        rawContent = llmRes.content || "";
+        if (llmRes?.content?.trim()) return llmRes.content;
+      } catch (primaryErr: any) {
+        console.warn("[chat.ts] Primary LLM provider failed, checking edge fallback:", primaryErr?.message);
       }
 
-      if (!rawContent.trim()) {
-        throw new Error("Empty LLM synthesis output");
+      if (!passedKey && isRemoteRagConfigured()) {
+        const edgeAnswer = await fetchRemoteRagAnswer(msgs, {
+          maxTokens: Math.min(maxTokens, 2200),
+          temperature: 0.05,
+          timeoutMs: 18000,
+        });
+        if (edgeAnswer?.trim()) return edgeAnswer;
       }
+      throw new Error("All LLM synthesis providers failed");
+    };
 
+    const baseMessages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+      { role: "system", content: systemPrompt },
+      ...formattedHistory,
+      { role: "user", content: userPrompt },
+    ];
+
+    try {
+      const rawContent = await invokePrimaryLlm(baseMessages, 2600);
       parsedJson = parseRawLlmJson(rawContent);
     } catch (llmErr: any) {
       usedLlmFallback = true;
-      console.error("[chat.ts] LLM synthesis failed, falling back to edge AI / statutory extracts:", llmErr?.message);
+      console.error("[chat.ts] LLM synthesis failed, falling back to statutory extracts:", llmErr?.message);
       parsedJson = await buildStatutoryFallbackResponse(
         query,
         retrievedChunks,
@@ -816,8 +806,35 @@ ${query}`;
       );
     }
 
-    // 6. VALIDATE & ENFORCE TWO-PASS HALLUCINATION GUARD
-    const validated = validateLegalResponse(parsedJson, retrievedChunks);
+    // 6. VALIDATE & ENFORCE ZERO-HALLUCINATION CITATION AUDIT (+ 1-PASS SELF-CORRECTION IF ANY ARTICLE WAS FABRICATED)
+    let validated = validateLegalResponse(parsedJson, retrievedChunks);
+
+    if (!usedLlmFallback && validated.ungrounded_articles && validated.ungrounded_articles.length > 0) {
+      const banned = validated.ungrounded_articles.join(", ");
+      console.warn(`[chat.ts] Hallucinated article(s) detected (${banned}); running strict grounded rewrite...`);
+      try {
+        const correctiveRaw = await invokePrimaryLlm(
+          [
+            ...baseMessages,
+            {
+              role: "user",
+              content: `KRİTİK XƏTA: Əvvəlki cavabında [MƏNBƏ 1..N] daxilində OLMAYAN bu maddə nömrələrini uydurdun: ${banned}. Həmin uydurma maddələri və onların cərimələrini TAMAMİLƏ SİL! Cavabı YALNIZ [MƏNBƏ 1..N] mətnlərində mövcud olan maddələrə əsasən yenidən etibarlı JSON formatında yaz.`,
+            },
+          ],
+          2400
+        );
+        const correctedJson = parseRawLlmJson(correctiveRaw);
+        const revalidated = validateLegalResponse(correctedJson, retrievedChunks);
+        if (
+          (revalidated.ungrounded_articles?.length ?? 0) < validated.ungrounded_articles.length ||
+          revalidated.citation_valid
+        ) {
+          validated = revalidated;
+        }
+      } catch (retryErr: any) {
+        console.warn("[chat.ts] Self-correction pass failed; keeping deterministically purged answer:", retryErr?.message);
+      }
+    }
 
     return {
       content: validated.answer,

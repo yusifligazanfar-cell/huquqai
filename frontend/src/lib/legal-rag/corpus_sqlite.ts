@@ -843,15 +843,17 @@ export function searchSqliteCorpus(options: SqliteSearchOptions): StructuredChun
     }
 
     const lawConf = options.targetLawConfidence ?? "explicit";
-    const primaryTargetBoost = lawConf === "weak" ? 150 : 470;
-    const secondaryTargetBoost = lawConf === "weak" ? 105 : 240;
+    const primaryTargetBoost =
+      lawConf === "explicit" ? 360 : lawConf === "strong" ? 65 : lawConf === "weak" ? 35 : 0;
+    const secondaryTargetBoost =
+      lawConf === "explicit" ? 180 : lawConf === "strong" ? 45 : lawConf === "weak" ? 25 : 0;
 
     if (targetDocs[0] && docId === targetDocs[0]) {
       score += primaryTargetBoost;
     } else if (targetDocs.includes(docId)) {
       score += secondaryTargetBoost;
     } else if (discoveredDocIds.includes(docId)) {
-      score += targetDocs.length > 0 && lawConf !== "weak" ? 90 : 190;
+      score += lawConf === "explicit" ? 60 : 120;
     }
 
     // Explicit articles (requested in user query) get massive boost; concept priority articles boost targeted laws by rank order

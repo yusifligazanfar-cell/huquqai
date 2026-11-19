@@ -533,13 +533,15 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
     }
   }
 
-  // Apply statutory priors, target confidence, and article boosts
-  const primaryBoost = lawConf === "weak" ? 150 : 470;
-  const secondaryBoost = lawConf === "weak" ? 105 : 240;
+  // Apply calibrated statutory priors (global-first like e-qanun.ai; never let a topical keyword lock drown out exact matches in other Codes)
+  const primaryBoost =
+    lawConf === "explicit" ? 360 : lawConf === "strong" ? 65 : lawConf === "weak" ? 35 : 0;
+  const secondaryBoost =
+    lawConf === "explicit" ? 180 : lawConf === "strong" ? 45 : lawConf === "weak" ? 25 : 0;
 
   for (const c of candidates.values()) {
-    if (c.isAmend && !allTargetedDocs.has(c.docId)) c.score -= 130;
-    if (c.isImpl && !allTargetedDocs.has(c.docId)) c.score -= 60;
+    if (c.isAmend && !allTargetedDocs.has(c.docId)) c.score -= 220;
+    if (c.isImpl && !allTargetedDocs.has(c.docId)) c.score -= 80;
     if (
       c.isTreaty &&
       !targetDocs.includes(c.docId) &&
@@ -553,7 +555,7 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
     if (targetDocs[0] && c.docId === targetDocs[0]) c.score += primaryBoost;
     else if (targetDocs.includes(c.docId)) c.score += secondaryBoost;
     else if (discoveredDocIds.includes(c.docId)) {
-      c.score += targetDocs.length > 0 && lawConf !== "weak" ? 90 : 190;
+      c.score += lawConf === "explicit" ? 60 : 120;
     }
 
     const isConceptTarget = targetDocs.length > 0 ? targetDocs.includes(c.docId) : allTargetedDocs.has(c.docId);
@@ -582,7 +584,7 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
 
   const preTop = Array.from(candidates.values())
     .sort((a, b) => b.score - a.score)
-    .slice(0, Math.min(limit + 8, 22));
+    .slice(0, Math.min(limit + 12, 32));
 
   const neededBuckets = Array.from(new Set(preTop.map((c) => c.bucketId))).slice(0, 12);
   const neededDocIds = Array.from(new Set(preTop.map((c) => c.docId))).slice(0, 12);
@@ -624,6 +626,20 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
     for (const bad of forbidden) {
       if (contentNorm.includes(bad) || titleNorm.includes(bad)) score -= 220;
     }
+
+    // Prefer consolidated in-force Codes and Laws over amendment laws and statistical indicator tables
+    const isAmendmentTitle =
+      titleNorm.includes("deyisiklikler edil") ||
+      titleNorm.includes("deyisiklik edil") ||
+      titleNorm.includes("elaveler edil");
+    const isStatsTitle =
+      titleNorm.includes("gostericileri") ||
+      titleNorm.includes("statistika") ||
+      titleNorm.includes("hesabat formasi");
+    if (isAmendmentTitle && !queryNorm.includes("deyisiklik")) score -= 220;
+    if (isStatsTitle && !queryNorm.includes("statistika") && !queryNorm.includes("gosterici")) score -= 180;
+    if (meta.dt === "kodeks" && !isAmendmentTitle) score += 70;
+    else if (meta.dt === "qanun" && !isAmendmentTitle && !isStatsTitle) score += 35;
 
     // Sub-article exact string check inside parent article text (e.g. "212.4", "327.2")
     const matchedExplicitSub = explicitArts.find(
@@ -884,10 +900,15 @@ async function handleSemantic(body: Record<string, unknown>, env: Env): Promise<
     Array.isArray(body.target_doc_ids) ? body.target_doc_ids.map(String).filter(Boolean) : []
   );
 
-  const embRes = (await env.AI.run("@cf/baai/bge-m3", { text: [query.slice(0, 1000)] })) as {
-    data?: number[][];
-  };
-  const qVec = embRes?.data?.[0];
+  let qVec: number[] | undefined;
+  try {
+    const embRes = (await env.AI.run("@cf/baai/bge-m3", { text: [query.slice(0, 1000)] })) as {
+      data?: number[][];
+    };
+    qVec = embRes?.data?.[0];
+  } catch (err) {
+    return jsonResp({ results: [], degraded: true, error: String(err), latency_ms: Date.now() - t0 });
+  }
   if (!qVec) return jsonResp({ results: [], latency_ms: Date.now() - t0 });
 
   const vRes = await env.VECTORIZE.query(qVec, {
@@ -899,7 +920,7 @@ async function handleSemantic(body: Record<string, unknown>, env: Env): Promise<
     .map((m) => {
       const md = (m.metadata || {}) as Record<string, string | number>;
       const did = String(md.document_id || "");
-      const boost = targetDocIds.size > 0 && targetDocIds.has(did) ? 0.1 : 0;
+      const boost = targetDocIds.size > 0 && targetDocIds.has(did) ? 0.04 : 0;
       return { match: m, md, effScore: m.score + boost };
     })
     .sort((a, b) => b.effScore - a.effScore);
@@ -967,17 +988,22 @@ async function handleRerank(body: Record<string, unknown>, env: Env): Promise<Re
   const aiRunner = env.AI as unknown as {
     run(model: string, input: Record<string, unknown>): Promise<{ response?: Array<{ id: number; score: number }> }>;
   };
-  const res = await aiRunner.run("@cf/baai/bge-reranker-base", {
-    query: query.slice(0, 500),
-    contexts,
-  });
+  let res: { response?: Array<{ id: number; score: number }> } | null = null;
+  try {
+    res = await aiRunner.run("@cf/baai/bge-reranker-base", {
+      query: query.slice(0, 500),
+      contexts,
+    });
+  } catch (err) {
+    return jsonResp({ scores: [], degraded: true, error: String(err), latency_ms: Date.now() - t0 });
+  }
 
   const scoreByIdx = new Map<number, number>();
   for (const r of res?.response || []) {
     scoreByIdx.set(Number(r.id), Number(r.score));
   }
 
-  const out = cands.slice(0, 85).map((c: Record<string, unknown>, i: number) => ({
+  const out = batch.map((c: Record<string, unknown>, i: number) => ({
     id: c.id,
     semantic_score: Math.round((scoreByIdx.get(i) ?? 0) * 10000) / 10000,
   }));

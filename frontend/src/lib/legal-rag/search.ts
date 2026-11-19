@@ -484,7 +484,7 @@ export async function hybridSearchAsync(
   const queryText = (rawQuery || analysis.normalizedQuery).trim();
   const timeoutMs = options?.timeoutMs ?? (isRemoteRagConfigured() ? 6500 : 1800);
   const extraTerms = (options?.extraExpandedTerms ?? []).filter((t) => t && t.trim().length >= 3);
-  const requestedWeight = options?.semanticWeight ?? (mode === "semantic" ? 0.85 : 0.26);
+  const requestedWeight = options?.semanticWeight ?? (mode === "semantic" ? 0.85 : 0.72);
   const semanticWeight = Math.max(0, Math.min(1, requestedWeight));
   const stage1Limit = Math.max(maxResults * 3, 45);
 
@@ -576,7 +576,7 @@ export async function hybridSearchAsync(
       : Promise.resolve(null),
     semanticQuery &&
     targetFrameworkIds.length > 0 &&
-    (effectiveLawConf === "explicit" || effectiveLawConf === "strong")
+    (effectiveLawConf === "explicit" || Boolean(analysis.isFollowUp))
       ? fetchSemanticBackend<SemanticSearchApiResponse>(
           "/rag/semantic",
           { query: semanticQuery, top_k: 25, target_doc_ids: targetFrameworkIds },
@@ -646,6 +646,7 @@ export async function hybridSearchAsync(
     scopedSemRank: number;
     supaRank: number;
     rawSemScore: number;
+    rerankScore: number;
   }
 
   const candidates = new Map<string, CandidateAcc>();
@@ -665,6 +666,7 @@ export async function hybridSearchAsync(
         scopedSemRank: -1,
         supaRank: -1,
         rawSemScore: ch.semanticScore ?? 0,
+        rerankScore: -1,
       });
     } else if ((ch.score ?? 0) > existing.lexScore) {
       existing.lexScore = ch.score ?? 0;
@@ -686,6 +688,7 @@ export async function hybridSearchAsync(
           scopedSemRank: isScoped ? idx : -1,
           supaRank: -1,
           rawSemScore: sem,
+          rerankScore: -1,
         });
       } else {
         if (isScoped && (existing.scopedSemRank === -1 || idx < existing.scopedSemRank)) {
@@ -721,16 +724,45 @@ export async function hybridSearchAsync(
         scopedSemRank: -1,
         supaRank: idx,
         rawSemScore: ch.semanticScore ?? 0,
+        rerankScore: -1,
       });
     } else if (existing.supaRank === -1 || idx < existing.supaRank) {
       existing.supaRank = idx;
     }
   });
 
-  // Rerank all candidates (including non-cached doc_types like qerar/beynelxalq and SQL-only hits)
-  const rerankBatch = Array.from(candidates.values()).slice(0, 85);
-  const needsRerank = rerankBatch.filter((c) => c.rawSemScore <= 0);
-  if (needsRerank.length > 0 && semanticQuery) {
+  // Build balanced 36-item rerank batch across global semantic, global lexical, and supplemental sources
+  // so top global semantic hits (e.g. IXM Madde 330) are NEVER crowded out by single-law lexical hits!
+  const rerankBatch: CandidateAcc[] = [];
+  const rerankKeys = new Set<string>();
+  const addToRerank = (list: StructuredChunk[], maxTake: number) => {
+    let added = 0;
+    for (const ch of list) {
+      if (added >= maxTake || rerankBatch.length >= 36) break;
+      const k = getKey(ch);
+      if (rerankKeys.has(k)) continue;
+      const acc = candidates.get(k);
+      if (!acc) continue;
+      rerankKeys.add(k);
+      rerankBatch.push(acc);
+      added++;
+    }
+  };
+  addToRerank(globalSemChunks, 16);
+  addToRerank(localChunks, 14);
+  addToRerank(expandedSemChunks, 4);
+  addToRerank(scopedSemChunks, 4);
+  addToRerank(supabaseChunks, 4);
+  for (const acc of candidates.values()) {
+    if (rerankBatch.length >= 36) break;
+    if (!rerankKeys.has(acc.key)) {
+      rerankKeys.add(acc.key);
+      rerankBatch.push(acc);
+    }
+  }
+
+  let rerankedCount = 0;
+  if (rerankBatch.length > 0 && semanticQuery) {
     const rerankRes = await fetchSemanticBackend<RerankApiResponse>(
       "/rag/rerank",
       {
@@ -744,11 +776,15 @@ export async function hybridSearchAsync(
       },
       timeoutMs
     );
-    if (rerankRes?.scores) {
+    if (rerankRes?.scores && rerankRes.scores.length > 0) {
       for (const sc of rerankRes.scores) {
         const entry = candidates.get(String(sc.id));
-        if (entry && sc.semantic_score > entry.rawSemScore) {
-          entry.rawSemScore = sc.semantic_score;
+        if (entry && typeof sc.semantic_score === "number") {
+          entry.rerankScore = sc.semantic_score;
+          if (sc.semantic_score > entry.rawSemScore) {
+            entry.rawSemScore = sc.semantic_score;
+          }
+          if (sc.semantic_score > 0) rerankedCount++;
         }
       }
     }
@@ -761,13 +797,13 @@ export async function hybridSearchAsync(
 
   const effWeight =
     mode === "hybrid" && explicitArticles.length > 0
-      ? Math.min(semanticWeight, 0.16)
+      ? Math.min(semanticWeight, 0.20)
       : semanticWeight;
+  const queryNormLow = analysis.normalizedQuery;
 
   const scoredPool: StructuredChunk[] = [];
   for (const c of candidates.values()) {
     const lexNorm = c.lexScore > 0 ? Math.min(1, c.lexScore / maxLex) : 0;
-    // Calibrated linear scaling without min-max noise amplification
     const semNorm =
       c.rawSemScore > 0
         ? Math.max(0, Math.min(1, (c.rawSemScore - 0.25) / 0.60))
@@ -785,20 +821,31 @@ export async function hybridSearchAsync(
       LAW_REGISTRY[c.chunk.lawId]?.frameworkId?.toString() ||
       c.chunk.sourceUrl.match(/\/results\/(\d+)/)?.[1] ||
       "";
-    const domainScale =
-      mode === "semantic"
-        ? 0.35
-        : effectiveLawConf === "weak"
-        ? 0.30
-        : effectiveLawConf === "none"
-        ? 0.50
-        : 1.0;
     let domainPrior = 0;
-    if (targetFrameworkIds[0] && docId === targetFrameworkIds[0]) {
-      domainPrior = 0.14 * domainScale;
-    } else if (docId && targetFrameworkIds.includes(docId)) {
-      domainPrior = 0.08 * domainScale;
+    if (effectiveLawConf === "explicit") {
+      if (targetFrameworkIds[0] && docId === targetFrameworkIds[0]) domainPrior = 0.12;
+      else if (docId && targetFrameworkIds.includes(docId)) domainPrior = 0.07;
+    } else if (effectiveLawConf === "strong") {
+      if (targetFrameworkIds[0] && docId === targetFrameworkIds[0]) domainPrior = 0.035;
+      else if (docId && targetFrameworkIds.includes(docId)) domainPrior = 0.025;
+    } else if (effectiveLawConf === "weak") {
+      if (targetFrameworkIds[0] && docId === targetFrameworkIds[0]) domainPrior = 0.015;
+      else if (docId && targetFrameworkIds.includes(docId)) domainPrior = 0.01;
     }
+
+    const titleNorm = normalizeAz(c.chunk.lawName || "");
+    let docQualityAdj = 0;
+    const isAmend =
+      titleNorm.includes("deyisiklikler edil") ||
+      titleNorm.includes("deyisiklik edil") ||
+      titleNorm.includes("elaveler edil");
+    const isStats =
+      titleNorm.includes("gostericileri") ||
+      titleNorm.includes("statistika") ||
+      titleNorm.includes("hesabat formasi");
+    if (isAmend && !queryNormLow.includes("deyisiklik")) docQualityAdj -= 0.22;
+    if (isStats && !queryNormLow.includes("statistika") && !queryNormLow.includes("gosterici")) docQualityAdj -= 0.18;
+    if (titleNorm.includes("mecelle") && !isAmend) docQualityAdj += 0.03;
 
     let artAlignBoost = 0;
     const artNum = c.chunk.articleNumber;
@@ -824,13 +871,17 @@ export async function hybridSearchAsync(
 
     const weighted = (1 - effWeight) * lexNorm + effWeight * semNorm;
     const rrfFused = ((1 - effWeight) * rrfLex + effWeight * rrfSem + rrfSupa) * 14;
-    const finalScore = weighted * 0.65 + rrfFused * 0.35 + domainPrior + artAlignBoost;
+    const baseScore =
+      rerankedCount > 0 && c.rerankScore >= 0
+        ? c.rerankScore * 0.52 + weighted * 0.33 + rrfFused * 0.15
+        : weighted * 0.65 + rrfFused * 0.35;
+    const finalScore = baseScore + domainPrior + artAlignBoost + docQualityAdj;
 
     scoredPool.push({
       ...c.chunk,
       documentId: docId || c.chunk.documentId,
       score: Math.round(finalScore * 1000),
-      semanticScore: Number(c.rawSemScore.toFixed(4)),
+      semanticScore: Number((c.rerankScore >= 0 ? c.rerankScore : c.rawSemScore).toFixed(4)),
     });
   }
 
