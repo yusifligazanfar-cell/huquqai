@@ -748,7 +748,7 @@ export function DocumentCreatorForm({
         </div>
       )}
 
-      <div className="pt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="pt-2 flex flex-col gap-3">
         <p role="status" aria-live="polite" className="text-xs text-slate-600 dark:text-slate-400">
           {isSubmitting
             ? "Qanunvericilik normaları yoxlanılır və rəsmi A4 sənəd strukturlaşdırılır..."
@@ -758,7 +758,7 @@ export function DocumentCreatorForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className="inline-flex items-center justify-center gap-2 min-h-12 px-6 py-3 rounded-xl text-base font-extrabold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-60 text-white shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all w-full sm:w-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
+          className="inline-flex items-center justify-center gap-2 min-h-12 px-8 py-3.5 rounded-xl text-base font-extrabold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-60 text-white shadow-md shadow-emerald-500/20 hover:shadow-emerald-500/30 transition-all w-full whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
         >
           {isSubmitting ? (
             <>
