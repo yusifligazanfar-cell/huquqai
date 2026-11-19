@@ -117,7 +117,7 @@ export function DocumentCreatorWorkspace({ docType }: { docType: DocumentTypeId 
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <Link
               href="/petition"
-              className="inline-flex items-center gap-2 min-h-11 px-3.5 py-2 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              className="inline-flex items-center gap-2 min-h-11 px-3.5 py-2 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
             >
               <ArrowLeft className="w-4 h-4" aria-hidden="true" />
               <span>Bütün generatorlar (19)</span>
@@ -125,7 +125,7 @@ export function DocumentCreatorWorkspace({ docType }: { docType: DocumentTypeId 
 
             <Link
               href="/chat"
-              className="inline-flex items-center gap-1.5 min-h-11 px-3.5 py-2 rounded-xl text-sm font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              className="inline-flex items-center gap-1.5 min-h-11 px-3.5 py-2 rounded-xl text-sm font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
             >
               <Sparkles className="w-4 h-4" aria-hidden="true" />
               <span>Hüquqi Çata qayıt</span>
@@ -141,10 +141,10 @@ export function DocumentCreatorWorkspace({ docType }: { docType: DocumentTypeId 
                     key={item.id}
                     href={item.href}
                     aria-current={active ? "page" : undefined}
-                    className={`inline-flex items-center gap-2 min-h-11 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 ${
+                    className={`inline-flex items-center gap-2 min-h-11 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold border transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600 ${
                       active
-                        ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                        : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700"
+                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-600 shadow-sm shadow-emerald-500/20"
+                        : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700"
                     }`}
                   >
                     <DocumentIcon name={item.iconName} className="w-4 h-4" />
@@ -187,7 +187,7 @@ export function DocumentCreatorWorkspace({ docType }: { docType: DocumentTypeId 
               />
             ) : (
               <div className="rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 p-8 sm:p-12 text-center flex flex-col items-center justify-center min-h-[420px]">
-                <span className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200/70 dark:border-indigo-800/50 mb-4">
+                <span className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/70 dark:border-emerald-800/50 mb-4">
                   <FileText className="w-7 h-7" aria-hidden="true" />
                 </span>
                 <h3 className="text-lg font-extrabold text-slate-950 dark:text-white mb-2">

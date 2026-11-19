@@ -65,7 +65,7 @@ export default function LawyerSearchClient({ categories }: { categories: any[] }
                 onClick={() => handleCategoryClick(cat.id)}
                 className={`group relative flex flex-col items-center justify-center text-center p-4 rounded-2xl border transition-all duration-300 hover:-translate-y-1.5 overflow-hidden ${
                   isSelected 
-                    ? 'bg-gradient-to-br from-primary to-blue-600 text-white border-transparent shadow-lg shadow-primary/30' 
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-transparent shadow-lg shadow-emerald-500/25' 
                     : 'bg-white/80 dark:bg-card/40 border-slate-200 dark:border-white/10 hover:border-primary/50 hover:shadow-xl hover:bg-white dark:hover:bg-slate-800'
                 }`}
               >

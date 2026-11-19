@@ -768,7 +768,7 @@ function ChatContent() {
                       aria-label="Sualı göndər"
                       title="Sualı göndər"
                       disabled={!input.trim() || isLoading}
-                      className="rounded-full h-10 w-10 bg-emerald-600 text-white hover:bg-emerald-500 shadow-md shadow-emerald-950/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
+                      className="rounded-full h-10 w-10 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20 transition-all hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
                     >
                       <Send className="h-4 w-4 md:ml-0.5" />
                     </Button>
@@ -926,7 +926,7 @@ function ChatContent() {
                   )}
 
                   {msg.role === "assistant" && !msg.isTyping && msg.content && !isPetitionMode && !msg.content.includes("[ƏRİZƏ]") && (
-                    <div className="mt-3 p-4 rounded-xl border border-indigo-200/80 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-indigo-950/30 flex flex-col gap-3 w-full shadow-sm">
+                    <div className="mt-3 p-4 rounded-xl border border-emerald-200/80 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/30 flex flex-col gap-3 w-full shadow-sm">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <div className="flex flex-col">
                           <span className="text-sm font-extrabold text-slate-950 dark:text-white">
@@ -940,7 +940,7 @@ function ChatContent() {
                           type="button"
                           onClick={() => openDocModal("petition", msg)}
                           disabled={isLoading}
-                          className="inline-flex items-center justify-center min-h-11 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white shadow-sm transition-colors whitespace-nowrap self-start sm:self-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                          className="inline-flex items-center justify-center min-h-11 px-4 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-60 text-white shadow-md shadow-emerald-500/20 transition-all whitespace-nowrap self-start sm:self-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                         >
                           Bütün 19 sənəd növü
                         </button>
@@ -953,7 +953,7 @@ function ChatContent() {
                             type="button"
                             onClick={() => openDocModal(docTypeItem.id, msg)}
                             disabled={isLoading}
-                            className="flex items-start gap-2.5 min-h-12 p-2.5 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-indigo-400 dark:hover:border-indigo-600 hover:bg-indigo-50/40 dark:hover:bg-indigo-950/40 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                            className="flex items-start gap-2.5 min-h-12 p-2.5 rounded-xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-emerald-400 dark:hover:border-emerald-600 hover:bg-emerald-50/40 dark:hover:bg-emerald-950/40 text-left transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
                           >
                             <span
                               className={`inline-flex items-center justify-center w-8 h-8 rounded-lg border shrink-0 mt-0.5 ${docTypeItem.accentClass}`}
@@ -1025,7 +1025,7 @@ function ChatContent() {
                 rows={1}
                 aria-label="Hüquqi sualınızı daxil edin"
                 placeholder={isDictating ? "Dinləyirəm, danışın..." : "Hüquqi sualınızı yazın..."}
-                className={`w-full resize-none overflow-y-auto overscroll-contain pl-4 sm:pl-14 pr-24 md:pr-24 py-3 md:py-4 min-h-[48px] md:min-h-[56px] max-h-[120px] md:max-h-[200px] rounded-2xl sm:rounded-3xl md:rounded-[2rem] bg-slate-50 dark:bg-card/50 border border-slate-200 dark:border-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/40 focus-visible:border-primary/50 text-base sm:text-[15px] shadow-inner transition-all text-foreground ${isDictating ? 'border-blue-400 dark:border-blue-500/60 ring-2 ring-blue-400/30' : ''}`}
+                className={`w-full resize-none overflow-y-auto overscroll-contain pl-4 sm:pl-14 pr-24 md:pr-24 py-3 md:py-4 min-h-[48px] md:min-h-[56px] max-h-[120px] md:max-h-[200px] rounded-2xl sm:rounded-3xl md:rounded-[2rem] bg-slate-50 dark:bg-card/50 border border-slate-200 dark:border-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500/40 focus-visible:border-emerald-500/50 text-base sm:text-[15px] shadow-inner transition-all text-foreground ${isDictating ? 'border-emerald-400 dark:border-emerald-500/60 ring-2 ring-emerald-400/30' : ''}`}
               />
               <div className="absolute right-1.5 md:right-2 bottom-1.5 md:bottom-1.5 flex items-center gap-1">
                 <button
@@ -1034,7 +1034,7 @@ function ChatContent() {
                   aria-label="Səslə daxiletmə"
                   className={`h-10 w-10 rounded-full flex items-center justify-center transition-all ${
                     isDictating
-                      ? 'bg-blue-500 text-white shadow-[0_0_16px_rgba(59,130,246,0.5)] animate-pulse'
+                      ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_0_16px_rgba(16,185,129,0.5)] animate-pulse'
                       : 'text-muted-foreground hover:text-foreground hover:bg-secondary'
                   }`}
                   title="Səsli daxiletmə"
@@ -1047,7 +1047,7 @@ function ChatContent() {
                   aria-label="Sualı göndər"
                   title="Sualı göndər"
                   disabled={!input.trim() || isLoading}
-                  className="rounded-full h-10 w-10 md:h-11 md:w-11 bg-primary text-white hover:opacity-90 shadow-[0_4px_15px_rgba(234,88,12,0.4)] transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
+                  className="rounded-full h-10 w-10 md:h-11 md:w-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100"
                 >
                   <Send className="h-4 w-4 md:h-5 md:w-5 md:ml-0.5" />
                 </Button>

@@ -278,7 +278,7 @@ export function DocumentResultSheet({
               type="button"
               onClick={handleDocx}
               disabled={downloadingDocx}
-              className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3.5 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white shadow-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              className="inline-flex items-center justify-center gap-1.5 min-h-11 px-3.5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-60 text-white shadow-md shadow-emerald-500/20 transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600"
             >
               <FileDown className="w-3.5 h-3.5" aria-hidden="true" />
               <span>{downloadingDocx ? "Yüklənir..." : "DOCX yüklə"}</span>
@@ -385,8 +385,8 @@ export function DocumentResultSheet({
                 onClick={() => onSelectVersion?.(v.id)}
                 className={`px-2.5 py-1 rounded-lg font-semibold border shrink-0 transition-colors ${
                   isCurrent
-                    ? "bg-indigo-600 text-white border-indigo-600"
-                    : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400"
+                    ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white border-emerald-600"
+                    : "bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-emerald-400"
                 }`}
               >
                 {v.label} ({v.createdAt})
@@ -530,7 +530,7 @@ export function DocumentResultSheet({
             <button
               type="button"
               onClick={handleApplyEdits}
-              className="inline-flex items-center gap-2 min-h-12 px-5 py-2.5 rounded-xl text-sm font-extrabold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+              className="inline-flex items-center gap-2 min-h-12 px-5 py-2.5 rounded-xl text-sm font-extrabold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-md shadow-emerald-500/20"
             >
               <Save className="w-4 h-4" aria-hidden="true" />
               <span>Dəyişiklikləri tətbiq et</span>
