@@ -194,7 +194,11 @@ function sanitizeStatutoryExcerpt(text: string): string {
     .replace(/\u2011|\u2010|\u2212/g, '-')
     .replace(/\bgörəyüz\b/gi, 'görə yüz')
     .replace(/\bgündənüçay\b/gi, 'gündən üç ay')
-    .replace(/([—–-]\s*)min\s+manatdan\b/gi, '$1bir min (1000) manatdan')
+    .replace(/([—–-]\s*)min\s+manatdan\s+iki\s+min\s+manatadək\s+miqdarda\s+cərimə/gi, '$1bir min (1.000) manatdan iki min (2.000) manatadək miqdarda cərimə (cəza sanksiyası)')
+    .replace(/beş\s+yüz\s+manatdan\s+yuxarı,\s*lakin\s+beş\s+min\s+manatdan\s+artıq\s+olmayan/gi, 'beş yüz (500) manatdan yuxarı, lakin beş min (5.000) manatdan artıq olmayan')
+    .replace(/beş\s+min\s+manatdan\s+yuxarı,\s*lakin\s+əlli\s+min\s+manatdan\s+artıq\s+olmayan/gi, 'beş min (5.000) manatdan yuxarı, lakin əlli min (50.000) manatdan artıq olmayan')
+    .replace(/əlli\s+min\s+manatdan\s+yuxarı,\s*lakin\s+beş\s+yüz\s+min\s+manatdan\s+artıq\s+olmayan/gi, 'əlli min (50.000) manatdan yuxarı, lakin beş yüz min (500.000) manatdan artıq olmayan')
+    .replace(/beş\s+yüz\s+min\s+manatdan\s+yuxarı\s+olan\s+məbləğ/gi, 'beş yüz min (500.000) manatdan yuxarı olan məbləğ')
     .replace(
       /(\d+(?:\.\d+)+)\.\s*\[QÜVVƏDƏN DÜŞÜB\s*\/\s*LƏĞV EDİLİB\]\s*(?=[a-zəöüğışç])/gi,
       '($1-cü bənd ləğv edilib) — '
@@ -786,8 +790,15 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
               query: effectiveSearchQuery,
               expandedQueries: [...(queryAnalysis.keywords || []), ...llmExpandedTerms],
               matchedLaws: isCriminalEmbezzlementOrOfficialKazus ? Array.from(new Set(["cinayet", ...topLawIds])) : topLawIds,
-              matchedArticles: topArtNums,
-              matchedPairs: topPairs,
+              matchedArticles: isCriminalEmbezzlementOrOfficialKazus ? Array.from(new Set(["179", "313", "308", "178", ...topArtNums])) : topArtNums,
+              matchedPairs: isCriminalEmbezzlementOrOfficialKazus
+                ? [
+                    { law: "cinayet", article: "179" },
+                    { law: "cinayet", article: "313" },
+                    { law: "cinayet", article: "308" },
+                    ...topPairs,
+                  ]
+                : topPairs,
               limit: 2,
             },
             5000
@@ -965,7 +976,9 @@ YALNIZ ETİBARLI JSON OBYEKTİ QAYTAR (əlavə izah olmadan):
 ${contextText}
 ${caseBanner}
 ÇOXTURLU SÖHBƏT VƏ KAZUS QAYDASI:
-- Əgər istifadəçi uzun hüquqi kazus (situasiya + sual) təqdim edibsə, "## Hüquqi sual" başlığı altında yalnız əsas sualı ("${displayQuestion}") yaz, kazusdakı BÜTÜN faktları (məbləği, qulluq mövqeyini, saxta müqavilə/hesab-fakturaları, müdafiə arqumentlərini və s.) [KONTEX] maddələrinə (xüsusən Qeyd hissələrindəki məbləğ hədlərinə və vəzifəli şəxs anlayışına) əsasən dərindən təhlil et.
+- Əgər istifadəçi uzun hüquqi kazus (situasiya + sual) təqdim edibsə, "## Hüquqi sual" başlığı altında yalnız əsas sualı ("${displayQuestion}") yaz.
+- Kazusdakı BÜTÜN faktları (məbləği, qulluq mövqeyini, saxta müqavilə və elektron hesab-fakturaları, təsisçilərin şifahi razılığı iddiasını, mühasibə sənəd silmə tapşırığını, təkbaşına səlahiyyət müdafiəsini və s.) [KONTEX]-dəki BÜTÜN mühüm maddələr üzrə (məs., CM 179.1, 179.2.1, 179.2.3, 179.3.2, CM 177 Qeyd 1–2 miqdar hədləri, CM 308 və Qeyd 3–4 MMC rəhbərinin vəzifəli şəxs statusu, CM 313 vəzifə saxtakarlığı, CM 178 dələduzluq və Ali Məhkəmə Plenumu / Konstitusiya Məhkəməsi qərarları) ayrı-ayrılıqda təhlil et, maddələrin məcmusu və rəqabətini göstər.
+- DİQQƏT: CM 179.1-dəki "1.000–2.000 manat" CƏRİMƏ CƏZASIDIR (sanksiyadır), ziyanın miqdar həddi DEYİL! Ziyanın miqdar hədləri yalnız CM 177 Qeyd 1–2 ilə müəyyən edilir: sadə tərkib (179.1) = 500–5.000 manat ziyan; xeyli miqdar (179.2.4) = 5.000–50.000 manat ziyan; külli miqdar (179.3.2) = 50.000–500.000 manat ziyan; xüsusilə külli miqdar (179.4) = 500.000 manatdan yuxarı ziyan.
 - Əgər yeni hüquqi mövzudursa, əvvəlki suallardakı köhnə maddə və məcəllələri UNUT və YALNIZ bu [KONTEX] mənbələrinə əsaslan.
 
 İSTİFADƏÇİNİN SORĞUSU: 
