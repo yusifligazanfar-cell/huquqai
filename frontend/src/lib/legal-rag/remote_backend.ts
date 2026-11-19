@@ -196,3 +196,44 @@ export async function fetchRemoteGenerateDocument(
     return null;
   }
 }
+
+export async function fetchRemoteRagAnswer(
+  messages: Array<{ role: string; content: string }>,
+  options?: { maxTokens?: number; temperature?: number; timeoutMs?: number }
+): Promise<string | null> {
+  if (!isRemoteRagConfigured()) return null;
+  const baseUrl = getRagBackendUrl().replace(/\/+$/, "");
+  if (!baseUrl) return null;
+  const secret = (process.env.LEXAZ_RAG_BACKEND_SECRET || "").trim();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(secret ? { Authorization: `Bearer ${secret}`, "x-rag-secret": secret } : {}),
+  };
+
+  const systemMsg = messages.find((m) => m.role === "system")?.content || "";
+  const nonSys = messages.filter((m) => m.role !== "system");
+  const lastUser = nonSys.length > 0 ? nonSys[nonSys.length - 1] : null;
+  if (!lastUser?.content?.trim()) return null;
+  const history = nonSys.slice(0, -1).slice(-4);
+
+  try {
+    const res = await fetch(`${baseUrl}/rag/answer`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        systemPrompt: systemMsg,
+        userPrompt: lastUser.content,
+        history,
+        maxTokens: options?.maxTokens ?? 2200,
+        temperature: options?.temperature ?? 0.05,
+      }),
+      signal: AbortSignal.timeout(options?.timeoutMs ?? 22000),
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { content?: string };
+    return typeof data?.content === "string" && data.content.trim() ? data.content.trim() : null;
+  } catch (err) {
+    console.warn("[remote_backend] /rag/answer failed:", err);
+    return null;
+  }
+}

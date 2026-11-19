@@ -15,6 +15,7 @@ import {
   fetchRemoteDocumentById,
   fetchRemoteDocumentByTitle,
   fetchRemoteShortSummary,
+  fetchRemoteRagAnswer,
   isRemoteRagConfigured,
 } from '@/lib/legal-rag'
 import { findCandidateLawsByQuery } from '@/lib/legal-rag/registry'
@@ -26,26 +27,43 @@ async function expandColloquialLegalQuery(
   query: string,
   apiKeyParam?: string
 ): Promise<string[]> {
+  const sysPrompt =
+    'Sən Azərbaycan qanunvericiliyi üzrə axtarış sorğusu tərcüməçisisən. İstifadəçinin gündəlik danışıq dilində yazdığı sualı e-Qanun (İnzibati Xətalar, Cinayət, Mülki, Əmək, Ailə, Vergi, Yol Hərəkəti və s.) məcəllələrindəki RƏSMİ hüquqi terminlərə çevir. Məsələn: "siqareti yerə atma" -> "tütün məmulatları tullantılarının ətraf mühitə atılması cərimə". Yalnız JSON qaytar: {"terms": ["rəsmi ifadə 1", "rəsmi ifadə 2"]}';
   try {
-    const llmPromise = generateLlmCompletion({
-      messages: [
-        {
-          role: "system",
-          content:
-            'Sən Azərbaycan qanunvericiliyi üzrə axtarış sorğusu tərcüməçisisən. İstifadəçinin gündəlik danışıq dilində yazdığı sualı e-Qanun (İnzibati Xətalar, Cinayət, Mülki, Əmək, Ailə, Vergi, Yol Hərəkəti və s.) məcəllələrindəki RƏSMİ hüquqi terminlərə çevir. Məsələn: "siqareti yerə atma" -> "tütün məmulatları tullantılarının ətraf mühitə atılması cərimə". Yalnız JSON qaytar: {"terms": ["rəsmi ifadə 1", "rəsmi ifadə 2"]}',
-        },
-        { role: "user", content: query },
-      ],
-      temperature: 0.0,
-      maxTokens: 260,
-      responseFormatJson: true,
-      apiKeyParam: apiKeyParam || undefined,
-    });
-    const timeoutPromise = new Promise<null>((resolve) =>
-      setTimeout(() => resolve(null), 1100)
-    );
-    const res = await Promise.race([llmPromise, timeoutPromise]);
-    if (!res?.content) return [];
+    let rawContent = "";
+    if (!apiKeyParam && isRemoteRagConfigured()) {
+      rawContent =
+        (await fetchRemoteRagAnswer(
+          [
+            { role: "system", content: sysPrompt },
+            { role: "user", content: query },
+          ],
+          { maxTokens: 220, temperature: 0.0, timeoutMs: 2200 }
+        )) || "";
+    } else {
+      const llmPromise = generateLlmCompletion({
+        messages: [
+          { role: "system", content: sysPrompt },
+          { role: "user", content: query },
+        ],
+        temperature: 0.0,
+        maxTokens: 260,
+        responseFormatJson: true,
+        apiKeyParam: apiKeyParam || undefined,
+      });
+      const timeoutPromise = new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), 1100)
+      );
+      const res = await Promise.race([llmPromise, timeoutPromise]);
+      rawContent = res?.content || "";
+    }
+    if (!rawContent) return [];
+
+    const braceStart = rawContent.indexOf("{");
+    const braceEnd = rawContent.lastIndexOf("}");
+    const res = {
+      content: braceStart >= 0 && braceEnd > braceStart ? rawContent.slice(braceStart, braceEnd + 1) : rawContent,
+    };
 
     const cleaned = res.content
       .trim()
@@ -294,9 +312,18 @@ function extractScoredClauses(
         continue;
       }
 
+      const explicitSubMatch = cleanSeg.match(/^Maddə\s+(\d{1,4}(?:-\d+)?(?:\.\d+)*)(?=\.|\s)/i);
       const subNumMatch = cleanSeg.match(/^(?:Maddə\s+)?(\d{1,3}(?:-\d+)?(?:\.\d{1,2})+(?:-\d+)?)(?=\.|\s)/i);
       const artNumMatch = cleanSeg.match(/^Maddə\s+(\d{1,4}(?:-\d+)?)(?=\.|\s)/i);
-      const clauseNum = subNumMatch?.[1] || artNumMatch?.[1] || ch.articleNumber || '';
+      const chunkBase = (ch.articleNumber || '').split(/[.\-]/)[0];
+      const bareSubOk =
+        subNumMatch?.[1] &&
+        (explicitSubMatch ||
+          !chunkBase ||
+          subNumMatch[1] === ch.articleNumber ||
+          subNumMatch[1].startsWith(`${chunkBase}.`) ||
+          subNumMatch[1].startsWith(`${chunkBase}-`));
+      const clauseNum = explicitSubMatch?.[1] || (bareSubOk ? subNumMatch![1] : '') || artNumMatch?.[1] || ch.articleNumber || '';
 
       // Skip bare article title headers without operative rule text (e.g. "Maddə 212. Tütün məmulatının istehlakına dair məhdudiyyətlərə riayət edilməməsi")
       if (!subNumMatch && cleanSeg.length < 130 && !wantsSpecificRule.test(cleanSeg)) {
@@ -615,7 +642,8 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     );
     const contextText = contextChunks
       .map((c, i) => {
-        return `[MƏNBƏ ${i + 1}: ${c.articleTitle}] (Rəsmi URL: ${c.sourceUrl})\n${c.content.substring(0, 2600)}`;
+        const sliceLen = i < 4 ? 4600 : i < 8 ? 2600 : 1800;
+        return `[MƏNBƏ ${i + 1}: ${c.articleTitle}] (Rəsmi URL: ${c.sourceUrl})\n${c.content.substring(0, sliceLen)}`;
       })
       .join("\n\n---\n\n")
       .slice(0, 26000);
@@ -634,9 +662,14 @@ Azərbaycan Respublikasının qanunvericiliyinə dair istifadəçi suallarını 
 5. Mənbəsiz hüquqi nəticə çıxarma (NO EVIDENCE → NO LEGAL CLAIM. NO VERIFIED SOURCE → NO DEFINITIVE LEGAL CONCLUSION).
 6. Məhkəmə qərarını qanun norması ilə eyniləşdirmə; yalnız normanın tətbiq nümunəsi kimi təqdim et.
 7. MƏNBƏ PRIORİTETİ: Qüvvədə olan normativ hüquqi akt → Konkret maddə/bənd → Digər əlaqəli qanunlar → Konstitusiya Məhkəməsi qərarları → Ali Məhkəmə təcrübəsi.
-8. MADDƏNİN BAŞLIĞINI MƏTNİNDƏN AYIR: Məsələn, "Maddə 1322 — Vərəsəlik şəhadətnaməsinin verildiyi müddət" normasını "Vərəsəlik hüququ altı aydan sonra əldə edilir" kimi şərh etmək qadağandır!
-9. HÜQUQİ ANLAYIŞLARI QARIŞDIRMA: vərəsəlik hüququ, vərəsəlik şəhadətnaməsi, mirasın açılması, mirasın qəbulu, mirasdan imtina, məhrum edilmə, ləyaqətsiz vərəsə, vəsiyyət və qanun üzrə vərəsəlik anlayışlarını ayır və hər birinə konkret maddə göstər.
-10. RELEVANCE SCORE: Yalnız 4/5 və 5/5 olan əsas normaları istifadə et. FEWER SOURCES + HIGHER LEGAL RELEVANCE.
+8. MADDƏNİN BAŞLIĞINI VƏ MƏZMUNUNU DƏQİQ OXU:
+   * Məsələn, "Mülki Məcəllə Maddə 1322 — Vərəsəlik şəhadətnaməsinin verildiyi müddət" normasını "Vərəsəlik hüququ altı aydan sonra əldə edilir" kimi şərh etmə! Mirasın açılması vaxtı Maddə 1145-1146 (miras qoyanın öldüyü gün / ölmüş elan edilmə qərarının qüvvəyə mindiyi gün), qəbul müddəti isə Maddə 1246-dır (3 ay / 6 ay).
+   * "Ailə Məcəlləsi Maddə 2.2" ümumi prinsiplərdir — əmlak bölgüsünə dair əsla 2.2 yazma! Birgə əmlak və bölgü Maddə 32 (32.1, 32.2), şəxsi əmlak Maddə 34, bölgü qaydası Maddə 36, bərabər paylar isə Maddə 37 (37.1, 37.2)-dir.
+   * "Əmək Məcəlləsi Maddə 70" işəgötürənin ləğvetmə əsaslarıdır — şikayət orqanı və iddia müddəti Maddə 294 (məhkəmə / kollektiv müqavilədə məhkəməyəqədər orqan) və Maddə 296 (məhkəməyə 1 təqvim ayı), bərpa isə Maddə 300-dür!
+9. RƏQƏM, CƏRİMƏ VƏ MÜDDƏT DƏQİQLİYİ:
+   * Hər maddədə dəqiq cərimə məbləğini, faizi, günü/ayı/ili [MƏNBƏ X] mətnindən tapıb DƏQİQ yaz!
+   * Bəzi köhnə mətnlərdə sözlər bitişik ola bilər ("görəyüz manat" = 100 manat, "gündənüçay" = 3 ay) — bunları düzgün oxu və kontekstdə məbləğ/müddət varsa əsla "göstərilməyib" və ya "məlumat yoxdur" yazma!
+   * Yalnız [MƏNBƏ X] mətnində sözbəsöz olan faktları, məbləğləri və maddə nömrələrini yaz. RELEVANCE: yalnız ən uyğun 2–5 normaya istinad et.
 8. MADDƏ NÖMRƏSİNİ YADDAŞDAN YAZMA QADAĞASI:
    * Model öz pretrained yaddaşından və ya təxminlə maddə nömrəsi yaza bilməz!
    * Məsələn: "İşdən əsassız çıxarıldıqda hara şikayət etməliyəm?" sualına model yaddaşından "Əmək Məcəlləsinin 62.5-ci maddəsi" kimi uydurma/təsadüfi maddə yaza bilməz! Əvvəlcə retrieval aparılmalı, rəsmi mətn yoxlanılmalı, maddə və bənd yalnız source-da varsa yazılmalıdır.
@@ -668,8 +701,8 @@ Azərbaycan Respublikasının qanunvericiliyinə dair istifadəçi suallarını 
      - İlk olaraq YALNIZ 1-ci addımı soruş: İddiaçının adı, soyadı, ata adı, faktiki ünvanı və FİN kodu.
      - Digər sualları növbəti addımlara saxla!
 
-# MÜTLƏQ STANDART CAVAB FORMATI (JSON):
-Aşağıdakı standart JSON strukturunda cavab ver ("cavab" mətnində ayrıca "## Mənbələr", URL siyahısı və ya "## Məhkəmə təcrübəsi" bölməsi YAZMA, çünki rəsmi mənbələr ayrıca kartlar kimi göstərilir):
+# MÜTLƏQ STANDART CAVAB FORMATI (YALNIZ ETİBARLI JSON):
+Aşağıdakı JSON strukturundan kənara ÇIXMA; öncə və ya sonra heç bir izah mətni yazma, cavabı yalnız bir JSON obyekti kimi qaytar. "cavab" mətnində ayrıca "## Mənbələr", URL siyahısı və ya "## Məhkəmə təcrübəsi" bölməsi YAZMA, çünki rəsmi mənbələr ayrıca kartlar kimi göstərilir; "## Qısa cavab" altında hər "-" bəndi mütləq YENİ sətirdən ("\n- ") başlasın:
 
 {
   "cavab": "## Hüquqi sual\n[sualların hüquqi forması]\n\n## Qısa cavab\n[1–2 sadə, aydın yekun cümlə — vətəndaşa birbaşa cavab və əsas məsələ.]\n- [Qanun/Məcəllənin adı] [Maddə nömrəsi]-ə əsasən, [konkret qayda sadə dildə].\n- [Qanun/Məcəllənin adı] [Maddə nömrəsi]-ə görə, [dəqiq məbləğ / müddət / şərt].\n- [Praktiki sübutlar, sənədlər və müraciət ediləcək orqan/həll yolu].\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[dəqiq və tam izah]\n\n### 2. [Normativ akt] — Maddə [Y]\n[dəqiq və tam izah]\n\n## Praktik izah\n[istifadəçinin vəziyyətinə və faktlara tətbiq]\n\n## Vacib məqamlar\n[müddətlər / istisnalar / zəruri şərtlər / prosedurlar]",
@@ -695,39 +728,113 @@ ${contextText}
 İSTİFADƏÇİNİN SORĞUSU: 
 ${query}`;
 
-    // 5. CALL AI MODEL
+    // 5. CALL AI MODEL (prefer Cloudflare Workers AI full-RAG synthesis in production when no user override key is passed)
     const formattedHistory = compactHistoryForLlm(history);
 
     let parsedJson: any = {};
     let usedLlmFallback = false;
 
-    try {
-      const llmRes = await generateLlmCompletion({
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...formattedHistory,
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.1,
-        maxTokens: 3200,
-        timeoutMs: 24000,
-        responseFormatJson: true,
-        apiKeyParam: passedKey || undefined,
-      });
+    const sanitizeJsonControlChars = (src: string): string => {
+      let out = "";
+      let inString = false;
+      let escaped = false;
+      for (let i = 0; i < src.length; i++) {
+        const ch = src[i];
+        if (escaped) {
+          out += ch;
+          escaped = false;
+          continue;
+        }
+        if (ch === "\\" && inString) {
+          out += ch;
+          escaped = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = !inString;
+          out += ch;
+          continue;
+        }
+        if (inString) {
+          if (ch === "\n") {
+            out += "\\n";
+            continue;
+          }
+          if (ch === "\r") {
+            out += "\\r";
+            continue;
+          }
+          if (ch === "\t") {
+            out += "\\t";
+            continue;
+          }
+        }
+        out += ch;
+      }
+      return out;
+    };
 
-      const rawContent = llmRes.content || "";
+    const parseRawLlmJson = (rawContent: string) => {
       let cleanedContent = rawContent.trim();
-      if (cleanedContent.startsWith("```json")) {
-        cleanedContent = cleanedContent.replace(/^```json\s*/, "").replace(/\s*```$/, "");
-      } else if (cleanedContent.startsWith("```")) {
-        cleanedContent = cleanedContent.replace(/^```\s*/, "").replace(/\s*```$/, "");
+      const fenceMatch = cleanedContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+      if (fenceMatch) {
+        cleanedContent = fenceMatch[1].trim();
+      }
+      const firstBrace = cleanedContent.indexOf("{");
+      const lastBrace = cleanedContent.lastIndexOf("}");
+      if (firstBrace >= 0 && lastBrace > firstBrace) {
+        cleanedContent = cleanedContent.slice(firstBrace, lastBrace + 1);
+      }
+      for (const candidate of [cleanedContent, sanitizeJsonControlChars(cleanedContent)]) {
+        try {
+          const obj = JSON.parse(candidate);
+          if (obj && typeof obj === "object" && (typeof obj.cavab === "string" || typeof obj.answer === "string")) {
+            return obj;
+          }
+        } catch {
+          // Try sanitized pass or partial recovery below
+        }
+      }
+      return recoverPartialJsonResponse(cleanedContent, rawContent, retrievedChunks);
+    };
+
+    try {
+      let rawContent = "";
+      if (!passedKey && isRemoteRagConfigured()) {
+        const edgeAnswer = await fetchRemoteRagAnswer(
+          [
+            { role: "system", content: systemPrompt },
+            ...formattedHistory,
+            { role: "user", content: userPrompt },
+          ],
+          { maxTokens: 2400, temperature: 0.05, timeoutMs: 22000 }
+        );
+        if (edgeAnswer) {
+          rawContent = edgeAnswer;
+        }
       }
 
-      try {
-        parsedJson = JSON.parse(cleanedContent);
-      } catch {
-        parsedJson = recoverPartialJsonResponse(cleanedContent, rawContent, retrievedChunks);
+      if (!rawContent) {
+        const llmRes = await generateLlmCompletion({
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...formattedHistory,
+            { role: "user", content: userPrompt },
+          ],
+          temperature: 0.05,
+          maxTokens: 2800,
+          timeoutMs: 20000,
+          responseFormatJson: true,
+          apiKeyParam: passedKey || undefined,
+        });
+        rawContent = llmRes.content || "";
       }
+
+      if (!rawContent.trim()) {
+        throw new Error("Empty LLM synthesis output");
+      }
+
+      parsedJson = parseRawLlmJson(rawContent);
     } catch (llmErr: any) {
       usedLlmFallback = true;
       console.error("[chat.ts] LLM synthesis failed, falling back to edge AI / statutory extracts:", llmErr?.message);

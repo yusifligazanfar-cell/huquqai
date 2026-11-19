@@ -560,12 +560,19 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
     if (c.artNum && explicitArts.length > 0) {
       if (explicitArts.includes(c.artNum)) c.score += 480;
       else if (explicitArts.some((a) => c.artNum.startsWith(`${a}.`))) c.score += 430;
+      else if (explicitArts.some((a) => a.includes(".") && c.artNum === a.split(".")[0])) c.score += 420;
     } else if (c.artNum && conceptPriorityArts.length > 0 && isConceptTarget) {
       const idx = conceptPriorityArts.indexOf(c.artNum);
       if (idx !== -1) c.score += Math.max(95, 250 - idx * 35);
       else {
         const subIdx = conceptPriorityArts.findIndex((a) => c.artNum.startsWith(`${a}.`));
         if (subIdx !== -1) c.score += Math.max(70, 165 - subIdx * 25);
+        else {
+          const baseIdx = conceptPriorityArts.findIndex(
+            (a) => a.includes(".") && c.artNum === a.split(".")[0]
+          );
+          if (baseIdx !== -1) c.score += Math.max(85, 225 - baseIdx * 30);
+        }
       }
     }
 
@@ -618,13 +625,34 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
       if (contentNorm.includes(bad) || titleNorm.includes(bad)) score -= 220;
     }
 
-    // Sub-article exact string check inside parent article text (e.g. "212.4")
-    if (explicitArts.some((a) => a.includes(".") && cand.artNum === a.split(".")[0] && content.includes(a))) {
+    // Sub-article exact string check inside parent article text (e.g. "212.4", "327.2")
+    const matchedExplicitSub = explicitArts.find(
+      (a) => a.includes(".") && cand.artNum === a.split(".")[0] && content.includes(a)
+    );
+    const matchedPrioritySub = conceptPriorityArts.find(
+      (a) => a.includes(".") && cand.artNum === a.split(".")[0] && content.includes(a)
+    );
+    if (matchedExplicitSub) {
       score += 430;
-    } else if (
-      conceptPriorityArts.some((a) => a.includes(".") && cand.artNum === a.split(".")[0] && content.includes(a))
-    ) {
-      score += 140;
+    } else if (matchedPrioritySub) {
+      score += 180;
+    }
+
+    const focusedSub = matchedExplicitSub || matchedPrioritySub;
+    let chunkContent = content;
+    if (content.length > 5600) {
+      if (focusedSub) {
+        const subIdx = content.indexOf(focusedSub);
+        if (subIdx > 2800) {
+          const firstNl = content.indexOf("\n");
+          const header = firstNl > 0 && firstNl < 220 ? content.slice(0, firstNl) : content.slice(0, 160);
+          chunkContent = `${header}\n${content.slice(Math.max(header.length, subIdx - 220), subIdx + 5000)}`;
+        } else {
+          chunkContent = content.slice(0, 5600);
+        }
+      } else {
+        chunkContent = content.slice(0, 5600);
+      }
     }
 
     const lawId = DOC_ID_TO_LAW_ID[cand.docId] ?? `eqanun_${cand.docId}`;
@@ -636,7 +664,7 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
         lawName: meta.t,
         articleNumber: cand.artNum,
         articleTitle: formatArticleTitle(meta.t, cand.artNum, entry.at),
-        content: content.slice(0, 3600),
+        content: chunkContent,
         sourceFile: `eqanun_doc_${cand.docId}`,
         sourceUrl: meta.u || `https://www.e-qanun.ai/results/${cand.docId}`,
         score: Math.round(score * 100) / 100,
@@ -911,7 +939,7 @@ async function handleSemantic(body: Record<string, unknown>, env: Env): Promise<
       chunk_index: Number(p.md.chunk_index || 0),
       article_number: art,
       article_title: String(p.md.article_title || entry?.at || ""),
-      content: (entry?.txt || String(p.md.snippet || "")).slice(0, 3200),
+      content: (entry?.txt || String(p.md.snippet || "")).slice(0, 5600),
       title: String(p.md.title || `e-Qanun № ${did}`),
       source_url: String(p.md.source_url || `https://www.e-qanun.ai/results/${did}`),
       file_name: `eqanun_doc_${did}`,
@@ -969,16 +997,16 @@ async function handleSummarizeShort(
   }
 
   const contextLines = rawExcerpts
-    .slice(0, 5)
+    .slice(0, 6)
     .map((item: Record<string, unknown>, i: number) => {
       const law = String(item.law || "").trim();
       const article = String(item.article || "").trim();
-      const text = String(item.text || "").replace(/\s+/g, " ").trim().slice(0, 420);
+      const text = String(item.text || "").replace(/\s+/g, " ").trim().slice(0, 1400);
       return `${i + 1}) ${law}${article ? ` — Maddə ${article}` : ""}: ${text}`;
     })
     .join("\n");
 
-  const prompt = `Sən Azərbaycan hüquq məsləhətçisisən. Yalnız aşağıdakı rəsmi maddələrə əsaslanaraq istifadəçinin sualına sadə, aydın və saf Azərbaycan dilində (heç bir ingilis sözü yazmadan) qısa cavab hazırla.
+  const prompt = `Sən Azərbaycan hüquq məsləhətçisisən. Yalnız aşağıdakı rəsmi maddələrə əsaslanaraq istifadəçinin sualına sadə, aydın, faktiki və saf Azərbaycan dilində (heç bir ingilis sözü yazmadan) qısa cavab hazırla.
 
 Sual: ${query}
 
@@ -986,9 +1014,10 @@ Maddələr:
 ${contextLines}
 
 TƏLƏBLƏR:
-1. Əvvəlcə 1-2 sadə, aydın yekun cümlə yaz (istifadəçinin dərhal anlayacağı praktik nəticə).
-2. Dərhal ardınca (boş sətir qoymadan) 3-4 qısa "-" bəndi yaz: hər bənd tək, tam cümlə olsun, konkret Qanun/Məcəllə və Maddə nömrəsini, əsas məbləğ/müddət/şərti və ya praktik addım/sübutları göstərsin.
-3. Heç bir başlıq ("Qısa cavab"), nömrəli siyahı və ya əlavə izah yazma. Hər cümlə nöqtə ilə tam bitsin.`;
+1. Əvvəlcə 1-2 sadə, aydın yekun cümlə yaz (istifadəçinin dərhal anlayacağı praktik nəticə, dəqiq cərimə/müddət/orqan varsa elə əvvəldə göstər).
+2. Hər maddədə dəqiq rəqəmləri, cərimə məbləğlərini ("görəyüz manat" -> 100 manat), faizləri, balları və müddətləri ("gündənüçay" -> 3 ay) mətndən tam dəqiq oxuyub yaz; əgər mətndə rəqəm/müddət varsa əsla "göstərilməyib" yazma. Mətndə olmayan maddə nömrəsini və ya cəriməni əsla uydurma.
+3. Yekun cümlələrdən sonra yeni sətirdə 3-4 ədəd "-" bəndi yaz (hər "-" bəndi MÜTLƏQ ayrıca yeni sətirdə başlasın): hər bənddə konkret Qanun/Məcəllə və Maddə nömrəsini, əsas məbləği/müddəti/orqanı/addımı qeyd et.
+4. Heç bir başlıq ("Qısa cavab"), nömrəli siyahı və ya əlavə izah yazma. Hər cümlə nöqtə ilə tam bitsin.`;
 
   try {
     const aiRunner = env.AI as unknown as {
@@ -999,13 +1028,14 @@ TƏLƏBLƏR:
     };
     const res = await aiRunner.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
       messages: [{ role: "user", content: prompt }],
-      max_tokens: 720,
-      temperature: 0.1,
+      max_tokens: 820,
+      temperature: 0.05,
     });
     let text = String(
       res?.response || res?.choices?.[0]?.message?.content || ""
     )
       .replace(/^#{1,3}\s*Qısa cavab\s*/i, "")
+      .replace(/([.!?»"])\s+[-–—]\s+(?=[A-ZƏÖÜĞŞÇ“"«0-9])/g, "$1\n- ")
       .trim();
 
     // Never truncate inside decimal article numbers like "740.5"; drop incomplete trailing bullet if output hit token cap
@@ -1081,6 +1111,10 @@ export default {
       const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
       return handleSummarizeShort(body, env);
     }
+    if (path === "/rag/answer" && request.method === "POST") {
+      const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+      return handleRagAnswer(body, env);
+    }
     if (path === "/rag/generate-document" && request.method === "POST") {
       const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
       return handleGenerateDocument(body, env);
@@ -1150,6 +1184,67 @@ async function handleGenerateDocument(body: Record<string, unknown>, env: Env): 
   } catch (err) {
     return jsonResp(
       { error: err instanceof Error ? err.message : "AI generation failed", latency_ms: Date.now() - t0 },
+      500
+    );
+  }
+}
+
+async function handleRagAnswer(body: Record<string, unknown>, env: Env): Promise<Response> {
+  const t0 = Date.now();
+  const systemPrompt = String(body.systemPrompt || body.system_prompt || "").trim();
+  const userPrompt = String(body.userPrompt || body.user_prompt || "").trim();
+  if (!userPrompt) return jsonResp({ error: "Empty userPrompt" }, 400);
+
+  const requestedTokens = Number(body.maxTokens || body.max_tokens || 2200);
+  const maxTokens = Math.max(500, Math.min(Number.isFinite(requestedTokens) ? requestedTokens : 2200, 3200));
+  const rawTemp = Number(body.temperature ?? 0.05);
+  const temperature = Number.isFinite(rawTemp) ? Math.max(0, Math.min(rawTemp, 0.3)) : 0.05;
+
+  const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+    {
+      role: "system",
+      content: (
+        systemPrompt ||
+        "Sən Azərbaycan Respublikasının qanunvericiliyi üzrə rəsmi e-qanun mənbələrinə əsaslanan hüquqşünas analitikisən."
+      ).slice(0, 8000),
+    },
+  ];
+
+  const rawHistory = Array.isArray(body.history) ? body.history : [];
+  for (const h of rawHistory.slice(-4)) {
+    if (!h || typeof h !== "object") continue;
+    const role = (h as Record<string, unknown>).role === "assistant" ? "assistant" : "user";
+    const content = String((h as Record<string, unknown>).content || "").trim();
+    if (content) {
+      messages.push({ role, content: content.slice(0, 1200) });
+    }
+  }
+  messages.push({ role: "user", content: userPrompt.slice(0, 22000) });
+
+  try {
+    const aiRes = (await env.AI.run("@cf/meta/llama-3.3-70b-instruct-fp8-fast", {
+      messages,
+      temperature,
+      max_tokens: maxTokens,
+    } as any)) as {
+      response?: string | Record<string, unknown>;
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+
+    const rawResp = aiRes?.response ?? aiRes?.choices?.[0]?.message?.content;
+    const content =
+      typeof rawResp === "string"
+        ? rawResp.trim()
+        : rawResp && typeof rawResp === "object"
+        ? JSON.stringify(rawResp)
+        : "";
+    if (!content) {
+      return jsonResp({ error: "Empty AI answer", content: "", latency_ms: Date.now() - t0 }, 502);
+    }
+    return jsonResp({ content, latency_ms: Date.now() - t0 });
+  } catch (err) {
+    return jsonResp(
+      { error: err instanceof Error ? err.message : "RAG answer failed", latency_ms: Date.now() - t0 },
       500
     );
   }

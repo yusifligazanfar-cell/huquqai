@@ -27,24 +27,40 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     priorityArticles: ["173", "174", "175", "159", "166"]
   },
   {
+    id: "labor_unfair_dismissal_complaint",
+    domain: "Əmək hüququ",
+    primaryLawId: "emek",
+    triggerPhrases: [
+      "esassiz cixaril", "qanunsuz cixaril", "esassiz isden", "qanunsuz isden",
+      "hara sikayet", "hansi muddetde sikayet", "ise berpa", "emek mubahis",
+      "emek mufettisliyi", "isden esassiz", "isden qanunsuz", "isden cixarildi"
+    ],
+    expandedTerms: [
+      "ferdi emek mubahiselerine baxan orqanlar", "ferdi emek mubahiselerinin hellinde iddia muddetleri",
+      "emek muqavilesinin legv edilmesi qaydalarina emel olunmamasinin huquqi neticeleri",
+      "1 teqvim ayi erzin", "dovlet emek mufettisliyi", "mehkeme", "ise berpa",
+      "emek mecellesi madde 296", "emek mecellesi madde 294", "emek mecellesi madde 300"
+    ],
+    priorityArticles: ["296", "294", "300", "288", "287", "289", "70"],
+    forbiddenPhrases: ["inzibati tenbeh", "protokol"]
+  },
+  {
     id: "labor_termination",
     domain: "Əmək hüququ",
     primaryLawId: "emek",
     triggerPhrases: [
-      "isden cixarma", "isden cixarilma", "isden cixmaq", "oz erizesi", "xeberdarliq etmeden", 
+      "isden cixarma", "isden cixarilma", "isden cixmaq", "oz erizesi", "xeberdarliq etmeden",
       "xeberdarliqsiz", "is muqavilesine xitam", "muqavilenin legvi", "isden azad", "isden qovulma", "is yerinden cixarilma",
-      "emek muqavilesine xitam", "esassiz cixarildiqda", "qanunsuz cixarildiqda", "hara sikayet etmeliyem",
-      "isden esassiz cixarildiqda", "ise berpa", "emek mubahisesi", "emek mufettisliyi"
+      "emek muqavilesine xitam"
     ],
     expandedTerms: [
-      "emek muqavilesine xitam", "iscinin tesebbusu ile xitam", "isegoturen terefinden xitam", 
-      "emek muqavilesine xitam verilmesinin esaslari", "iscilerin teminatlari", "xeberdarliq muddetleri", 
-      "emek vezifelerinin kobud sekilde pozulmasi", "sinaq muddeti", "iscinin teqsirli hereketleri", 
-      "staj", "muddet", "xitam verilmesi qaydalari", "ferdi emek mubahiseleri", "ise berpa haqqinda teleb",
-      "dovlet emek mufettisliyi xidmeti", "mehkemeye muraciet muddeti", "emek mecellesi madde 287",
-      "emek mecellesi madde 288", "emek mecellesi madde 294", "emek mecellesi madde 300"
+      "emek muqavilesine xitam", "iscinin tesebbusu ile xitam", "isegoturen terefinden xitam",
+      "emek muqavilesine xitam verilmesinin esaslari", "iscilerin teminatlari", "xeberdarliq muddetleri",
+      "emek vezifelerinin kobud sekilde pozulmasi", "sinaq muddeti", "iscinin teqsirli hereketleri",
+      "staj", "muddet", "xitam verilmesi qaydalari", "emek mecellesi madde 68", "emek mecellesi madde 70",
+      "emek mecellesi madde 294", "emek mecellesi madde 296", "emek mecellesi madde 300"
     ],
-    priorityArticles: ["68", "69", "70", "71", "72", "73", "74", "76", "77", "79", "80", "84", "287", "288", "294", "296", "300", "303"],
+    priorityArticles: ["68", "69", "70", "71", "72", "73", "74", "76", "77", "79", "80", "84", "294", "296", "300"],
     forbiddenPhrases: ["inzibati tenbeh", "protokol"]
   },
   {
@@ -52,16 +68,17 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     domain: "Ailə hüququ",
     primaryLawId: "aile",
     triggerPhrases: [
-      "emlakin bolunmesi", "emlak bolunmesi", "bosanma zamani emlak", "birge mulkiyyet", 
+      "emlakin bolunmesi", "emlak bolunmesi", "bosanma zamani emlak", "birge mulkiyyet",
+      "birge emlak", "bosanan zaman", "bosandiqda", "umumi birge",
       "er arvadin emlaki", "er-arvadin emlaki", "emlak nece bolunur", "sexsi emlak", "umumi emlak",
       "bosanarken emlak", "bosanmada ev", "bosanmada masin"
     ],
     expandedTerms: [
       "er arvadin birge mulkiyyeti", "er arvadin umumi emlakinin bolunmesi", "paylarin mueyyen edilmesi",
-      "er arvadin her birinin mulkiyyeti", "aile mecellesi madde 32", "aile mecellesi madde 36", 
+      "beraber paylar", "er arvadin her birinin mulkiyyeti", "aile mecellesi madde 32", "aile mecellesi madde 36",
       "aile mecellesi madde 37", "aile mecellesi madde 34", "birge nikah dovrunde elde edilmis"
     ],
-    priorityArticles: ["32", "36", "37", "34", "31", "35"],
+    priorityArticles: ["32", "37", "36", "34", "35", "33"],
     forbiddenPhrases: ["soyad secmek", "madde 30", "madde 30."]
   },
   {
@@ -285,15 +302,17 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     primaryLawId: "mulki",
     triggerPhrases: [
       "vereselik", "vereselik qaydalari", "miras", "miras emlak", "verese", "qanun uzre vereselik",
-      "vesiyyetname", "vesiyyet uzre vereselik", "mirasin qebulu", "mirasdan imtina", 
-      "vereselik sehadetnamesi", "mirasin acilmasi", "leyaqetsiz verese"
+      "vesiyyetname", "vesiyyet uzre vereselik", "mirasin qebulu", "mirasdan imtina",
+      "vereselik sehadetnamesi", "mirasin acilmasi", "miras ne vaxt acilir", "ne vaxt acilir",
+      "mirasin acildigi vaxt", "leyaqetsiz verese"
     ],
     expandedTerms: [
+      "mirasin acilmasi", "mirasin acildigi vaxt", "miras qoyanın olduyu gun",
       "vereselik anlayisi", "vereseler", "qanun uzre vereseler", "vesiyyet anlayisi",
       "mirasin qebul edildiyi muddet", "vereselik sehadetnamesinin verildiyi muddet",
-      "mirasin acilmasi", "mirasdan imtina", "mulki mecelle madde 1133", "mulki mecelle madde 1159"
+      "mirasdan imtina", "mulki mecelle madde 1145", "mulki mecelle madde 1146", "mulki mecelle madde 1159"
     ],
-    priorityArticles: ["1133", "1134", "1159", "1166", "1246", "1273", "1322"],
+    priorityArticles: ["1145", "1146", "1147", "1159", "1243", "1246", "1322", "1133", "1134"],
     forbiddenPhrases: ["tikintiye vereselik", "torpaq sahesinin qeydiyyati"]
   },
   {
@@ -421,15 +440,16 @@ export const LEGAL_CONCEPTS: LegalConcept[] = [
     primaryLawId: "inzibati_xetalar",
     primaryDocId: "46960",
     triggerPhrases: [
-      "qirmizi isiq", "qirmizida", "svetoforun", "svetafor", "yol qaydasini pozma",
+      "qirmizi isiq", "qirmizi isiqda", "qirmizida", "svetoforun", "svetafor", "yol qaydasini pozma",
       "cerime meydancasi", "evakuator"
     ],
     expandedTerms: [
       "svetoforun ve ya nizamlayicinin qadaganedici isaresi",
+      "yuz manat mebleginde cerime", "madde 327.2",
       "neqliyyat vasitelerinin suruculeri terefinden yol hereketi qaydalarinin pozulmasi",
       "dayanma ve ya durma qaydalarinin pozulmasi"
     ],
-    priorityArticles: ["327", "346", "328", "338"]
+    priorityArticles: ["327.2", "327", "346", "328", "338"]
   },
   {
     id: "administrative_noise_violation",
