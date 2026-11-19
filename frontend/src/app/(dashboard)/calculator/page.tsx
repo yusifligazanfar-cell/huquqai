@@ -108,11 +108,6 @@ export default function CalculatorPage() {
         
         {/* Header Title Section */}
         <div className="text-center max-w-3xl mx-auto mb-8 sm:mb-10">
-          <div className="inline-flex items-center gap-2 px-3.5 sm:px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold uppercase tracking-wider mb-3.5 backdrop-blur-md">
-            <Calculator className="w-3.5 h-3.5" />
-            <span>Rəsmi Məhkəmə Rüsumu Kalkulyatoru</span>
-          </div>
-          
           <h1 className="text-2xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-3 leading-tight">
             Məhkəmə Dövlət Rüsumunun Hesablanması
           </h1>
