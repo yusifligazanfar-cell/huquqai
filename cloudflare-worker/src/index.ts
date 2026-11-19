@@ -1127,6 +1127,10 @@ export default {
       const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
       return handleLexical(body, env);
     }
+    if (path === "/rag/judicial" && request.method === "POST") {
+      const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+      return handleJudicial(body, env);
+    }
     if (path === "/rag/doc-search" && request.method === "POST") {
       const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
       return handleDocSearch(body, env);
@@ -1287,8 +1291,8 @@ async function handleRagAnswer(body: Record<string, unknown>, env: Env): Promise
   const userPrompt = String(body.userPrompt || body.user_prompt || "").trim();
   if (!userPrompt) return jsonResp({ error: "Empty userPrompt" }, 400);
 
-  const requestedTokens = Number(body.maxTokens || body.max_tokens || 2200);
-  const maxTokens = Math.max(500, Math.min(Number.isFinite(requestedTokens) ? requestedTokens : 2200, 3200));
+  const requestedTokens = Number(body.maxTokens || body.max_tokens || 3200);
+  const maxTokens = Math.max(500, Math.min(Number.isFinite(requestedTokens) ? requestedTokens : 3200, 4800));
   const rawTemp = Number(body.temperature ?? 0.05);
   const temperature = Number.isFinite(rawTemp) ? Math.max(0, Math.min(rawTemp, 0.3)) : 0.05;
 
@@ -1351,4 +1355,289 @@ async function handleRagAnswer(body: Record<string, unknown>, env: Env): Promise
       500
     );
   }
+}
+
+interface JudicialIndexEntry {
+  id: string;
+  k: "plenum" | "cc";
+  t: string;
+  nt: string;
+  laws: string[];
+  arts: string[];
+  bs: number[];
+  u: string;
+}
+
+const JUDICIAL_GENERIC_STEMS = new Set([
+  "azerbayc", "respublik", "qanun", "mecel", "madd", "huquq", "qerar",
+  "mehkem", "tecrub", "tetbiq", "baxim", "serh", "edil", "dair", "haqq",
+  "zaman", "nece", "qeder", "hansi", "olun", "mubahis", "bagl", "bazi",
+  "mesele", "umum", "esas", "qayd", "hald", "uzre", "gore", "tara", "sexs",
+]);
+
+const JUDICIAL_TOPIC_BUCKETS: Array<{ name: string; markers: string[] }> = [
+  { name: "limitation", markers: ["iddia muddet", "bildiyi ve ya bilmeli", "baslanmir", "hesablanir", "36.9", "9.3", "9.5"] },
+  { name: "form", markers: ["notarial", "notariat", "xususi forma", "sade yazili", "sazis", "6.6", "6.5"] },
+  { name: "mediation", markers: ["mediasiya", "ilkin mediasiya", "barisiq sazisi", "6.9"] },
+  { name: "exceptions", markers: ["sexsi emlak", "ayrica", "istisna", "hediyye", "miras", "ayri yasadigi", "bagislanm"] },
+  { name: "holding", markers: ["qerara aldi", "plenum qeyd edir", "plenum hesab edir", "izah edilsin", "nezere almalidir"] },
+];
+
+const JUDICIAL_PARTY_ARG_MARKERS = [
+  "muracieteden", "muraciet eden", "sikayetci", "erizeci", "iddiacinin fikrince", "sorguveren",
+];
+
+function normalizeJudicialLawId(raw: string): string {
+  const s = String(raw || "").trim().toLowerCase();
+  const map: Record<string, string> = {
+    aile_mecellesi: "aile",
+    mulki_mecelle: "mulki",
+    mulki_mecellesi: "mulki",
+    emek_mecellesi: "emek",
+    cinayet_mecellesi: "cinayet",
+    cinayet_prosessual_mecellesi: "cinayet_prosessual",
+    mulki_prosessual_mecellesi: "mulki_prosessual",
+    inzibati_prosessual_mecellesi: "inzibati_prosessual",
+    inzibati_xetalar_mecellesi: "inzibati_xetalar",
+    vergi_mecellesi: "vergi",
+    torpaq_mecellesi: "torpaq",
+    menzil_mecellesi: "menzil",
+    gomruk_mecellesi: "gomruk",
+    miqrasiya_mecellesi: "miqrasiya",
+    yol_hereketi_haqqinda: "yol_hereketi",
+  };
+  return map[s] || s;
+}
+
+function clipAtSentenceBoundary(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  const slice = text.slice(0, maxLen);
+  const lastEnd = Math.max(slice.lastIndexOf(". "), slice.lastIndexOf("; "), slice.lastIndexOf("! "));
+  if (lastEnd >= Math.floor(maxLen * 0.55)) {
+    return slice.slice(0, lastEnd + 1).trim();
+  }
+  return `${slice.trim()}...`;
+}
+
+async function handleJudicial(body: Record<string, unknown>, env: Env): Promise<Response> {
+  const t0 = Date.now();
+  const query = String(body.query || "").trim();
+  if (!query) return jsonResp({ chunks: [], latency_ms: 0 });
+
+  const expandedQueries = Array.isArray(body.expanded_queries)
+    ? body.expanded_queries.map((x) => String(x || "").trim()).filter(Boolean)
+    : [];
+  const rawPairs = Array.isArray(body.matched_pairs) ? body.matched_pairs : [];
+  const matchedPairs: Array<{ law: string; article: string }> = [];
+  for (const item of rawPairs) {
+    if (!item || typeof item !== "object") continue;
+    const law = normalizeJudicialLawId(String((item as Record<string, unknown>).law || ""));
+    const article = String((item as Record<string, unknown>).article || "").trim();
+    if (law && article) matchedPairs.push({ law, article });
+  }
+  const matchedLaws = new Set(
+    [
+      ...(Array.isArray(body.matched_laws)
+        ? body.matched_laws.map((x) => normalizeJudicialLawId(String(x || "")))
+        : []),
+      ...matchedPairs.map((p) => p.law),
+    ].filter(Boolean)
+  );
+  const matchedArts = Array.isArray(body.matched_articles)
+    ? body.matched_articles.map((x) => String(x || "").trim()).filter(Boolean)
+    : [];
+  const limit = Math.max(1, Math.min(Number(body.limit || 2), 3));
+
+  const assets = new RequestAssetCache(env);
+  const index = await assets.getJson<JudicialIndexEntry[]>("/judicial_index.json");
+  if (!Array.isArray(index) || index.length === 0) {
+    return jsonResp({ chunks: [], latency_ms: Date.now() - t0 });
+  }
+
+  const tokenize = (raw: string) =>
+    normalizeAzSearch(raw)
+      .replace(/[^a-z0-9 ]+/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length >= 4 && !AZ_STOP_WORDS.has(w))
+      .map(stemAzToken)
+      .filter((s) => s.length >= 4 && !JUDICIAL_GENERIC_STEMS.has(s));
+
+  const rawStems = Array.from(new Set(tokenize(query))).slice(0, 12);
+  const expStems = Array.from(
+    new Set(expandedQueries.flatMap((q) => tokenize(q)).filter((s) => !rawStems.includes(s)))
+  ).slice(0, 16);
+
+  const artMatchesOne = (entryArt: string, targetArt: string) =>
+    targetArt === entryArt ||
+    entryArt.startsWith(`${targetArt}.`) ||
+    targetArt.startsWith(`${entryArt}.`) ||
+    (entryArt.includes(".") && entryArt.split(".")[0] === targetArt.split(".")[0]);
+
+  const scored: Array<{ entry: JudicialIndexEntry; score: number }> = [];
+  for (const entry of index) {
+    // Domain safety: if primary statutory retrieval matched specific codes (e.g. inzibati_xetalar/yol_hereketi)
+    // and this judicial decision belongs strictly to an unrelated code (e.g. cinayet), skip it!
+    const lawHit = matchedLaws.size > 0 && entry.laws.some((l) => matchedLaws.has(l));
+    if (matchedLaws.size > 0 && entry.laws.length > 0 && !lawHit) {
+      continue;
+    }
+
+    let score = 0;
+    let rawHits = 0;
+    let expHits = 0;
+    for (const st of rawStems) {
+      if (entry.nt.includes(st)) {
+        rawHits++;
+        score += 95;
+      }
+    }
+    for (const st of expStems) {
+      if (entry.nt.includes(st)) {
+        expHits++;
+        if (expHits <= 4) score += 35;
+      }
+    }
+
+    // Paired (law, article) matching prevents cross-law collisions like Yol Hereketi 54 matching IXM 54.2!
+    let exactArtHit = false;
+    if (matchedPairs.length > 0) {
+      exactArtHit = matchedPairs.some(
+        (pair) => entry.laws.includes(pair.law) && entry.arts.some((ea) => artMatchesOne(ea, pair.article))
+      );
+    } else if (lawHit) {
+      exactArtHit = entry.arts.some((ea) => matchedArts.some((a) => artMatchesOne(ea, a)));
+    }
+
+    if (exactArtHit) {
+      score += 210;
+    } else if (lawHit && (rawHits > 0 || expHits >= 2)) {
+      score += 60;
+    }
+
+    // Require genuine topical overlap (either exact paired article match or >=2 title hits or lawHit + title hit)
+    if (!exactArtHit && rawHits === 0 && expHits < 2) continue;
+    if (!lawHit && rawHits < 2) continue;
+
+    if (entry.k === "plenum" && score >= 130) {
+      score += 55;
+    }
+
+    if (score >= 190) {
+      scored.push({ entry, score });
+    }
+  }
+
+  scored.sort((a, b) => b.score - a.score);
+  const picked = scored.slice(0, limit);
+  if (picked.length === 0) {
+    return jsonResp({ chunks: [], latency_ms: Date.now() - t0 });
+  }
+
+  const allBuckets = Array.from(
+    new Set(picked.flatMap((p) => (p.entry.bs || []).slice(0, 3)))
+  ).slice(0, 6);
+  const bucketMap = new Map<number, Record<string, ContentEntry>>();
+  await Promise.all(
+    allBuckets.map(async (bid) => {
+      const data = await assets.getJson<Record<string, ContentEntry>>(`/c/${bid}.json`);
+      if (data) bucketMap.set(bid, data);
+    })
+  );
+
+  const chunks: Array<Record<string, unknown>> = [];
+  for (const { entry, score } of picked) {
+    const parts: string[] = [];
+    for (const bid of (entry.bs || []).slice(0, 3)) {
+      const b = bucketMap.get(bid);
+      if (!b) continue;
+      const keys = Object.keys(b)
+        .filter((k) => k.startsWith(`${entry.id}::`))
+        .sort();
+      for (const k of keys) {
+        if (b[k]?.txt) parts.push(b[k].txt);
+      }
+    }
+    const fullText = parts.join("\n\n");
+    if (!fullText.trim()) continue;
+
+    // Diversified holding extraction: capture limitation start, form/notariat, mediation, exceptions, and QƏRARA ALDI
+    // while penalizing applicant/party complaint paragraphs ("Müraciətedənin qənaətinə görə...")!
+    const paras = fullText
+      .split(/\n+/)
+      .map((p) => p.replace(/\s+/g, " ").trim())
+      .filter((p) => p.length >= 55);
+
+    const scoredParas = paras.map((p, idx) => {
+      const pn = normalizeAzSearch(p);
+      let ps = 0;
+      for (const st of rawStems) if (pn.includes(st)) ps += 16;
+      for (const st of expStems) if (pn.includes(st)) ps += 6;
+      if (/^\d+\.\d+\./.test(p)) ps += 14;
+      for (const bad of JUDICIAL_PARTY_ARG_MARKERS) {
+        if (pn.includes(bad)) ps -= 55;
+      }
+      const bucketHits: Record<string, number> = {};
+      for (const tb of JUDICIAL_TOPIC_BUCKETS) {
+        let hits = 0;
+        for (const mk of tb.markers) {
+          if (pn.includes(mk)) hits++;
+        }
+        if (hits > 0) {
+          bucketHits[tb.name] = hits * 32 + ps;
+          ps += hits * 18;
+        }
+      }
+      return { idx, p, ps, bucketHits };
+    });
+
+    const chosenIdx = new Set<number>();
+    const chosen: Array<{ idx: number; p: string }> = [];
+    // Pick best 1 paragraph from each matched judicial holding bucket first (budgeted so all buckets survive!)
+    for (const tb of JUDICIAL_TOPIC_BUCKETS) {
+      const bestForBucket = scoredParas
+        .filter((x) => !chosenIdx.has(x.idx) && (x.bucketHits[tb.name] ?? 0) > 0)
+        .sort((a, b) => (b.bucketHits[tb.name] ?? 0) - (a.bucketHits[tb.name] ?? 0))[0];
+      if (bestForBucket) {
+        chosenIdx.add(bestForBucket.idx);
+        chosen.push({ idx: bestForBucket.idx, p: clipAtSentenceBoundary(bestForBucket.p, 650) });
+      }
+    }
+    // Fill remaining slots up to 6 with overall highest-scoring ruling paragraphs
+    for (const item of [...scoredParas].sort((a, b) => b.ps - a.ps)) {
+      if (chosen.length >= 6) break;
+      if (chosenIdx.has(item.idx) || item.ps <= 0) continue;
+      chosenIdx.add(item.idx);
+      chosen.push({ idx: item.idx, p: clipAtSentenceBoundary(item.p, 620) });
+    }
+
+    const topParas = chosen
+      .sort((a, b) => a.idx - b.idx)
+      .map((x) => x.p);
+
+    const excerpt = topParas.join("\n\n").slice(0, 4000) || fullText.slice(0, 3200);
+    const prefix =
+      entry.k === "plenum"
+        ? "Azərbaycan Respublikası Ali Məhkəməsi Plenumunun Qərarı"
+        : "Azərbaycan Respublikası Konstitusiya Məhkəməsinin Qərarı";
+    const tailDateMatch = fullText
+      .slice(-450)
+      .match(/Bakı\s+şəhəri,\s*(\d{1,2}\s+[a-zəöüğışç]+\s+\d{4}-c[iıuü]\s+il(?:\s*№\s*[\w/-]+)?)/i);
+    const dateSuffix = tailDateMatch ? ` (${tailDateMatch[1].trim()})` : "";
+    const fullTitle = `${prefix}${dateSuffix} — ${entry.t}`;
+
+    chunks.push({
+      sourceId: `cf_judicial_${entry.id}`,
+      lawId: `judicial_${entry.id}`,
+      lawName: fullTitle,
+      articleNumber: "",
+      articleTitle: fullTitle,
+      content: excerpt,
+      sourceFile: `eqanun_doc_${entry.id}`,
+      sourceUrl: entry.u || `https://www.e-qanun.ai/results/${entry.id}`,
+      score: Math.round(score),
+      documentId: entry.id,
+    });
+  }
+
+  return jsonResp({ chunks, latency_ms: Date.now() - t0 });
 }

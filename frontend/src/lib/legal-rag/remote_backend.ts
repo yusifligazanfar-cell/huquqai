@@ -224,10 +224,10 @@ export async function fetchRemoteRagAnswer(
         systemPrompt: systemMsg,
         userPrompt: lastUser.content,
         history,
-        maxTokens: options?.maxTokens ?? 2200,
+        maxTokens: options?.maxTokens ?? 3600,
         temperature: options?.temperature ?? 0.05,
       }),
-      signal: AbortSignal.timeout(options?.timeoutMs ?? 22000),
+      signal: AbortSignal.timeout(options?.timeoutMs ?? 24000),
     });
     if (!res.ok) return null;
     const data = (await res.json()) as { content?: string };
@@ -236,4 +236,31 @@ export async function fetchRemoteRagAnswer(
     console.warn("[remote_backend] /rag/answer failed:", err);
     return null;
   }
+}
+
+export async function fetchRemoteJudicialSearch(
+  options: {
+    query: string;
+    expandedQueries?: string[];
+    matchedLaws?: string[];
+    matchedArticles?: string[];
+    matchedPairs?: Array<{ law: string; article: string }>;
+    limit?: number;
+  },
+  timeoutMs = 5500
+): Promise<StructuredChunk[]> {
+  if (!options.query?.trim() || !isRemoteRagConfigured()) return [];
+  const res = await fetchRagBackend<{ chunks?: StructuredChunk[] }>("/rag/judicial", {
+    method: "POST",
+    timeoutMs,
+    body: {
+      query: options.query,
+      expanded_queries: options.expandedQueries ?? [],
+      matched_laws: options.matchedLaws ?? [],
+      matched_articles: options.matchedArticles ?? [],
+      matched_pairs: options.matchedPairs ?? [],
+      limit: options.limit ?? 2,
+    },
+  });
+  return Array.isArray(res?.chunks) ? res.chunks : [];
 }

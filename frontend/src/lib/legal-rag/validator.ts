@@ -154,7 +154,8 @@ function findRetrievedMatch(
  */
 export function validateLegalResponse(
   rawJson: any,
-  retrievedChunks: StructuredChunk[]
+  retrievedChunks: StructuredChunk[],
+  contextChunks?: StructuredChunk[]
 ): LegalResponsePayload {
   let answer = rawJson.cavab || rawJson.answer || "";
   const rawBasis = rawJson.legal_basis || [];
@@ -227,8 +228,15 @@ export function validateLegalResponse(
 
     const cleanRawTitle = cleanTitleNoise(rawTitle || "");
     const resolvedArt = artNum || retrievedMatch?.articleNumber || "";
-    const entryKey = `${normalizeLawBase(resolvedLawName)}::${normalizeArticleToken(resolvedArt) || "doc"}`;
-    if (seenEntryKeys.has(entryKey)) return;
+    const normArtTok = normalizeArticleToken(resolvedArt);
+    const baseArtTok = normArtTok.split(".")[0];
+    const lawBaseKey = normalizeLawBase(resolvedLawName);
+    const entryKey = `${lawBaseKey}::${normArtTok || "doc"}`;
+    const parentKey = baseArtTok ? `${lawBaseKey}::${baseArtTok}` : "";
+    // Deduplicate exact matches and skip redundant sub-article cards (e.g. 36.5, 36.6, 36.9) when parent Maddə 36 is already listed
+    if (seenEntryKeys.has(entryKey) || (normArtTok.includes(".") && parentKey && seenEntryKeys.has(parentKey))) {
+      return;
+    }
     seenEntryKeys.add(entryKey);
 
     const titleStr = artNum
@@ -462,19 +470,90 @@ export function validateLegalResponse(
     }
   }
 
-  // Strip duplicate "## Mənbələr" and unwanted "## Məhkəmə təcrübəsi" sections from markdown
-  // (Verified sources are already rendered once below the answer bubble)
+  // Strip duplicate "## Mənbələr", unwanted generic "## Məhkəmə təcrübəsi", and empty/negative "## Ali Məhkəmə..." sections
+  const hasRetrievedJudicial = retrievedChunks.some((c) => c.lawId.startsWith("judicial_"));
   answer = answer
     .replace(/\n{1,}#{1,3}\s*Məhkəmə təcrübəsi[\s\S]*?(?=\n#{1,3}\s|\s*$)/gi, "")
     .replace(/\n{1,}#{1,3}\s*Mənbələr[\s\S]*$/gi, "")
     .trim();
+  const judicialSecMatch = answer.match(/\n?#{1,3}\s*Ali Məhkəmə[\s\S]*?(?=\n#{1,2}\s|\s*$)/i);
+  const judicialSecIsEmpty =
+    !hasRetrievedJudicial ||
+    Boolean(judicialSecMatch && /(?:qeyd olunmayıb|tapılmadı|göstərilməyib|mövcud deyil)/i.test(judicialSecMatch[0]));
+  if (judicialSecIsEmpty) {
+    answer = answer
+      .replace(/\n{1,}#{1,3}\s*Ali Məhkəmə[\s\S]*?(?=\n#{1,2}\s|\s*$)/gi, "")
+      .trim();
+  }
 
-  // Keep "## Qısa cavab" compact & complete (1-2 lead sentences + separate-line "-" bullets with no trailing semicolons)
+  // Synchronize bottom verified source cards 100% with verified statutory headings & retrieved judicial decisions cited in answer
+  const refChunks = contextChunks && contextChunks.length > 0 ? contextChunks : retrievedChunks;
+  if (answer) {
+    const headingArtRe = /###\s+\d+\.\s+([^\n—–-]+?)\s*[—–-]\s*Maddə\s+(\d{1,4}(?:-\d+)?(?:\.\d{1,3})*(?:-\d+)?)/gi;
+    let hm: RegExpExecArray | null;
+    while ((hm = headingArtRe.exec(answer)) !== null) {
+      const hLaw = cleanTitleNoise(hm[1] || "");
+      const hArt = normalizeArticleToken(hm[2] || "");
+      if (!hArt) continue;
+      const hReg = findRegistryLaw(hLaw);
+      const hMatch = findRetrievedMatch(hLaw, hArt, retrievedChunks, hReg);
+      if (hMatch) {
+        pushVerifiedEntry({
+          lawName: hLaw,
+          artNum: hArt,
+          matchedReg: hReg,
+          retrievedMatch: hMatch,
+        });
+      }
+    }
+
+    if (!judicialSecIsEmpty && /(?:ali məhkəmə|plenum|konstitusiya məhkəməsi)/i.test(answer)) {
+      for (const jc of refChunks.filter((c) => c.lawId.startsWith("judicial_"))) {
+        pushVerifiedEntry({
+          lawName: jc.lawName,
+          artNum: "",
+          rawTitle: jc.articleTitle,
+          retrievedMatch: jc,
+        });
+      }
+    } else if (judicialSecIsEmpty) {
+      // Remove unused judicial cards if no judicial holding was actually cited in the answer
+      for (let i = verifiedSources.length - 1; i >= 0; i--) {
+        if (verifiedSources[i].source_id.startsWith("cf_judicial_")) {
+          verifiedSources.splice(i, 1);
+        }
+      }
+      for (let i = verifiedLegalBasis.length - 1; i >= 0; i--) {
+        if (verifiedLegalBasis[i].source_id.startsWith("cf_judicial_")) {
+          verifiedLegalBasis.splice(i, 1);
+        }
+      }
+    }
+
+    // Normalize Unicode non-breaking hyphens and clean artifacts like "Maddə 330-0" -> "Maddə 330"
+    answer = answer
+      .replace(/[\u2011\u2010]/g, "-")
+      .replace(/\b(Maddə\s+\d+)-0\b/gi, "$1")
+      .replace(/\b(\d+)-0(\s+maddə)/gi, "$1-cu$2");
+
+    // Convert "(mənbə 6)" / "[mənbə 6]" prose markers into standard [6] before linkifying
+    answer = answer.replace(/[(\[]\s*mənbə\s+(\d{1,2})\s*[)\]]/gi, "[$1]");
+
+    // Convert inline numeric source markers [1], [2] into clickable official e-qanun.ai citation links
+    answer = answer.replace(/(?<!\[)\[(\d{1,2})\](?!\()/g, (full: string, numStr: string) => {
+      const idx = Number(numStr) - 1;
+      const targetChunk = refChunks[idx];
+      if (!targetChunk?.sourceUrl) return full;
+      return `[[${numStr}]](${targetChunk.sourceUrl})`;
+    });
+  }
+
+  // Keep "## Qısa cavab" clean & complete (fluid conclusion paragraph + separate-line "-" bullets)
   answer = answer.replace(
     /(##\s*Qısa cavab\s*\n)([\s\S]*?)(?=\n##\s+|$)/i,
     (_m: string, heading: string, body: string) => {
       const normalizedBullets = body.replace(
-        /([.!?»"])\s+[-–—]\s+(?=[A-ZƏÖÜĞŞÇ“"«0-9])/g,
+        /([.!?»"\])])\s+[-–—]\s+(?=[A-ZƏÖÜĞŞÇ“"«0-9])/g,
         "$1\n- "
       );
       const cleanedLines = normalizedBullets
@@ -483,7 +562,7 @@ export function validateLegalResponse(
         .filter(Boolean)
         .map((line) => {
           const normalizedEnd = line.replace(/[;,:]+$/, "");
-          return /[.!?…]$/.test(normalizedEnd) ? normalizedEnd : `${normalizedEnd}.`;
+          return /[.!?…)\]]$/.test(normalizedEnd) ? normalizedEnd : `${normalizedEnd}.`;
         });
       return `${heading}${cleanedLines.join("\n")}\n`;
     }

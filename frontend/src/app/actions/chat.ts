@@ -16,6 +16,7 @@ import {
   fetchRemoteDocumentByTitle,
   fetchRemoteShortSummary,
   fetchRemoteRagAnswer,
+  fetchRemoteJudicialSearch,
   isRemoteRagConfigured,
 } from '@/lib/legal-rag'
 import { findCandidateLawsByQuery } from '@/lib/legal-rag/registry'
@@ -637,18 +638,102 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       }
     }
 
-    // 3. COMPOSE STRICT GROUND-TRUTH CONTEXT FOR LLM (Diverse top reranked statutes across all in-force Codes & Laws)
-    const contextChunks = selectDiverseContextChunks(
-      retrievedChunks,
-      6,
+    // 2c. PARALLEL BINDING JUDICIAL PRACTICE (Ali Məhkəmə Plenumu / Konstitusiya Məhkəməsi) + COMPANION PROCEDURAL RECALL
+    const topPrimaryScore = retrievedChunks[0]?.score ?? 0;
+    const highRelTop = retrievedChunks
+      .slice(0, 8)
+      .filter((c, idx) => idx < 3 || topPrimaryScore < 500 || (c.score ?? 0) >= topPrimaryScore * 0.62);
+    const topLawIds = Array.from(new Set(highRelTop.map((c) => c.lawId).filter(Boolean))).slice(0, 4);
+    const topArtNums = Array.from(new Set(highRelTop.map((c) => c.articleNumber).filter(Boolean))).slice(0, 6);
+    const topPairs = highRelTop
+      .filter((c) => c.lawId && c.articleNumber)
+      .map((c) => ({ law: c.lawId, article: c.articleNumber }))
+      .slice(0, 8);
+    const qNorm = queryAnalysis.normalizedQuery;
+    const isFamilyOrLaborDispute =
+      (topLawIds.includes("aile") || topLawIds.includes("emek")) &&
+      /(bosan|bolun|emlak|aliment|esassiz|qanunsuz|sikayet|mubahis|mehkem|cixaril|berpa|valideyn|usaq)/i.test(qNorm);
+    const isDivorcePropertyQuery =
+      topLawIds.includes("aile") && /(emlak|mulkiyyet|bolun|bosan)/i.test(qNorm);
+    const hasMediationChunk = retrievedChunks.slice(0, 8).some((c) => c.documentId === "41828" || c.lawName.toLowerCase().includes("mediasiya"));
+    const hasAile34 = retrievedChunks.slice(0, 8).some((c) => c.lawId === "aile" && (c.articleNumber === "34" || c.articleNumber.startsWith("34.")));
+
+    const fetchCompanionArticle = async (docId: string, artNum: string, lawId: string): Promise<StructuredChunk | null> => {
+      try {
+        const doc = isSqliteCorpusAvailable()
+          ? getSqliteDocumentById(docId, artNum)
+          : isRemoteRagConfigured()
+          ? await fetchRemoteDocumentById(docId, artNum, 4500)
+          : null;
+        if (!doc?.content) return null;
+        return {
+          sourceId: `companion_${docId}_art_${artNum}`,
+          lawId,
+          lawName: doc.title,
+          articleNumber: artNum,
+          articleTitle: `${doc.title} — Maddə ${artNum}`,
+          content: doc.content.slice(0, 3200),
+          sourceFile: `eqanun_doc_${docId}`,
+          sourceUrl: doc.sourceUrl || `https://www.e-qanun.ai/results/${docId}`,
+          score: 820,
+          documentId: docId,
+        };
+      } catch {
+        return null;
+      }
+    };
+
+    const [judicialChunks, mediationChunk, aile34Chunk] = await Promise.all([
+      isRemoteRagConfigured()
+        ? fetchRemoteJudicialSearch(
+            {
+              query,
+              expandedQueries: [...(queryAnalysis.keywords || []), ...llmExpandedTerms],
+              matchedLaws: topLawIds,
+              matchedArticles: topArtNums,
+              matchedPairs: topPairs,
+              limit: 2,
+            },
+            5000
+          )
+        : Promise.resolve([] as StructuredChunk[]),
+      isFamilyOrLaborDispute && !hasMediationChunk
+        ? fetchCompanionArticle("41828", "28", "eqanun_41828")
+        : Promise.resolve(null),
+      isDivorcePropertyQuery && !hasAile34
+        ? fetchCompanionArticle("46946", "34", "aile")
+        : Promise.resolve(null),
+    ]);
+
+    const supplementalChunks: StructuredChunk[] = [
+      ...(aile34Chunk ? [aile34Chunk] : []),
+      ...(mediationChunk ? [mediationChunk] : []),
+      ...judicialChunks,
+    ];
+    const allRetrievedChunks = [...retrievedChunks, ...supplementalChunks];
+
+    // 3. COMPOSE STRICT GROUND-TRUTH CONTEXT FOR LLM (Core statutory articles + companion procedural norm + binding Supreme/Constitutional Court rulings)
+    const primaryScore = retrievedChunks[0]?.score ?? 0;
+    const relevantRetrieved =
+      primaryScore >= 500
+        ? retrievedChunks.filter((c, idx) => idx < 3 || (c.score ?? 0) >= primaryScore * 0.62)
+        : retrievedChunks;
+    const baseStatutory = selectDiverseContextChunks(
+      relevantRetrieved.length >= 3 ? relevantRetrieved : retrievedChunks,
+      aile34Chunk ? 5 : 6,
       lawMatch.confidence === "explicit"
     );
+    const contextChunks: StructuredChunk[] = [
+      ...baseStatutory,
+      ...(aile34Chunk ? [aile34Chunk] : []),
+      ...(mediationChunk ? [mediationChunk] : []),
+      ...judicialChunks.slice(0, 2),
+    ];
     const contextStems = buildSearchStems(query, queryAnalysis, llmExpandedTerms);
     const extractFocusedExcerpt = (rawContent: string, maxLen: number): string => {
       const cleaned = sanitizeStatutoryExcerpt(rawContent);
       if (cleaned.length <= maxLen) return cleaned;
       const lines = cleaned.split("\n");
-      const header = lines[0]?.slice(0, 180) || "";
       let bestOffset = 0;
       let bestScore = -1;
       let cursor = 0;
@@ -676,39 +761,44 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
 
     const contextText = contextChunks
       .map((c, i) => {
-        const sliceLen = i < 4 ? 2600 : 1500;
-        const cleanBody = extractFocusedExcerpt(c.content, sliceLen);
+        const isJud = c.lawId.startsWith("judicial_");
+        const cleanBody = isJud
+          ? sanitizeStatutoryExcerpt(c.content).slice(0, 3800)
+          : extractFocusedExcerpt(c.content, i < 4 ? 2300 : 1400);
         return `[MƏNBƏ ${i + 1}: ${c.articleTitle}] (Rəsmi URL: ${c.sourceUrl})\n${cleanBody}`;
       })
       .join("\n\n---\n\n")
-      .slice(0, 13000);
+      .slice(0, 20000);
 
-    // 4. ZERO-EXAMPLE, STRICT CLOSED-WORLD LEGAL PROMPT (e-qanun.ai precision — zero hardcoded statute/fine examples to prevent cross-question bleed!)
-    const systemPrompt = `Sən HuquqAI — Azərbaycan Respublikasının qüvvədə olan qanunvericiliyinə (e-qanun.ai rəsmi mətnlərinə) əsaslanan dəqiq hüquqi araşdırma sistemisən.
+    const hasJudicialInContext = judicialChunks.length > 0;
+
+    // 4. UNIFIED HUQUQAI × E-QANUN.AI CLOSED-WORLD PROMPT (zero hardcoded fine/article examples -> zero cross-question bleed!)
+    const systemPrompt = `Sən HuquqAI — Azərbaycan Respublikasının qüvvədə olan qanunvericiliyinə, Ali Məhkəmə Plenumunun və Konstitusiya Məhkəməsinin rəsmi qərarlarına (e-qanun.ai rəsmi bazasına) əsaslanan peşəkar hüquqi təhlil sistemisən.
 
 MÜTLƏQ VƏ DƏYİŞMƏZ QAYDALAR (ZERO HALLUCINATION):
-1. QAPALI MƏNBƏ PRİNSİPİ: Cavabında YALNIZ aşağıdakı [MƏNBƏ 1..N] mətnlərində SÖZBƏSÖZ mövcud olan qanun adlarını, maddə və bənd nömrələrini, cərimə məbləğlərini, faizləri, gün/ay/il müddətlərini və dövlət orqanlarını yaz.
-2. UYDURMA QADAĞASI: Öz yaddaşından HEÇ VAXT maddə nömrəsi, cərimə məbləği, müddət və ya sanksiya uydurma! Əgər [MƏNBƏ 1..N] mətnlərində konkret cərimə/sanksiya maddəsi YOXDURSA, bunu açıq yaz ("Təqdim olunan mənbələrdə bunun cərimə məbləği göstərilməyib"), əsla başqa maddə və ya məbləğ uydurma!
-3. BƏNDLƏRİ VƏ ŞƏRTLƏRİ DƏQİQ OXU:
+1. QAPALI MƏNBƏ PRİNSİPİ: Cavabında YALNIZ aşağıdakı [MƏNBƏ 1..N] mətnlərində SÖZBƏSÖZ mövcud olan qanun adlarını, maddə və bənd nömrələrini, Ali Məhkəmə/Konstitusiya Məhkəməsi mövqelərini, cərimə məbləğlərini, faizləri, müddətləri və prosessual tələbləri (məsələn, ilkin mediasiya sessiyası, notariat forması və s.) yaz.
+2. UYDURMA QADAĞASI: Öz yaddaşından HEÇ VAXT maddə nömrəsi, məhkəmə qərarı, cərimə məbləği və ya müddət uydurma! Əgər [MƏNBƏ 1..N] mətnlərində konkret cərimə/sanksiya maddəsi YOXDURSA, bunu açıq bildir, əsla başqa maddə uydurma!
+3. BƏNDLƏRİ, İSTİSNALARI VƏ MƏHKƏMƏ ŞƏRHLƏRİNİ DƏQİQ OXU:
    - Hər bənd nömrəsi özündən SONRAKI cümləyə aiddir, əvvəlki cümləyə deyil.
-   - Hər normanın dəqiq şərtini və tətbiq dairəsini saxla (məs: "lazımi keyfiyyətli" = qüsursuz/sağlam maldır, bunu əsla "lazımi keyfiyyətli olmayan" kimi çevirmə; xüsusi kateqoriya/vəzifəli şəxs/təkrar törətmə bəndlərini ümumi qayda ilə qarışdırma!).
-   - Əgər həm əsas qanun (qayda/vəzifə), həm də sanksiya məcəlləsi (cərimə/məsuliyyət) kontekstdə varsa, İKİSİNİ DƏ dəqiq əlaqələndirib göstər — cərimə/məsuliyyət məbləğini elə ilk cümlədə qeyd et.
+   - Əsas qayda ilə yanaşı kontekstdəki BÜTÜN mühüm istisnaları (məsələn: şəxsi/ayrıca əmlak, şəxsi əmlakın dəyərinin artırılması, müddətin başlanma anı, sazişin forması, ilkin mediasiya sessiyası, təkrar törətmə və s.) mütləq əhatə et!
+   - "lazımi keyfiyyətli" = qüsursuz/sağlam maldır — əsla "lazımi keyfiyyətli olmayan" kimi təhrif etmə.
    - Bitişik yazılmış məbləğ və ya müddət sözlərini düzgün oxu (məs., "görə yüz manat" = 100 manat); məbləğ mətndə varsa əsla "göstərilməyib" yazma.
-4. MADDƏ NÖMRƏLƏRİNİN YAZILIŞI:
-   - Maddə və bənd nömrələrini rəsmi yazılışla nöqtə ilə yaz (yalnız rəsmi aktda defisli olan bəndlərdə defisi saxla).
-   - Yalnız suala birbaşa aid olan 1–4 ən uyğun maddəyə istinad et; əlaqəsiz maddələri əlavə etmə və eyni maddəni təkrarlama.
-5. DİL VƏ FORMAT:
-   - Saf və səlis Azərbaycan dilində yaz (ingilis və ya kiril hərfləri işlətmə). Hər cümlə nöqtə ilə tam bitsin.
-   - "## Qısa cavab": əvvəlcə 1–2 aydın, birbaşa yekun cümlə (konkret hüquqi nəticə + məbləğ/müddət/orqan), dərhal sonra hər biri yeni sətirdə ("\n- ") 2–4 qısa bənd.
-   - "## Mənbələr" və ya URL siyahısı YAZMA (sistem kart kimi göstərir).
+4. SƏTİRDAXİLİ İSTİNADLAR VƏ MADDƏ YAZILIŞI (E-QANUN.AI STANDARTI):
+   - Sətirdaxili [N] istinadını YALNIZ həmin faktın götürüldüyü [MƏNBƏ N]-in DƏQİQ nömrəsinə uyğun yaz (bölmə nömrəsi ilə qarışdırma; mətn içində "(mənbə 6)" deyil, birbaşa [6] yaz!).
+   - Ali Məhkəmə / Konstitusiya Məhkəməsi qərarlarından YALNIZ məhkəmənin öz rəsmi mövqeyini ("Plenum qeyd edir", "QƏRARA ALDI", "hesab edir") yaz — müraciət edənin/şikayətçinin iddiasını məhkəmənin mövqeyi kimi təqdim etmə! Qərarların tarixini və nömrəsini YALNIZ [MƏNBƏ] başlığında göstərilən dəqiq tarixə görə yaz, il təxmin etmə. Kontekstdə suala uyğun məhkəmə qərarı yoxdursa, "## Ali Məhkəmə..." bölməsini ÜMUMİYYƏTLƏ YAZMA.
+   - Maddə və bənd nömrələrini rəsmi yazılışla ("Maddə 330", "Maddə 54 (I hissə)", nöqtə ilə "36.9") yaz — əsla "330-0" və ya "54-I" yazma, təsdiq/inkar mənasını ("yol verməlidir" ≠ "qadağandır") əsla təhrif etmə.
+   - Yalnız suala birbaşa aid olan əsas normativ maddələri və (kontekstdə varsa) Ali Məhkəmə/Konstitusiya Məhkəməsi qərarlarını seç, eyni maddəni təkrarlama.
+5. DİL VƏ TAMLIQ:
+   - Saf və səlis hüquqi Azərbaycan dilində yaz (ingilis və ya kiril hərfləri işlətmə). Heç bir cümlə və ya bölmə yarımçıq qalmasın; hər bölmə tam, ətraflı və praktik olsun.
+   - "## Mənbələr" və ya URL siyahısı YAZMA (sistem aşağıda rəsmi mənbə kartları kimi göstərir).
    - İstifadəçi "ərizə yaz / hazırla" deyirsə, boş şablon yazma — əvvəlcə yalnız 1-ci addımı (iddiaçının ad, soyad, ata adı, ünvan, FİN) soruş.
 
 YALNIZ ETİBARLI JSON OBYEKTİ QAYTAR (əlavə izah olmadan):
 {
-  "cavab": "## Hüquqi sual\n[sual]\n\n## Qısa cavab\n[1-2 aydın yekun cümlə — konkret nəticə və məbləğ/müddət.]\n- [Qanun/Məcəllə] — Maddə [X]-ə əsasən, [konkret qayda/məbləğ].\n- [Qanun/Məcəllə] — Maddə [Y]-ə görə, [müddət/şərt/orqan].\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[normanın dəqiq məzmunu və izahı]\n\n### 2. [Normativ akt] — Maddə [Y]\n[normanın dəqiq məzmunu və izahı]\n\n## Praktik izah\n[vəziyyətə tətbiq və izah]\n\n## Vacib məqamlar\n- [müddət / şərt / istisna]",
+  "cavab": "## Hüquqi sual\n[sual]\n\n## Qısa cavab\n[3-5 tam, axıcı cümlədən ibarət ətraflı yekun abzas — əsas qayda, dəqiq məbləğ/müddət, müddətin başlanma anı, istisnalar və prosessual şərtlər, sətirdaxili [1] [2] istinadları ilə.]\n- [Normativ akt] — Maddə [X]: [əsas qayda/məbləğ/müddət].\n- [Normativ akt] — Maddə [Y]: [istisna / prosessual şərt / əlavə norma].\n\n## Hüquqi əsaslar\n\n### 1. [Normativ akt] — Maddə [X]\n[normanın dəqiq məzmunu, şərtləri və tətbiqi]\n\n### 2. [Normativ akt] — Maddə [Y]\n[normanın dəqiq məzmunu, istisnaları və tətbiqi]${hasJudicialInContext ? "\n\n## Ali Məhkəmə və Konstitusiya Məhkəməsinin mövqeyi\n[Kontekstdəki Ali Məhkəmə Plenumu / Konstitusiya Məhkəməsi qərarının konkret hüquqi mövqeyi: iddia müddətinin başlanması, saziş/notariat forması, mediasiya və məhkəmə tətbiqi qaydaları, [N] istinadı ilə.]" : ""}\n\n## Praktik izah və hüquqi risklər\n[3-5 tam cümlə — vətəndaşın atmalı olduğu konkret addımlar, ilkin prosessual şərtlər, sübutlar, istisnalar və diqqət edilməli hüquqi risklər.]\n\n## Vacib məqamlar\n- [Müddət və hesablanma başlanğıcı]\n- [İstisna və ya məhdudiyyət]\n- [Prosessual tələb / sübut / risk]",
   "maddeler": ["Azərbaycan Respublikasının [Normativ akt] — Maddə [X]"],
   "legal_basis": [
-    {"law_name": "[Normativ aktın rəsmi adı]", "article_number": "[Maddə nömrəsi]", "article_title": "[Maddənin başlığı]", "claim": "[Bu normanın tətbiq edildiyi nəticə]"}
+    {"law_name": "[Normativ aktın rəsmi adı]", "article_number": "[Maddə nömrəsi və ya məhkəmə qərarı üçün boş string]", "article_title": "[Maddənin və ya qərarın rəsmi başlığı]", "claim": "[Bu normanın tətbiq edildiyi hüquqi nəticə]"}
   ]
 }`;
 
@@ -792,14 +882,14 @@ ${query}`;
 
     const invokePrimaryLlm = async (
       msgs: Array<{ role: "system" | "user" | "assistant"; content: string }>,
-      maxTokens = 2600
+      maxTokens = 4500
     ): Promise<string> => {
       try {
         const llmRes = await generateLlmCompletion({
           messages: msgs,
           temperature: 0.05,
           maxTokens,
-          timeoutMs: 18000,
+          timeoutMs: 22000,
           responseFormatJson: true,
           apiKeyParam: passedKey || undefined,
         });
@@ -810,9 +900,9 @@ ${query}`;
 
       if (!passedKey && isRemoteRagConfigured()) {
         const edgeAnswer = await fetchRemoteRagAnswer(msgs, {
-          maxTokens: Math.min(maxTokens, 2200),
+          maxTokens: Math.min(maxTokens, 4500),
           temperature: 0.05,
-          timeoutMs: 18000,
+          timeoutMs: 24000,
         });
         if (edgeAnswer?.trim()) return edgeAnswer;
       }
@@ -826,21 +916,21 @@ ${query}`;
     ];
 
     try {
-      const rawContent = await invokePrimaryLlm(baseMessages, 2600);
+      const rawContent = await invokePrimaryLlm(baseMessages, 4500);
       parsedJson = parseRawLlmJson(rawContent);
     } catch (llmErr: any) {
       usedLlmFallback = true;
       console.error("[chat.ts] LLM synthesis failed, falling back to statutory extracts:", llmErr?.message);
       parsedJson = await buildStatutoryFallbackResponse(
         query,
-        retrievedChunks,
+        allRetrievedChunks,
         queryAnalysis,
         llmExpandedTerms
       );
     }
 
     // 6. VALIDATE & ENFORCE ZERO-HALLUCINATION CITATION AUDIT (+ 1-PASS SELF-CORRECTION IF ANY ARTICLE WAS FABRICATED)
-    let validated = validateLegalResponse(parsedJson, retrievedChunks);
+    let validated = validateLegalResponse(parsedJson, allRetrievedChunks, contextChunks);
 
     if (!usedLlmFallback && validated.ungrounded_articles && validated.ungrounded_articles.length > 0) {
       const banned = validated.ungrounded_articles.join(", ");
@@ -854,10 +944,10 @@ ${query}`;
               content: `KRİTİK XƏTA: Əvvəlki cavabında [MƏNBƏ 1..N] daxilində OLMAYAN bu maddə nömrələrini uydurdun: ${banned}. Həmin uydurma maddələri və onların cərimələrini TAMAMİLƏ SİL! Cavabı YALNIZ [MƏNBƏ 1..N] mətnlərində mövcud olan maddələrə əsasən yenidən etibarlı JSON formatında yaz.`,
             },
           ],
-          2400
+          4200
         );
         const correctedJson = parseRawLlmJson(correctiveRaw);
-        const revalidated = validateLegalResponse(correctedJson, retrievedChunks);
+        const revalidated = validateLegalResponse(correctedJson, allRetrievedChunks, contextChunks);
         if (
           (revalidated.ungrounded_articles?.length ?? 0) < validated.ungrounded_articles.length ||
           revalidated.citation_valid

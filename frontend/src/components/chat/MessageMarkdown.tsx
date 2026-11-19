@@ -43,9 +43,27 @@ export default function MessageMarkdown({ content, paper = false }: MessageMarkd
         td: ({ node, ...props }) => (
           <td className={`px-3 py-2.5 text-xs sm:text-sm border-t ${borderColor} ${bodyColor}`} {...props} />
         ),
-        a: ({ node, ...props }) => (
-          <a target="_blank" rel="noopener noreferrer" className={linkColor} {...props} />
-        ),
+        a: ({ node, children, ...props }) => {
+          const textVal = typeof children === 'string' ? children.trim() : Array.isArray(children) && children.length === 1 && typeof children[0] === 'string' ? children[0].trim() : '';
+          const isNumericCite = /^\[?\d{1,2}\]?$/.test(textVal);
+          if (isNumericCite) {
+            return (
+              <a
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center align-baseline text-[11px] leading-none font-bold px-1.5 py-0.5 mx-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/25 border border-emerald-500/30 no-underline transition-colors"
+                {...props}
+              >
+                {textVal.startsWith('[') ? textVal : `[${textVal}]`}
+              </a>
+            );
+          }
+          return (
+            <a target="_blank" rel="noopener noreferrer" className={linkColor} {...props}>
+              {children}
+            </a>
+          );
+        },
         h1: ({ node, ...props }) => (
           <h1 className={`text-lg sm:text-2xl font-extrabold ${headingColor} tracking-tight mt-4 mb-2 first:mt-0 [text-wrap:balance]`} {...props} />
         ),
