@@ -711,15 +711,15 @@ async function handleLexical(body: Record<string, unknown>, env: Env): Promise<R
       else if (explicitArts.some((a) => a.includes(".") && c.artNum === a.split(".")[0])) c.score += 420;
     } else if (c.artNum && conceptPriorityArts.length > 0 && isConceptTarget) {
       const idx = conceptPriorityArts.indexOf(c.artNum);
-      if (idx !== -1) c.score += Math.max(110, 320 - idx * 40);
+      if (idx !== -1) c.score += Math.max(160, 620 - idx * 95);
       else {
         const subIdx = conceptPriorityArts.findIndex((a) => c.artNum.startsWith(`${a}.`));
-        if (subIdx !== -1) c.score += Math.max(85, 210 - subIdx * 30);
+        if (subIdx !== -1) c.score += Math.max(120, 440 - subIdx * 70);
         else {
           const baseIdx = conceptPriorityArts.findIndex(
             (a) => a.includes(".") && c.artNum === a.split(".")[0]
           );
-          if (baseIdx !== -1) c.score += Math.max(95, 250 - baseIdx * 30);
+          if (baseIdx !== -1) c.score += Math.max(130, 480 - baseIdx * 70);
         }
       }
     }

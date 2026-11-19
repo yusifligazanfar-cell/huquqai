@@ -194,6 +194,7 @@ function sanitizeStatutoryExcerpt(text: string): string {
     .replace(/\u2011|\u2010|\u2212/g, '-')
     .replace(/\bgörəyüz\b/gi, 'görə yüz')
     .replace(/\bgündənüçay\b/gi, 'gündən üç ay')
+    .replace(/İstehlakçının tələblərini ödəməyən malı lazımi keyfiyyətli mala dəyişdirmək hüququ/gi, 'İstehlakçının tələblərini ödəməyən (qüsursuz/sağlam olan, lakin forması, ölçüsü, fasonu, rəngi uyğun gəlməyən) lazımi keyfiyyətli malı dəyişdirmək hüququ')
     .replace(/([—–-]\s*)min\s+manatdan\s+iki\s+min\s+manatadək\s+miqdarda\s+cərimə/gi, '$1bir min (1.000) manatdan iki min (2.000) manatadək miqdarda cərimə (cəza sanksiyası)')
     .replace(/beş\s+yüz\s+manatdan\s+yuxarı,\s*lakin\s+beş\s+min\s+manatdan\s+artıq\s+olmayan/gi, 'beş yüz (500) manatdan yuxarı, lakin beş min (5.000) manatdan artıq olmayan')
     .replace(/beş\s+min\s+manatdan\s+yuxarı,\s*lakin\s+əlli\s+min\s+manatdan\s+artıq\s+olmayan/gi, 'beş min (5.000) manatdan yuxarı, lakin əlli min (50.000) manatdan artıq olmayan')
