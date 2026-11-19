@@ -1013,7 +1013,11 @@ ${query}`;
       lawMatch.confidence === "strong" ||
       Boolean(queryAnalysis.targetArticleNum);
 
-    if (!usedLlmFallback && parsedJson?.insufficient_sources === true && !hasStrongStatutoryGrounding) {
+    const hasDraftCavab =
+      typeof (parsedJson?.cavab ?? parsedJson?.answer) === "string" &&
+      String(parsedJson?.cavab ?? parsedJson?.answer).trim().length >= 40;
+
+    if (!usedLlmFallback && parsedJson?.insufficient_sources === true && (!hasStrongStatutoryGrounding || !hasDraftCavab)) {
       return buildInsufficientSourceResponse(
         query,
         typeof parsedJson.missing_reason === "string" ? parsedJson.missing_reason : undefined
