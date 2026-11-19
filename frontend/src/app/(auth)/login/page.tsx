@@ -5,7 +5,7 @@ import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Mail, ArrowRight, Loader2, Scale } from "lucide-react"
+import { Mail, ArrowRight, Loader2, Scale, LogIn, UserPlus } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
@@ -204,16 +204,26 @@ export default function LoginPage() {
 
           {/* Lawyer Section */}
           <div className="mt-7 pt-6 border-t border-slate-200 dark:border-slate-800 text-center">
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-3">
-              Vəkil və ya hüquqşünas kimi fəaliyyət göstərirsiniz?
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-3 flex items-center justify-center gap-1.5">
+              <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>Vəkil və ya hüquqşünas kimi fəaliyyət göstərirsiniz?</span>
             </p>
-            <Link
-              href="/lawyer-signup"
-              className="inline-flex items-center justify-center w-full h-12 gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm border border-emerald-200 dark:border-emerald-800/60 transition-all"
-            >
-              <Scale className="w-4 h-4" />
-              <span>Vəkil və ya Hüquqşünas Kimi Daxil Ol / Qeydiyyat</span>
-            </Link>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <Link
+                href="/lawyer-signup?mode=login"
+                className="inline-flex items-center justify-center w-full h-12 gap-2 rounded-xl bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold text-sm border border-slate-200 dark:border-slate-700 transition-all"
+              >
+                <LogIn className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Daxil Ol</span>
+              </Link>
+              <Link
+                href="/lawyer-signup"
+                className="inline-flex items-center justify-center w-full h-12 gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold text-sm border border-emerald-200 dark:border-emerald-800/60 transition-all"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Qeydiyyat</span>
+              </Link>
+            </div>
           </div>
         </div>
 

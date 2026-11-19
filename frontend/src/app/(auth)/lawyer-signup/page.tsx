@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,16 @@ import categoriesData from "@/data/lawyer_categories.json"
 
 export default function LawyerSignupPage() {
   const [step, setStep] = useState<1 | 2>(1)
+  const [isLoginMode, setIsLoginMode] = useState(false)
   const [practitionerType, setPractitionerType] = useState<"vekil" | "huquqsunas">("vekil")
+
+  useEffect(() => {
+    const mode = new URLSearchParams(window.location.search).get("mode")
+    if (mode === "login") {
+      setIsLoginMode(true)
+      setStep(2)
+    }
+  }, [])
   
   // Step 1: Onboarding Info
   const [name, setName] = useState("")
@@ -93,25 +102,30 @@ export default function LawyerSignupPage() {
     setLoading(true)
     setMessage(null)
 
+    const hasOnboardingData = !isLoginMode && Boolean(name.trim() || surname.trim())
     const extra = buildStructuredFields()
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?next=/account%3Frole=lawyer`,
-        data: {
-          role: 'lawyer',
-          practitioner_type: practitionerType,
-          name: name.trim(),
-          surname: surname.trim(),
-          full_name: `${name.trim()} ${surname.trim()}`.trim(),
-          license_number: getNormalizedLicense(),
-          experience_years: parseInt(experienceYears, 10) || 0,
-          bio: bio.trim(),
-          specialties: selectedSpecialties,
-          workplaces: extra.workplaces,
-          education: extra.education,
-          hourly_rate: extra.hourlyRate,
-        }
+        ...(hasOnboardingData
+          ? {
+              data: {
+                role: 'lawyer',
+                practitioner_type: practitionerType,
+                name: name.trim(),
+                surname: surname.trim(),
+                full_name: `${name.trim()} ${surname.trim()}`.trim(),
+                license_number: getNormalizedLicense(),
+                experience_years: parseInt(experienceYears, 10) || 0,
+                bio: bio.trim(),
+                specialties: selectedSpecialties,
+                workplaces: extra.workplaces,
+                education: extra.education,
+                hourly_rate: extra.hourlyRate,
+              }
+            }
+          : {}),
       }
     })
 
@@ -119,7 +133,12 @@ export default function LawyerSignupPage() {
       setMessage({ text: error.message, type: 'error' })
     } else {
       setIsOtpSent(true)
-      setMessage({ text: "Qeydiyyat linki e-poçt ünvanınıza göndərildi! Linkə kliklədikdən sonra anketiniz admin yoxlamasına göndəriləcək və hesabınıza daxil olacaqsınız.", type: 'success' })
+      setMessage({
+        text: isLoginMode
+          ? "Giriş linki e-poçt ünvanınıza göndərildi! Linkə klikləyərək hesabınıza daxil ola bilərsiniz."
+          : "Qeydiyyat linki e-poçt ünvanınıza göndərildi! Linkə kliklədikdən sonra anketiniz admin yoxlamasına göndəriləcək və hesabınıza daxil olacaqsınız.",
+        type: 'success'
+      })
     }
     setLoading(false)
   }
@@ -162,10 +181,14 @@ export default function LawyerSignupPage() {
                 <Scale className="w-8 h-8 text-white" />
               </div>
               <h1 className="text-2xl sm:text-3xl font-black tracking-tighter text-black dark:text-white mb-2">
-                Vəkil və ya Hüquqşünas Kimi Qoşulun
+                {isLoginMode && step === 2 ? "Vəkil və ya Hüquqşünas Girişi" : "Vəkil və ya Hüquqşünas Kimi Qoşulun"}
               </h1>
               <p className="text-slate-600 dark:text-slate-300 font-medium tracking-wide">
-                {step === 1 ? "Müştərilərin sizi tapa bilməsi üçün anketinizi doldurun" : "Davam etmək üçün hesaba daxil olun"}
+                {step === 1
+                  ? "Müştərilərin sizi tapa bilməsi üçün anketinizi doldurun"
+                  : isLoginMode
+                    ? "Mövcud hesabınıza daxil olun"
+                    : "Davam etmək üçün hesaba daxil olun"}
               </p>
             </div>
 
@@ -328,7 +351,7 @@ export default function LawyerSignupPage() {
                     </div>
                     <Button type="submit" className="w-full h-14 font-semibold text-base rounded-xl shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white transition-all hover:-translate-y-0.5" disabled={loading}>
                       {loading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
-                      {loading ? "Göndərilir..." : "Qeydiyyatı Tamamla"}
+                      {loading ? "Göndərilir..." : isLoginMode ? "Daxil Ol" : "Qeydiyyatı Tamamla"}
                     </Button>
                   </form>
                 ) : (
@@ -367,8 +390,15 @@ export default function LawyerSignupPage() {
                 </div>
 
                 <div className="pt-4 mt-6 text-center">
-                  <button onClick={() => setStep(1)} className="text-sm font-medium text-amber-500 hover:underline">
-                    &larr; Anketə qayıt
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsLoginMode(false)
+                      setStep(1)
+                    }}
+                    className="text-sm font-medium text-amber-500 hover:underline"
+                  >
+                    {isLoginMode ? "Yeni hesab? Anketi doldurub qeydiyyatdan keçin →" : "← Anketə qayıt"}
                   </button>
                 </div>
               </div>
