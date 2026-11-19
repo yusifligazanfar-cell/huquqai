@@ -733,7 +733,8 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       (topLawIds.includes("aile") || topLawIds.includes("emek")) &&
       /(bosan|bolun|emlak|aliment|esassiz|qanunsuz|sikayet|mubahis|mehkem|cixaril|berpa|valideyn|usaq)/i.test(qNorm);
     const isDivorcePropertyQuery =
-      topLawIds.includes("aile") && /(emlak|mulkiyyet|bolun|bosan)/i.test(qNorm);
+      topLawIds.includes("aile") && /(emlak|mulkiyyet|bolun|bosan|borc)/i.test(qNorm);
+    const hasAile37 = retrievedChunks.slice(0, 6).some((c) => c.lawId === "aile" && (c.articleNumber === "37" || c.articleNumber.startsWith("37.")));
     const isCriminalEmbezzlementOrOfficialKazus =
       (topLawIds.includes("cinayet") || rewrittenLaws.includes("cinayet") || /(menimse|israf|cinayet terkib|huquqi tovsif|saxta xidmet muqavile|vezife selahiyyet)/i.test(combinedQNorm)) &&
       /(menimse|israf|cinayet terkib|huquqi tovsif|saxta|vezife|direktor|hesab-faktura)/i.test(combinedQNorm);
@@ -793,6 +794,7 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       judicialChunks,
       mediationChunk,
       aile34Chunk,
+      aile37Chunk,
       cm179Chunk,
       cm177NoteChunk,
       cm178Chunk,
@@ -865,6 +867,9 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
       isDivorcePropertyQuery && !hasAile34
         ? fetchCompanionArticle("46946", "34", "aile")
         : Promise.resolve(null),
+      isDivorcePropertyQuery && !hasAile37
+        ? fetchCompanionArticle("46946", "37", "aile")
+        : Promise.resolve(null),
       isCriminalEmbezzlementOrOfficialKazus
         ? fetchCompanionArticle("46947", "179", "cinayet")
         : Promise.resolve(null),
@@ -919,6 +924,7 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     ]);
 
     const cmCompanionChunks = [
+      aile37Chunk,
       cm179Chunk,
       cm177NoteChunk,
       cm178Chunk,

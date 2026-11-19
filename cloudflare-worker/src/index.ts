@@ -66,6 +66,7 @@ const GENERIC_META = new Set([
   "qaydalari", "muddet", "muddeti", "miqdar", "miqdari", "mebleg", "meblegi",
   "sert", "serti", "sertleri", "qeder", "qederdir", "hallar", "hallarda", "esas", "esaslari",
   "sexs", "sexsi", "sexsin", "sexse", "sexsler", "mesuliyyet", "mesuliyyeti", "mesuliyyete", "mesuliyyetden",
+  "vergi", "inzibati", "mulki", "emek", "aile", "mehkem", "mehkeme",
 ]);
 
 const DOC_ID_TO_LAW_ID: Record<string, string> = {
@@ -205,6 +206,12 @@ const STATUTORY_STEM_SYNONYMS: Record<string, string[]> = {
   kiray: ["icare", "kiraye"],
   kiraye: ["icare", "kiray"],
   propiska: ["qeydiyyat", "yasayis"],
+  beyanname: ["hesabat"],
+  beyannam: ["hesabat"],
+  alkoqol: ["serxos"],
+  alkoqollu: ["serxos"],
+  icki: ["serxos"],
+  masin: ["neqliyyat", "vasite"],
 };
 
 function isAskingAboutRepealedLaw(queryNorm: string): boolean {
