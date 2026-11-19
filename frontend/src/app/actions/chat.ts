@@ -194,6 +194,7 @@ function sanitizeStatutoryExcerpt(text: string): string {
     .replace(/\u2011|\u2010|\u2212/g, '-')
     .replace(/\bgörəyüz\b/gi, 'görə yüz')
     .replace(/\bgündənüçay\b/gi, 'gündən üç ay')
+    .replace(/([—–-]\s*)min\s+manatdan\b/gi, '$1bir min (1000) manatdan')
     .replace(
       /(\d+(?:\.\d+)+)\.\s*\[QÜVVƏDƏN DÜŞÜB\s*\/\s*LƏĞV EDİLİB\]\s*(?=[a-zəöüğışç])/gi,
       '($1-cü bənd ləğv edilib) — '
@@ -740,7 +741,8 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
     const fetchCompanionArticle = async (
       docId: string,
       artNum: string,
-      lawId: string
+      lawId: string,
+      mode: "full" | "cm177_note" | "cm308_full" = "full"
     ): Promise<StructuredChunk | null> => {
       try {
         const doc = isSqliteCorpusAvailable()
@@ -749,13 +751,23 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
           ? await fetchRemoteDocumentById(docId, artNum, 4500)
           : null;
         if (!doc?.content) return null;
-        const body = doc.content.slice(0, 3600);
+        let body = doc.content.slice(0, 3600);
+        let customTitle = `${doc.title} — Maddə ${artNum}`;
+        if (mode === "cm177_note") {
+          const qeydIdx = doc.content.indexOf("Qeyd:");
+          if (qeydIdx >= 0) {
+            body = `Maddə 177 — ${doc.content.slice(qeydIdx, qeydIdx + 2400)}`;
+          }
+          customTitle = `${doc.title} — Maddə 177 (Qeyd 1–3: Maddə 177–182 üzrə məsuliyyət və miqdar hədləri — xeyli, külli və xüsusilə külli miqdar)`;
+        } else if (mode === "cm308_full") {
+          customTitle = `${doc.title} — Maddə 308 (Vəzifə səlahiyyətlərindən sui-istifadə və Qeyd 1–7: Vəzifəli şəxs anlayışı)`;
+        }
         return {
           sourceId: `companion_${docId}_art_${artNum}`,
           lawId,
           lawName: doc.title,
           articleNumber: artNum,
-          articleTitle: `${doc.title} — Maddə ${artNum}`,
+          articleTitle: customTitle,
           content: body,
           sourceFile: `eqanun_doc_${docId}`,
           sourceUrl: doc.sourceUrl || `https://www.e-qanun.ai/results/${docId}`,
@@ -791,13 +803,13 @@ export async function generateLegalResponse(query: string, apiKeyParam?: string,
         ? fetchCompanionArticle("46947", "179", "cinayet")
         : Promise.resolve(null),
       isCriminalEmbezzlementOrOfficialKazus
-        ? fetchCompanionArticle("46947", "177", "cinayet")
+        ? fetchCompanionArticle("46947", "177", "cinayet", "cm177_note")
         : Promise.resolve(null),
       isCriminalEmbezzlementOrOfficialKazus
         ? fetchCompanionArticle("46947", "178", "cinayet")
         : Promise.resolve(null),
       isCriminalEmbezzlementOrOfficialKazus
-        ? fetchCompanionArticle("46947", "308", "cinayet")
+        ? fetchCompanionArticle("46947", "308", "cinayet", "cm308_full")
         : Promise.resolve(null),
       isCriminalEmbezzlementOrOfficialKazus
         ? fetchCompanionArticle("46947", "313", "cinayet")
@@ -909,22 +921,23 @@ Hər bir sualın aid olduğu hüquq sahəsini (Konstitusiya, Mülki, Cinayət, C
 5) Mərhələ 5 — Faktlara tətbiq: İstifadəçinin təqdim etdiyi faktları hüquqi normalarla müqayisə et; hansı faktın hansı şərti təsdiqlədiyini və ya istisna etdiyini göstər.
 6) Mərhələ 6 — Praktik nəticə: İstifadəçinin hüquqlarını necə həyata keçirə biləcəyini, hansı addımları atmalı olduğunu və mümkün hüquqi riskləri izah et.
 
-## 5. MADDƏ, BƏND, MÜDDƏT VƏ MƏBLƏĞ DƏQİQLİYİ (BÖLMƏ 5, 6, 7, 8, 9, 10)
-- Maddə nömrələrini uydurma; maddənin bir hissəsini digər hissə ilə qarışdırma; hər bənd nömrəsi özündən SONRAKI cümləyə aiddir.
-- Sual ümumi / ilk hal barədədirsə, ƏVVƏLCƏ əsas bəndi (məs., adi vergi hesabatı gecikməsi üçün ümumi bənd; ilk dəfə yol hərəkəti pozuntusu üçün 1-ci bənd) əsas cavab kimi yaz; xüsusi transmilli/ağırlaşdırıcı/təkrar bəndləri yalnız ayrıca istisna və ya təkrar hal kimi qeyd et!
-- MÜDDƏTLƏR: Təqvim günü, iş günü, ay, il, prosessual müddət, iddia müddəti, şikayət/apellyasiya/kassasiya müddətini qarışdırma; müddətin başlanma anını (məs., hüququn pozulduğunu bildiyi və ya bilməli olduğu gündən), dayandırılmasını və bərpasını dəqiq göstər.
-- MƏBLƏĞLƏR VƏ CİNAYƏT MİQDAR KATEQORİYALARI:
-  * Cərimə məbləği (cəza sanksiyası), zərərin məbləği, dövlət rüsumu, əmlakın dəyəri, faiz, dəbbə pulu, kompensasiya və cinayətlərin miqdar kateqoriyalarını HEÇ VAXT bir-biri ilə qarışdırma!
-  * Cinayətin miqdar kateqoriyasını YALNIZ maddənin "Qeyd:" hissəsinə əsasən müəyyən et (məs., CM 177 Qeyd 1–2: 500–5.000 AZN = sadə tərkib; 5.000–50.000 AZN = "xeyli miqdar"; 50.000–500.000 AZN = "külli miqdar"; >500.000 AZN = "xüsusilə külli miqdar". Odur ki, 450.000 manat "külli miqdar"dır -> 179.3.2: 5–10 il azadlıqdan məhrum etmə; 179.4 isə >500.000 manat üçündür). Ağırlaşdırıcı bənddə (məs., 179.3.2) cərimə sanksiyası yoxdursa, 179.1-in cərimə cəzasını 179.3.2-yə aid etmə!
-  * CM 308 Qeyd 3–4 üzrə kommersiya və qeyri-kommersiya təşkilatlarının (MMC-nin) rəhbərləri və işçiləri "vəzifəli şəxs" sayılır.
-- HÜQUQİ MƏSULİYYƏT, TƏQSİRSİZLİK PREZUMPSİYASI VƏ ALTERNATİV TÖVSİFLƏR:
-  * Cinayət tərkibinin bütün elementləri sübut edilmədən şəxsin cinayət törətdiyi barədə qəti hökm çıxarma (şərti hüquqi tövsif ver).
-  * Eyni faktlara uyğun ola biləcək alternativ hüquqi mövqeləri və cinayət tərkiblərini (məs., CM 179 mənimsəmə/israf etmə vs. CM 178 dələduzluq vs. CM 308 vəzifə səlahiyyətlərindən sui-istifadə vs. CM 313 vəzifə saxtakarlığı) müqayisə et və fərqləndirici əlamətlərini göstər.
-  * Faktlar kifayət etmədikdə bunu açıq bildir və yalnız nəticəyə ciddi təsir edən çatışmayan məlumatları göstər.
+## 5. CRITICAL LEGAL VALIDATION — MADDƏLƏRİN VƏ RƏQƏMLƏRİN AYRILMASI (10 MƏCBURİ QAYDA)
+Bütün hüquqi suallarda aşağıdakı yoxlamaları məcburi yerinə yetir:
+1. Qanunun sanksiyasında göstərilən cərimə məbləğini (məs., CM 179.1-dəki 1.000–2.000 manat cərimə cəzasını və ya 179.2-dəki 4.000–7.000 manat cəriməni) cinayət predmetinin, əmlakın və ya ziyanın məbləği (miqdar həddi) ilə HEÇ VAXT qarışdırma! (179.1 üzrə ziyanın miqdar həddi 2.000 manat DEYİL; CM 177 Qeyd 1-ə əsasən 500 manatdan yuxarı, lakin 5.000 manatdan artıq olmayan məbləğdir).
+2. Maddənin dispozisiyasını, kvalifikasiyaedici (ağırlaşdırıcı) əlamətlərini və sanksiyasını ayrı-ayrılıqda təhlil et.
+3. Eyni maddənin müxtəlif bəndlərinin tətbiq şərtlərini ayrıca yoxla (məs., 179.1 sadə tərkib, 179.2.1 qabaqcadan əlbir qrup, 179.2.3 öz qulluq mövqeyindən istifadə, 179.2.4 xeyli miqdar, 179.3.2 külli miqdar, 179.4 xüsusilə külli miqdar).
+4. Rəqəmsal hədləri YALNIZ qanunun Qeyd hissəsindən və qüvvədə olan rəsmi redaksiyasından yoxla (CM 177 Qeyd 1–2 məhz CM 177–182-ci maddələrin hamısına şamil edilir: sadə tərkib = 500–5.000 manat; "xeyli miqdar" = 5.000–50.000 manat; "külli miqdar" = 50.000–500.000 manat; "xüsusilə külli miqdar" = 500.000 manatdan yuxarı. Əsla "xeyli və ya külli miqdar qanunda dəqiq müəyyən edilməyib" YAZMA!).
+5. İstifadəçinin təqdim etdiyi faktlar əsasında tətbiq oluna biləcək mühüm maddələri (məs., CM 179 ilə yanaşı CM 177 Qeyd 1–2, CM 308 və Qeyd 3–4 üzrə MMC rəhbərinin vəzifəli şəxs statusu, CM 313 vəzifə saxtakarlığı, CM 178 dələduzluq) nəzərdən qaçırma.
+6. Bir maddənin tətbiqi digər maddənin avtomatik tətbiqi demək deyil.
+7. Cinayət tərkibinin bütün zəruri elementləri (obyekt, obyektiv cəhət, xüsusi subyekt, subyektiv cəhət — birbaşa qəsd və tamah niyyəti) müəyyən edilmədən şəxsin təqsirli olduğunu qəti şəkildə bildirmə.
+8. Ehtimal olunan hüquqi tövsiflə sübut edilmiş hüquqi tövsifi fərqləndir.
+9. Faktlar bir neçə maddənin tətbiqini mümkün edirsə, onların hər birini ayrıca izah et və maddələrin məcmusu (məs., CM 179.2.3, 179.3.2 + CM 313) və ya normaların rəqabəti (CM 179 vs. CM 178 vs. CM 308) məsələsini yoxla.
+10. Cavabın sonunda bütün rəqəmləri, maddə nömrələrini, miqdar hədlərini, sanksiyaları və hüquqi nəticələri yenidən yoxla.
+- MÜDDƏTLƏR VƏ SƏTİRDAXİLİ İSTİNADLAR:
+  * Təqvim günü, iş günü, ay, il, prosessual müddət, iddia müddəti, şikayət/apellyasiya/kassasiya müddətini qarışdırma; qanunda olmayan "6 aylıq cinayət şikayət müddəti" kimi müddətlər uydurma!
   * "lazımi keyfiyyətli" = qüsursuz/sağlam maldır — əsla tərsinə çevirmə! Bitişik yazılmış məbləğ və ya müddət sözlərini düzgün oxu.
-- MƏHKƏMƏ TƏCRÜBƏSİ VƏ SƏTİRDAXİLİ İSTİNADLAR:
   * Sətirdaxili [N] istinadını YALNIZ həmin faktın götürüldüyü [MƏNBƏ N]-in DƏQİQ nömrəsinə uyğun yaz (mətn içində "(mənbə 6)" deyil, birbaşa [6] yaz!).
-  * Ali Məhkəmə / Konstitusiya Məhkəməsi qərarlarından YALNIZ məhkəmənin öz rəsmi mövqeyini ("Plenum qeyd edir", "QƏRARA ALDI", "hesab edir") tam adı, tarixi və nömrəsi ilə yaz — şikayətçinin iddiasını məhkəmənin mövqeyi kimi təqdim etmə! Kontekstdə suala uyğun məhkəmə qərarı yoxdursa, məhkəmə qərarı uydurma.
+  * Ali Məhkəmə / Konstitusiya Məhkəməsi qərarlarından YALNIZ məhkəmənin öz rəsmi mövqeyini ("Plenum qeyd edir", "QƏRARA ALDI", "hesab edir") tam adı, tarixi və nömrəsi ilə yaz — şikayətçinin iddiasını məhkəmənin mövqeyi kimi təqdim etmə!
   * Maddə və bənd nömrələrini rəsmi yazılışla ("Maddə 330", "Maddə 54 (I hissə)", nöqtə ilə "36.9") yaz — əsla "330-0" və ya "54-I" yazma.
 
 ## 6. YEKUN CAVABIN STRUKTURU VƏ MƏCBURİ KEYFİYYƏT NƏZARƏTİ (BÖLMƏ 11–16)
